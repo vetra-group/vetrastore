@@ -1,10 +1,10 @@
 import type { CmsContent } from "@/lib/cms/types";
 import { businessKeys } from "@/lib/business-settings";
+import { isPublicHttpsOrigin } from "@/lib/site-origin";
 
 export type ReadinessItem = { key: string; ready: boolean; required: boolean };
 export function launchReadiness(content: CmsContent, env: Record<string, string | undefined> = process.env): ReadinessItem[] {
-  let domain = false;
-  try { const url = new URL(env.NEXT_PUBLIC_SITE_URL || ""); domain = url.protocol === "https:" && !["localhost", "127.0.0.1", "[::1]"].includes(url.hostname) && !url.username && !url.password; } catch { /* Unconfigured. */ }
+  const domain = isPublicHttpsOrigin(env.NEXT_PUBLIC_SITE_URL || "");
   return [
     { key: "domain", ready: domain, required: true },
     { key: "database", ready: env.CMS_STORAGE === "mongodb" && !!env.MONGODB_URI, required: true },

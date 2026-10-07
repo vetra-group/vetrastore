@@ -103,7 +103,7 @@ async function main() {
   assert.equal(restoreCartItem(bag, removed, 0), bag, "Unavailable stock cannot be restored");
   assert.deepEqual(bag, [{ id: "first", quantity: 2 }, { id: honey.id, quantity: 3 }, { id: "last", quantity: 1 }], "Mutations leave earlier snapshots unchanged");
   assert.equal(formatPrice(380, "th"), "฿380");
-  assert.equal(formatPrice(54.29, "en", "USD"), "$54.29");
+  assert.equal(formatPrice(54.29, "en", "USD").replace(/\s/g, " "), "USD 54.29", "US dollars remain unambiguous in English dollar markets");
   const { localizedDestination } = load("src/lib/i18n.ts");
   assert.equal(localizedDestination("en", "/products"), "/products");
   assert.equal(localizedDestination("th", "/products"), "/th/products");
@@ -323,6 +323,27 @@ async function main() {
     const wrongThaiPostcode = structuredClone(thaiBody);
     wrongThaiPostcode.customer.postcode = "SW1A 1AA";
     assert.equal((await POST(request(wrongThaiPostcode, randomUUID()))).status, 400);
+    for (const field of ["province", "postcode"]) {
+      const incompleteThai = structuredClone(thaiBody);
+      incompleteThai.customer[field] = "";
+      assert.equal((await POST(request(incompleteThai))).status, 400, `Thai ${field} remains required`);
+    }
+    for (const [locale, country, city] of [["ar", "United Arab Emirates", "Dubai"], ["ar", "Qatar", "Doha"], ["en", "Singapore", "Singapore"]]) {
+      const international = makeBody(), internationalKey = randomUUID();
+      international.locale = locale;
+      Object.assign(international.customer, { country, district: city, province: "", postcode: "" });
+      assert.equal((await POST(request(international, internationalKey))).status, 201, `${city} enquiries need no invented region or postcode`);
+      assert.equal(documents.get(internationalKey).customer.postcode, "");
+      delete international.customer.province;
+      delete international.customer.postcode;
+      assert.equal((await POST(request(international, internationalKey))).status, 201, "Omitted and empty optional fields share retry identity");
+      assert.equal((await POST(request(international))).status, 201, "Optional international fields can also be omitted from a new enquiry");
+      for (const change of [{ postcode: "--" }, { province: "x".repeat(101) }, { province: null }]) {
+        const malformed = structuredClone(international);
+        Object.assign(malformed.customer, change);
+        assert.equal((await POST(request(malformed))).status, 400, "Optional values still enforce length, type and postal format");
+      }
+    }
     const contact = load("src/app/api/contact/route.ts", { "@/lib/db": { getDb: async () => fakeDb }, "@/lib/cms/server": { getPublishedContent: async () => publishedContent } });
     const wholesale = { name: "Business buyer", email: "business@example.test", locale: "en", consent: true, subject: "wholesale", message: "Please confirm availability for our business.", submissionId: randomUUID(), wholesale: { productId: "coffee-blossom-honey", quantity: 150, business: "Cafe", destination: "Bangkok 10110", neededBy: "2026-12-12" } };
     for (const invalid of [{ quantity: 0 }, { productId: "unknown" }, { neededBy: "2026-02-30" }, { business: "" }]) assert.equal((await contact.POST(request({ ...wholesale, submissionId: randomUUID(), wholesale: { ...wholesale.wholesale, ...invalid } }))).status, 400);

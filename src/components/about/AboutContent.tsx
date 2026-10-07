@@ -5,7 +5,7 @@ import { storyCopy } from "@/content/pages";
 import { applyCopy } from "@/lib/cms/defaults";
 import { getLocalizedPublishedContent } from "@/lib/localized-content";
 import { localizedPath, type Locale } from "@/lib/i18n";
-import { siteUrl } from "@/lib/metadata";
+import { organizationSchema, pageSchema, serializeSchema } from "@/lib/structured-data";
 import styles from "./AboutContent.module.css";
 
 export default async function AboutContent({ locale }: { locale: Locale }) {
@@ -19,13 +19,9 @@ export default async function AboutContent({ locale }: { locale: Locale }) {
     { key: "value", icon: "heart" as const, ...c.values[2] },
   ];
   const schema = {
-    "@context": "https://schema.org",
-    "@type": "AboutPage",
-    name: c.title,
+    ...pageSchema(locale, "/about", c.title, "AboutPage"),
     description: c.description,
-    url: new URL(href("/about"), siteUrl).href,
-    inLanguage: locale,
-    about: { "@type": "Organization", name: content.settings.storeName, url: new URL(href("/"), siteUrl).href },
+    about: organizationSchema(content.settings, locale),
   };
 
   return (
@@ -117,7 +113,7 @@ export default async function AboutContent({ locale }: { locale: Locale }) {
         <p>{c.closingBody}</p>
         <Link className="button" href={href("/products")}>{c.shop}<Icon name="chevron" /></Link>
       </section>
-      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, "\\u003c") }} />
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeSchema(schema) }} />
     </div>
   );
 }

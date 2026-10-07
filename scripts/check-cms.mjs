@@ -214,13 +214,16 @@ async function main() {
   const repairSubmission = randomUUID(); await server.stageCmsMedia(owner, repairSubmission, image, "image/png", "product.png");
   const repaired = await server.commitCmsMedia(owner, repairSubmission, 5, [{ id: staged.id, alt }]);
   assert.equal(repaired.state.revision, 5); assert.ok(await server.readCmsMedia(path.basename(uploaded.media.src)), "Identical upload repairs a missing private image without duplicating its record");
-  assert.ok(await server.readCmsMedia(path.basename(uploaded.media.src))); assert.equal(await server.readCmsMedia("../../session-secret"), null);
+  assert.equal((await server.readCmsMedia(path.basename(uploaded.media.src))).published, false, "Saved draft images are not indexable publications"); assert.equal(await server.readCmsMedia("../../session-secret"), null);
   const withImage = clone(uploaded.state.draft); withImage.products[0].image = uploaded.media.src;
   state = await server.updateCmsContent(5, withImage, "publish");
+  assert.equal((await server.readCmsMedia(path.basename(uploaded.media.src))).published, true, "Images referenced by a published product are indexable");
   await assert.rejects(server.deleteCmsMedia(6, uploaded.media.id), (error) => error.code === "MEDIA_REFERENCED");
   withImage.products[0].image = "/images/honey-product.png"; state = await server.updateCmsContent(6, withImage, "save");
   await assert.rejects(server.deleteCmsMedia(7, uploaded.media.id), (error) => error.code === "MEDIA_REFERENCED");
-  state = await server.updateCmsContent(7, withImage, "publish"); state = await server.deleteCmsMedia(8, uploaded.media.id);
+  state = await server.updateCmsContent(7, withImage, "publish");
+  assert.equal((await server.readCmsMedia(path.basename(uploaded.media.src))).published, false, "An unreferenced library image is not a public publication");
+  state = await server.deleteCmsMedia(8, uploaded.media.id);
   assert.equal(state.draft.media.length, 0); assert.equal(state.published.media.length, 0); assert.equal(await server.readCmsMedia(path.basename(uploaded.media.src)), null);
   const firstMediaTrash = state.trash.find((entry) => entry.kind === "media" && entry.item.id === uploaded.media.id);
   assert.ok(firstMediaTrash); assert.equal(Date.parse(firstMediaTrash.expiresAt) - Date.parse(firstMediaTrash.deletedAt), validation.CMS_TRASH_TTL_MS);

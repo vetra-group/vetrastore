@@ -74,7 +74,11 @@ export async function launchBrowser(output, { preferences, windowSize } = {}) {
       // A newly opened drawer is visible before it reaches its final position.
       // Let finite ancestor motion finish before aiming a real pointer click.
       await wait(`(() => { for(let e=${expression}; e; e=e.parentElement) if(e.getAnimations().some(a=>a.playState==='running' && a.effect?.getTiming().iterations!==Infinity)) return false; return true; })()`);
-      const box = await evaluate(`(() => { const e=${expression}; e.scrollIntoView({block:'center',behavior:'instant'}); const r=e.getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`);
+      await evaluate(`(${expression}).scrollIntoView({block:'center',behavior:'instant'})`);
+      // Scrolling can trigger layout and scroll anchoring after this command.
+      // Aim only once the box is stable and the pointer really hits the target.
+      await wait(`(async () => { const e=${expression}; if(!e || e.disabled) return false; const first=e.getBoundingClientRect(); await new Promise(resolve=>requestAnimationFrame(()=>requestAnimationFrame(resolve))); const r=e.getBoundingClientRect(); if(!r.width || !r.height || Math.abs(first.x-r.x)>0.5 || Math.abs(first.y-r.y)>0.5 || Math.abs(first.width-r.width)>0.5 || Math.abs(first.height-r.height)>0.5) return false; const hit=document.elementFromPoint(r.x+r.width/2,r.y+r.height/2); return hit===e || e.contains(hit); })()`);
+      const box = await evaluate(`(() => { const r=(${expression}).getBoundingClientRect(); return {x:r.x+r.width/2,y:r.y+r.height/2}; })()`);
       await command("Input.dispatchMouseEvent", { type: "mousePressed", button: "left", clickCount: 1, ...box });
       await command("Input.dispatchMouseEvent", { type: "mouseReleased", button: "left", clickCount: 1, ...box });
     };

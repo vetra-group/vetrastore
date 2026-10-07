@@ -1,4 +1,5 @@
 .carousel {
+  position: relative;
   width: 100%;
   container-type: inline-size;
 }
@@ -62,6 +63,20 @@
   width: 100%;
   height: 100%;
   padding-inline: var(--page-gutter);
+  padding-inline-start: calc(var(--page-gutter) + var(--slider-control-size));
+}
+
+.rotation {
+  position: absolute;
+  z-index: 2;
+  inset-block-end: 0;
+  inset-inline-start: var(--page-gutter);
+  background: var(--navy-dark);
+}
+
+.rotation:disabled {
+  opacity: 0.65;
+  cursor: default;
 }
 
 .indicators {
@@ -133,6 +148,11 @@
 .arrow svg {
   width: 1.875rem;
   height: 1.875rem;
+}
+
+.rotation svg {
+  width: var(--icon-size);
+  height: var(--icon-size);
 }
 
 .arrow:focus-visible,

@@ -1,8 +1,8 @@
 import type { Metadata } from "next";
 import { languageConfig, locales, localizedPath, type Locale } from "./i18n";
-export const siteUrl =
-  process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000";
-export const preventIndexing = process.env.NEXT_PUBLIC_DEMO_MODE === "true" || process.env.SITE_NOINDEX === "true" || /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?(?:\/|$)/.test(siteUrl);
+import { honey } from "./catalog";
+import { preventIndexing } from "./site-origin";
+export { siteUrl, preventIndexing } from "./site-origin";
 export function pageMetadata(
   locale: Locale,
   path: string,
@@ -25,10 +25,26 @@ export function pageMetadata(
     openGraph: {
       title: `${title} | ${storeName}`,
       description,
+      siteName: storeName,
       url: localizedPath(locale, path),
       locale: languageConfig.locales.find((l) => l.code === locale)?.region,
+      alternateLocale: availableLocales.filter((language) => language !== locale).map((language) => languageConfig.locales.find((entry) => entry.code === language)!.region),
       type: "website",
-      images: [{ url: "/images/hero-eshan-1.webp", width: 2172, height: 724 }],
+      images: [{ url: honey.image, width: 1100, height: 1000, alt: honey.card[locale].imageAlt }],
     },
+    twitter: {
+      card: "summary_large_image", title: `${title} | ${storeName}`, description,
+      images: [{ url: honey.image, alt: honey.card[locale].imageAlt }],
+    },
+  };
+}
+
+/** Keep social networks on the same page-specific image when a route overrides
+ * the shared fallback. The public metadata helper's existing API is unchanged. */
+export function withSocialImage(metadata: Metadata, url: string, alt: string): Metadata {
+  return {
+    ...metadata,
+    openGraph: { ...metadata.openGraph, images: [{ url, alt }] },
+    twitter: { ...metadata.twitter, card: "summary_large_image", images: [{ url, alt }] },
   };
 }

@@ -48,7 +48,7 @@ type HoneyStory = {
   faqEyebrow: string;
   faqTitle: string;
   faqIntro: string;
-  faqs: Record<"storage" | "delivery", { question: string; answer: string }>;
+  faqs: Record<"meaning" | "ingredients" | "storage" | "batch" | "international" | "delivery", { question: string; answer: string }>;
   footerLine: string;
   backToStore: string;
   backToTop: string;
@@ -106,9 +106,13 @@ export const honeyStory: Localized<HoneyStory> = {
     },
     faqEyebrow: "معلومات إضافية",
     faqTitle: "الأسئلة الشائعة",
-    faqIntro: "الحفظ والطلب.",
+    faqIntro: "المكوّنات والمنشأ والحفظ وما ينبغي تأكيده قبل الطلب.",
     faqs: {
+      meaning: { question: "ما المقصود بعسل أزهار القهوة؟", answer: "يشير اسم «أزهار القهوة» إلى المصدر الزهري للعسل، ولا يعني إضافة القهوة إليه. يذكر ملصق ESHAN المقدَّم أن العسل يُجمع من أزهار القهوة في شمال تايلاند." },
+      ingredients: { question: "ما المكوّنات والوزن المذكوران على الملصق؟", answer: "يذكر ملصق العيّنة المقدَّمة عسل أزهار القهوة بنسبة 100%، تحت العلامة التجارية ESHAN، بوزن صافٍ قدره 380 غرامًا. والمنشأ المعلن هو شمال تايلاند. راجع صور الملصق وتعليمات العبوة التي تستلمها." },
       storage: { question: "كيف أحفظ العسل؟", answer: "احفظه في درجة حرارة الغرفة، وتحقّق من تاريخ «يُفضّل استهلاكه قبل» على العبوة التي تستلمها." },
+      batch: { question: "هل تؤكد صور الملصق تشغيلة طلبي أو الشهادة الحالية؟", answer: "تعرض الصور عيّنة مقدَّمة من المنتج. لا تؤكد التواريخ وأرقام التشغيلات والعلامات على هذه العيّنة تشغيلة المنتج الذي ستستلمه أو سريان الشهادة الحالية. اطلب من فريقنا تأكيد تفاصيل المخزون ووثائق الشهادات الحالية قبل الطلب." },
+      international: { question: "كيف أستفسر عن التوصيل خارج تايلاند؟", answer: "أرسل بلد الوجهة والمدينة والرمز البريدي إن كان لعنوانك رمز. يجب أن يؤكد فريقنا إمكانية التوصيل ورسومه ومواعيده قبل متابعة الطلب." },
       delivery: { question: "كيف أطلب أو أستفسر عن الشراء بالجملة؟", answer: "أضف العسل إلى سلتك أو تواصل مع VETRA STORE. سيؤكد فريقنا توافر المنتج وتفاصيل الشحن والدفع قبل متابعة الطلب. إضافة المنتج إلى السلة لا تُعدّ طلب شراء أو عملية دفع." },
     },
     footerLine: "عسل أزهار القهوة من شمال تايلاند.",
@@ -166,9 +170,13 @@ export const honeyStory: Localized<HoneyStory> = {
     },
     faqEyebrow: "ข้อมูลเพิ่มเติม",
     faqTitle: "คำถามที่พบบ่อย",
-    faqIntro: "การเก็บรักษา และการสั่งซื้อ",
+    faqIntro: "ส่วนประกอบ แหล่งที่มา การเก็บรักษา และข้อมูลที่ควรยืนยันก่อนสั่งซื้อ",
     faqs: {
+      meaning: { question: "น้ำผึ้งดอกกาแฟคืออะไร?", answer: "ชื่อดอกกาแฟหมายถึงแหล่งดอกไม้ที่มาของน้ำผึ้ง ไม่ได้หมายความว่ามีการเติมกาแฟลงไป ฉลาก ESHAN ที่ได้รับมาระบุว่าเป็นน้ำผึ้งจากดอกกาแฟในภาคเหนือของประเทศไทย" },
+      ingredients: { question: "ฉลากระบุส่วนประกอบและน้ำหนักอย่างไร?", answer: "ฉลากสินค้าตัวอย่างที่ได้รับมาระบุส่วนประกอบเป็นน้ำผึ้งดอกกาแฟ 100% ตรา ESHAN น้ำหนักสุทธิ 380 กรัม และแหล่งที่มาจากภาคเหนือของไทย ดูภาพฉลากประกอบ และตรวจสอบข้อมูลบนกระปุกที่ได้รับ" },
       storage: { question: "ควรเก็บรักษาอย่างไร?", answer: "เก็บที่อุณหภูมิห้อง และตรวจสอบวันควรบริโภคก่อนบนกระปุกที่ได้รับ" },
+      batch: { question: "ภาพฉลากยืนยันล็อตที่จะได้รับหรือใบรับรองปัจจุบันหรือไม่?", answer: "ภาพแสดงสินค้าตัวอย่างที่ได้รับมา วันที่ เลขล็อต และเครื่องหมายบนตัวอย่างไม่ได้ยืนยันล็อตที่จะส่งให้คุณหรือสถานะใบรับรองปัจจุบัน กรุณาขอให้ทีมงานยืนยันข้อมูลสินค้าที่พร้อมจำหน่ายและเอกสารรับรองปัจจุบันก่อนสั่งซื้อ" },
+      international: { question: "สอบถามการจัดส่งนอกประเทศไทยได้อย่างไร?", answer: "แจ้งประเทศปลายทาง เมือง และรหัสไปรษณีย์หากมี ทีมงานต้องยืนยันว่าจัดส่งได้หรือไม่ พร้อมค่าจัดส่งและระยะเวลาก่อนดำเนินการสั่งซื้อ" },
       delivery: { question: "สั่งซื้อหรือสอบถามขายส่งอย่างไร?", answer: "เพิ่มสินค้าลงตะกร้า หรือติดต่อ VETRA STORE จัดส่งฟรีในประเทศไทย ทีมงานจะยืนยันสินค้า พื้นที่จัดส่ง และการชำระเงินก่อนดำเนินการ การเพิ่มลงตะกร้ายังไม่ใช่การสั่งซื้อหรือชำระเงิน" },
     },
     footerLine: "น้ำผึ้งดอกกาแฟ จากภาคเหนือของไทย",
@@ -226,9 +234,13 @@ export const honeyStory: Localized<HoneyStory> = {
     },
     faqEyebrow: "More information",
     faqTitle: "Frequently asked questions",
-    faqIntro: "Storage and ordering.",
+    faqIntro: "Ingredients, origin, storage and what to confirm before ordering.",
     faqs: {
+      meaning: { question: "What is coffee blossom honey?", answer: "Coffee blossom describes the honey’s floral source; it does not mean coffee has been added. The supplied ESHAN label states that the honey is harvested from coffee blossoms in northern Thailand." },
+      ingredients: { question: "What ingredients and weight does the label list?", answer: "The supplied sample label lists 100% coffee blossom honey, the ESHAN brand and a net weight of 380 g. Its stated origin is northern Thailand. Review the label photographs and check the information on the jar you receive." },
       storage: { question: "How should I store it?", answer: "Store at room temperature and check the best-before date on your jar." },
+      batch: { question: "Do label photos confirm my batch or current certification?", answer: "The photographs show a supplied sample. Dates, lot numbers and marks on that sample do not confirm the batch you will receive or current certification. Ask our team to confirm current stock details and certification documents before ordering." },
+      international: { question: "How do I enquire about delivery outside Thailand?", answer: "Share the destination country and city, with a postal code if your address has one. Our team must confirm whether delivery is available, its charges and timing before an order proceeds." },
       delivery: { question: "How do I order or enquire about wholesale?", answer: "Add honey to your bag or contact VETRA STORE. Our team will confirm availability, shipping and payment before proceeding. Adding to the bag does not place or pay for an order." },
     },
     footerLine: "Coffee blossom honey from northern Thailand.",

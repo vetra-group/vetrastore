@@ -52,6 +52,12 @@ export default async function HoneyExperience({ locale, overrideContent, preview
   return (
     <div className={styles.experience} id="top">
       <main id="main-content">
+        <nav className={styles.breadcrumbs} aria-label={t.breadcrumb}>
+          <ol><li><Link href={href("")}>{t.home}</Link></li>
+            <li><ChevronRight size="1rem" aria-hidden="true" /><Link href={href("/products")}>{t.products}</Link></li>
+            <li><ChevronRight size="1rem" aria-hidden="true" /><span aria-current="page">{honey.name[locale]}</span></li>
+          </ol>
+        </nav>
         <section className={styles.hero} aria-labelledby="honey-title">
           <div className={styles.heroCopy}>
             <p className={styles.eyebrow}>{c.eyebrow}</p>

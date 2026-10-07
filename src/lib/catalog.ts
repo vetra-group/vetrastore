@@ -144,7 +144,7 @@ export function formatPrice(value: number, locale: Locale, currency: Currency = 
   return new Intl.NumberFormat(locale, {
     style: "currency",
     currency,
-    currencyDisplay: locale === "ar" && currency === "USD" ? "code" : "narrowSymbol",
+    currencyDisplay: currency === "USD" ? "code" : "narrowSymbol",
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(value);

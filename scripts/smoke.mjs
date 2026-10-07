@@ -220,9 +220,12 @@ for (const locale of locales) {
       assert.equal(product.brand.name, "ESHAN");
       assert.equal(product.weight.value, 380);
       assert.equal(product.weight.unitCode, "GRM");
-      assert.equal(product.offers.price, locale === "th" ? 380 : 54.29);
-      assert.equal(product.offers.priceCurrency, locale === "th" ? "THB" : "USD");
-      assert.equal(new URL(product.offers.url).pathname, expectedPath);
+      if (product.offers) {
+        assert.equal(locale, "th", `${url}: reference USD prices must not advertise international purchase offers`);
+        assert.equal(product.offers.price, 380);
+        assert.equal(product.offers.priceCurrency, "THB");
+        assert.equal(new URL(product.offers.url).pathname, expectedPath);
+      }
       assert.ok(html.includes(product.name), `${url}: visible localized product name`);
     }
     if (["", "/products"].includes(path)) {
@@ -360,7 +363,11 @@ for (const locale of locales) {
 }
 const robots = await (await fetch(`${base}/robots.txt`)).text();
 if (indexingBlocked) assert.match(robots, /Disallow: \/\s/);
-else for (const locale of locales) assert.ok(robots.includes(`Disallow: ${localizedPath(locale, "/staff")}`));
+else {
+  assert.match(robots, /Allow: \/api\/cms-media\//);
+  assert.match(robots, /Disallow: \/api\//);
+  for (const locale of locales) assert.ok(!robots.includes(`Disallow: ${localizedPath(locale, "/cart")}`), "Crawlers can read page noindex directives");
+}
 console.log(
   `PASS: ${checked} localized routes (${articlePaths.length} published articles per locale), metadata, headings, shared navigation, honey/blog schemas, discovery, missing routes, permanent legacy redirects with queries and trailing slashes, sitemap, robots, CMS entry routes, and ${demoMode ? "demo" : "disabled"} staff routes.`,
 );

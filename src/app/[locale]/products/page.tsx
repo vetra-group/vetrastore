@@ -10,18 +10,21 @@ type Props = {
   params: Promise<{ locale: string }>;
   searchParams: Promise<{ search?: string; q?: string; category?: string }>;
 };
-export async function generateMetadata({ params }: Props) {
+export async function generateMetadata({ params, searchParams }: Props) {
   const { locale } = await params;
   if (!isLocale(locale)) return {};
   const content = await getPublishedContent();
   const c = applyCopy(siteCopy[locale], `site.${locale}`, content.copy);
   const t = applyCopy(commerce[locale], `commerce.${locale}`, content.copy);
-  return pageMetadata(
+  const metadata = pageMetadata(
     locale,
     "/products",
     c.collectionTitle,
     t.collectionIntro, content.settings.storeName,
   );
+  const query = await searchParams;
+  const filtered = [query.search, query.q].some((value) => typeof value === "string" && value.trim()) || (typeof query.category === "string" && !!query.category.trim() && query.category !== "all");
+  return { ...metadata, ...(filtered && !metadata.robots ? { robots: { index: false, follow: true } } : {}) };
 }
 export default async function ProductsPage({ params, searchParams }: Props) {
   const { locale } = await params;

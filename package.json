@@ -32,6 +32,7 @@
     "audit:serve": "node scripts/serve-audit.mjs",
     "check:launch": "node scripts/check-launch.mjs",
     "test:smoke": "node scripts/smoke.mjs",
+    "test:seo": "node scripts/check-structured-data.mjs && node scripts/check-seo.mjs",
     "media:check": "node scripts/cloudinary-media.mjs",
     "test:forms": "node scripts/check-customer-forms.mjs",
     "test:storefront": "node scripts/check-cms-live.mjs --storefront-only"

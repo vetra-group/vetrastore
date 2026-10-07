@@ -5,11 +5,19 @@ const config: NextConfig = {
   agentRules: false,
   outputFileTracingExcludes: { "*": ["./.local/**/*", "./output/**/*"] },
   async headers() {
-    return ["/cms/:path*", ...locales.map((locale) => `/${locale}/cms/:path*`)].map((source) => ({ source, headers: [
+    return [...["/cms/:path*", ...locales.map((locale) => `/${locale}/cms/:path*`)].map((source) => ({ source, headers: [
       { key: "Cache-Control", value: "private, no-store" },
       { key: "X-Robots-Tag", value: "noindex, nofollow" },
       { key: "Referrer-Policy", value: "no-referrer" },
-    ] }));
+    ] })), {
+      source: "/_next/image",
+      has: [{ type: "query" as const, key: "url", value: "/api/cms-media/.+" }],
+      // The optimizer drops upstream robots headers and caches bytes for at
+      // least four hours. Keep all CMS variants out of image indexes; published
+      // originals have their own current publication-based indexing response.
+      // This is not authorization: saved draft originals were already public.
+      headers: [{ key: "X-Robots-Tag", value: "noindex, nofollow" }],
+    }];
   },
   async rewrites() {
     const cloud = process.env.CLOUDINARY_CLOUD_NAME;

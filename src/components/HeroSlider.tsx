@@ -2,7 +2,8 @@
 
 import Image from "next/image";
 import Link from "next/link";
-import { useEffect, useMemo, useReducer, useRef, useState, type KeyboardEvent } from "react";
+import { Pause, Play } from "lucide-react";
+import { useEffect, useMemo, useReducer, useRef, useState, useSyncExternalStore, type KeyboardEvent } from "react";
 import Icon from "./Icon";
 import { initialState, nextAvailable, sliderReducer } from "@/lib/gallery-state";
 import { decodeGalleryImage } from "@/lib/gallery-swipe";
@@ -37,22 +38,37 @@ function formatLabel(template: string, number: number, total: number) {
     .replace("{total}", String(total));
 }
 
+function subscribeReducedMotion(onChange: () => void) {
+  const preference = window.matchMedia("(prefers-reduced-motion: reduce)");
+  preference.addEventListener("change", onChange);
+  return () => preference.removeEventListener("change", onChange);
+}
+const reducedMotionSnapshot = () => window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+const serverMotionSnapshot = () => false;
+
 export default function HeroSlider({ locale, slides, labels }: HeroSliderProps) {
   return <Slider key={JSON.stringify(slides.map(({ id, src }) => [id, src]))} locale={locale} slides={slides} labels={labels} />;
 }
 
 function Slider({ locale, slides, labels }: HeroSliderProps) {
-  const roleLabels = { en: { carousel: "carousel", slide: "slide" }, ar: { carousel: "عرض شرائح", slide: "شريحة" }, th: { carousel: "ภาพสไลด์", slide: "สไลด์" } }[locale];
+  const roleLabels = {
+    en: { carousel: "carousel", slide: "slide", pause: "Pause slide rotation", play: "Start slide rotation", reducedMotion: "Automatic slide rotation is disabled by your reduced motion preference" },
+    ar: { carousel: "عرض شرائح", slide: "شريحة", pause: "إيقاف التدوير التلقائي للشرائح", play: "بدء التدوير التلقائي للشرائح", reducedMotion: "تم تعطيل التدوير التلقائي للشرائح وفقًا لتفضيلك لتقليل الحركة" },
+    th: { carousel: "ภาพสไลด์", slide: "สไลด์", pause: "หยุดเปลี่ยนสไลด์อัตโนมัติ", play: "เริ่มเปลี่ยนสไลด์อัตโนมัติ", reducedMotion: "ปิดการเปลี่ยนสไลด์อัตโนมัติตามการตั้งค่าลดการเคลื่อนไหวของคุณ" },
+  }[locale];
   const [state, dispatch] = useReducer(sliderReducer, initialState);
   const [isHovered, setIsHovered] = useState(false);
-  const [isFocused, setIsFocused] = useState(false);
+  const [rotationPaused, setRotationPaused] = useState(false);
+  const reducedMotion = useSyncExternalStore(subscribeReducedMotion, reducedMotionSnapshot, serverMotionSnapshot);
   const [indicatorLimit, setIndicatorLimit] = useState(slides.length);
   const navigationRef = useRef<HTMLDivElement | null>(null);
   const indicatorRefs = useRef<(HTMLButtonElement | null)[]>([]);
   const imageRefs = useRef<(HTMLImageElement | null)[]>([]);
+  const pointerRotationRequest = useRef<boolean | null>(null);
   const focusIndicatorAfterNavigation = useRef(false);
   const total = slides.length;
-  const playbackPaused = isHovered || isFocused;
+  const rotationStopped = rotationPaused || reducedMotion;
+  const playbackPaused = isHovered || rotationStopped;
   const next = nextAvailable(state.active, 1, total, state.failed);
   const previous = nextAvailable(state.active, -1, total, state.failed);
   const currentReady = state.loaded.has(state.active);
@@ -162,6 +178,7 @@ function Slider({ locale, slides, labels }: HeroSliderProps) {
   }, [state.active, state.pending]);
 
   function select(index: number) {
+    setRotationPaused(true);
     dispatch({
       type: "request",
       index,
@@ -217,18 +234,32 @@ function Slider({ locale, slides, labels }: HeroSliderProps) {
       onPointerDown={(event) => {
         if (event.pointerType === "touch") {
           setIsHovered(false);
-          setIsFocused(false);
         }
       }}
-      onFocusCapture={(event) => {
-        setIsFocused((event.target as HTMLElement).matches(":focus-visible"));
-      }}
-      onBlurCapture={(event) => {
-        if (!event.currentTarget.contains(event.relatedTarget as Node | null)) {
-          setIsFocused(false);
-        }
-      }}
+      onFocusCapture={() => setRotationPaused(true)}
     >
+      {total > 1 && (
+        <button
+          className={`${styles.arrow} ${styles.rotation}`}
+          type="button"
+          data-carousel-rotation
+          data-rotation={rotationStopped ? "paused" : "playing"}
+          aria-label={reducedMotion ? roleLabels.reducedMotion : rotationStopped ? roleLabels.play : roleLabels.pause}
+          disabled={reducedMotion}
+          onPointerDown={() => {
+            // Focusing the button pauses rotation. Preserve the action the
+            // pointer requested before focus so a Pause click cannot restart it.
+            pointerRotationRequest.current = !rotationStopped;
+          }}
+          onPointerCancel={() => { pointerRotationRequest.current = null; }}
+          onClick={(event) => {
+            setRotationPaused(event.detail > 0 && pointerRotationRequest.current !== null ? pointerRotationRequest.current : !rotationStopped);
+            pointerRotationRequest.current = null;
+          }}
+        >
+          {rotationStopped ? <Play size="1.375rem" strokeWidth={1.5} aria-hidden="true" /> : <Pause size="1.375rem" strokeWidth={1.5} aria-hidden="true" />}
+        </button>
+      )}
       <div className={styles.slider} {...swipe} aria-busy={state.pending !== null}>
         {slides.map((slide, index) => preparedImages.has(index) && (
           <div

@@ -8,6 +8,7 @@ import type {
 } from "./site-structure";
 type SiteCopy = {
   homeTitle: string;
+  homeDescription: string;
   mainNav: string;
   mobileNav: string;
   heroSlideAlts: Record<HeroSlideKey, string>;
@@ -49,7 +50,8 @@ type SiteCopy = {
 };
 export const siteCopy: Localized<SiteCopy> = {
   ar: {
-    homeTitle: "منتجات عالية الجودة. قيمة استثنائية.",
+    homeTitle: "منتجات واستفسارات للجملة والتجزئة",
+    homeDescription: "استفسر عن الشراء بالتجزئة أو بالجملة. يؤكد فريقنا التوافر وترتيبات التوصيل.",
     mainNav: "التنقل الرئيسي",
     mobileNav: "قائمة التنقل على الهاتف",
     heroSlideAlts: {
@@ -107,7 +109,7 @@ export const siteCopy: Localized<SiteCopy> = {
     heroSecondary: "من نحن",
     trust: {
       productKnowledge: { title: "نعرف منتجاتنا جيدًا", body: "ندرس تفاصيل كل منتج بعناية." },
-      wholesaleRetail: { title: "للجملة والتجزئة", body: "كميات كبيرة في المخزون، جاهزة للشحن." },
+      wholesaleRetail: { title: "للجملة والتجزئة", body: "استفسر عن الكميات المناسبة لك أو لنشاطك التجاري." },
       consultation: { title: "نسعد بمساعدتك", body: "اهتمام ومشورة قبل كل عملية شراء وبعدها." },
     },
     collectionEyebrow: "منتجات VETRA",
@@ -117,7 +119,7 @@ export const siteCopy: Localized<SiteCopy> = {
         title: "عسل أزهار القهوة من ESHAN",
         sub: "عسل من أزهار القهوة في شمال تايلاند.",
         description: "عسل أزهار القهوة بلونه الكهرماني وحلاوته اللطيفة ونكهته المميزة. استمتع به بمفرده، أو أضف لمسته العطرية إلى أطعمتك ومشروباتك.",
-        details: ["عسل أزهار القهوة 100%", "من شمال تايلاند", "حلال"],
+        details: ["عسل أزهار القهوة 100%", "من شمال تايلاند", "علامة حلال على ملصق العيّنة؛ تحقّق من الشهادة الحالية"],
         tag: "عرض التفاصيل",
       },
       coffee: {
@@ -139,7 +141,8 @@ export const siteCopy: Localized<SiteCopy> = {
     },
   },
   en: {
-    homeTitle: "Quality Products. Outstanding Value.",
+    homeTitle: "Products & retail or wholesale enquiries",
+    homeDescription: "Retail and wholesale enquiries. Confirm availability and delivery with our team.",
     mainNav: "Main navigation",
     mobileNav: "Mobile navigation",
     heroSlideAlts: {
@@ -203,7 +206,7 @@ export const siteCopy: Localized<SiteCopy> = {
       },
       wholesaleRetail: {
         title: "Wholesale & Retail",
-        body: "Large quantities in stock and ready to ship.",
+        body: "Ask about quantities for yourself or your business.",
       },
       consultation: {
         title: "Here to Advise",
@@ -218,7 +221,7 @@ export const siteCopy: Localized<SiteCopy> = {
         sub: "Honey from coffee blossoms in northern Thailand.",
         description:
           "Amber-coloured coffee blossom honey with a gentle sweetness and distinctive flavour. Enjoy it on its own, or add a fragrant touch to food and drinks.",
-        details: ["100% coffee blossom honey", "From northern Thailand", "Halal حلال"],
+        details: ["100% coffee blossom honey", "From northern Thailand", "Sample label: halal mark; verify current certification"],
         tag: "View details",
       },
       coffee: {
@@ -242,7 +245,8 @@ export const siteCopy: Localized<SiteCopy> = {
     },
   },
   th: {
-    homeTitle: "สินค้าคุณภาพดี คุ้มค่ามากที่สุด",
+    homeTitle: "สินค้าและการสอบถามปลีกหรือขายส่ง",
+    homeDescription: "สอบถามสินค้าได้ทั้งปลีกและขายส่ง ทีมงานจะยืนยันสินค้าและรายละเอียดการจัดส่ง",
     mainNav: "เมนูหลัก",
     mobileNav: "เมนูมือถือ",
     heroSlideAlts: {
@@ -311,7 +315,7 @@ export const siteCopy: Localized<SiteCopy> = {
       },
       wholesaleRetail: {
         title: "รองรับขายส่ง และปลีก",
-        body: "มีสินค้าพร้อมจัดส่ง ในคลังจำนวนมาก",
+        body: "สอบถามจำนวนสำหรับใช้เองหรือธุรกิจของคุณ",
       },
       consultation: {
         title: "ยินดีให้คำปรึกษา",
@@ -326,7 +330,7 @@ export const siteCopy: Localized<SiteCopy> = {
         sub: "น้ำผึ้งจากดอกกาแฟทางภาคเหนือของไทย",
         description:
           "น้ำผึ้งดอกกาแฟ สีอำพัน รสหวานนุ่ม พร้อมกลิ่นรสเฉพาะตัว รับประทานโดยตรง หรือเติมความหอมหวานให้อาหารและเครื่องดื่ม",
-        details: ["น้ำผึ้งดอกกาแฟ 100%", "จากภาคเหนือของไทย", "Halal حلال"],
+        details: ["น้ำผึ้งดอกกาแฟ 100%", "จากภาคเหนือของไทย", "ฉลากตัวอย่างมีเครื่องหมายฮาลาล โปรดยืนยันใบรับรองปัจจุบัน"],
         tag: "ดูเพิ่มเติม",
       },
       coffee: {

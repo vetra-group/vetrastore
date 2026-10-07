@@ -16,6 +16,7 @@ import { publicContent } from "@/lib/cms/public-content";
 import { articleLocaleReady, productLocaleReady } from "@/lib/cms/localization";
 import { HONEY_ID } from "@/lib/catalog";
 import { checkoutPaymentOptions } from "@/lib/public-payment-availability";
+import { organizationSchema, serializeSchema, websiteSchema } from "@/lib/structured-data";
 import { bodyLatin, bodyThai, headingThai, bodyArabic, headingArabic } from "../fonts";
 import "../globals.css";
 export const dynamic = "force-dynamic";
@@ -49,6 +50,8 @@ export default async function LocaleLayout({
   return (
     <html lang={locale} dir={localeSettings(locale).direction} className={`${bodyLatin.variable} ${bodyThai.variable} ${headingThai.variable} ${bodyArabic.variable} ${headingArabic.variable}`} data-scroll-behavior="smooth" data-demo-mode={demoEnabled ? "true" : undefined}>
       <body>
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeSchema({ "@context": "https://schema.org", ...organizationSchema(storefront.settings, locale) }) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeSchema(websiteSchema(storefront.settings)) }} />
         <PublishedProvider content={storefront}><StoreProvider products={fullStorefront.products}>
           <DemoProvider enabled={demoEnabled}>
             <StoreShell

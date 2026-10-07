@@ -5,7 +5,7 @@ import { getLocalizedPublishedContent } from "@/lib/localized-content";
 import { isLocale, locales, localizedPath } from "@/lib/i18n";
 import { articleLocaleReady } from "@/lib/cms/localization";
 import { articleForRoute } from "@/lib/cms/publishing";
-import { pageMetadata } from "@/lib/metadata";
+import { pageMetadata, withSocialImage } from "@/lib/metadata";
 
 export async function generateMetadata({
   params,
@@ -19,12 +19,12 @@ export async function generateMetadata({
   if (!article) return {};
   const copy = article.content[locale];
   const metadata = pageMetadata(locale, `/blog/${article.slug}`, copy.seoTitle || copy.title, copy.seoDescription || copy.excerpt, content.settings.storeName, locales.filter((language) => articleLocaleReady(article, language)));
+  const socialMetadata = withSocialImage(metadata, copy.socialImage || article.image, copy.imageAlt || copy.title);
   return {
-    ...metadata,
+    ...socialMetadata,
     openGraph: {
-      ...metadata.openGraph,
+      ...socialMetadata.openGraph,
       type: "article",
-      images: [{ url: copy.socialImage || article.image, alt: copy.imageAlt || copy.title }],
       ...(article.publishedAt ? { publishedTime: article.publishedAt } : {}),
       ...(article.updatedAt ? { modifiedTime: article.updatedAt } : {}),
     },

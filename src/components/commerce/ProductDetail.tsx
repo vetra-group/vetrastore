@@ -39,7 +39,7 @@ export default function ProductDetail({ locale, product, preview = false, paymen
     <div className={styles.page}>
       <nav className={`container ${styles.breadcrumb}`} aria-label={t.breadcrumb}>
         <Link href={localizedPath(locale)}>{t.home}</Link><span>/</span>
-        <Link href={localizedPath(locale, "/products")}>{t.products}</Link><span>/</span><span>{product.name[locale]}</span>
+        <Link href={localizedPath(locale, "/products")}>{t.products}</Link><span aria-hidden="true">/</span><span aria-current="page">{product.name[locale]}</span>
       </nav>
       <section className={`container ${styles.product}`}>
         <div className={styles.gallery}>{product.gallery?.length ? <HoneyGallery productSrc={product.image} productAlt={product.card[locale].imageAlt} lifestyleAlt="" images={product.gallery.map((image) => ({ key: image.id, src: image.src, alt: image.alt[locale], label: image.caption?.[locale] || image.alt[locale], kind: "label" }))} labels={locale === "ar" ? galleryArabic : locale === "th" ? { gallery: "ภาพสินค้า", loading: "กำลังโหลดภาพ…", unavailable: "โหลดภาพนี้ไม่สำเร็จ", retry: "ลองอีกครั้ง", zoom: "ขยายภาพ", zoomIn: "ขยาย", zoomOut: "ย่อ", close: "ปิด", previous: "ภาพก่อนหน้า", next: "ภาพถัดไป", product: "สินค้า", front: "ด้านหน้า", back: "ด้านหลัง", lifestyle: "ไอเดียการใช้งาน" } : { gallery: "Product images", loading: "Loading image…", unavailable: "This image could not be loaded.", retry: "Try again", zoom: "View larger", zoomIn: "Zoom in", zoomOut: "Zoom out", close: "Close", previous: "Previous image", next: "Next image", product: "Product", front: "Front", back: "Back", lifestyle: "Inspiration" }} /> : <div className={styles.mainImage}>

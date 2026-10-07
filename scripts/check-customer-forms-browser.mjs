@@ -38,10 +38,17 @@ async function validation(kind, locale) {
   await browser.click(`${form} button[type="submit"]`);
   await browser.wait(`document.activeElement?.getAttribute('aria-label') === ${JSON.stringify(c.errors)}`);
   const invalid = await browser.evaluate(`Array.from(document.querySelectorAll(${JSON.stringify(`${form} [aria-invalid="true"]`)})).map(e=>({name:e.name,description:e.getAttribute('aria-describedby').split(' ').every(id=>Boolean(document.getElementById(id)?.textContent.trim()))}))`);
-  assert.ok(invalid.length >= (kind === "contact" ? 4 : 8));
+  assert.ok(invalid.length >= (kind === "contact" ? 4 : locale === "th" ? 8 : 7));
+  if (kind === "checkout") {
+    assert.equal(invalid.some((entry) => entry.name === "province"), locale === "th");
+    assert.equal(invalid.some((entry) => entry.name === "postcode"), locale === "th");
+    assert.equal(await browser.evaluate('document.querySelector("input[name=province]").required'), locale === "th");
+    assert.equal(await browser.evaluate('document.querySelector("input[name=postcode]").required'), locale === "th");
+  }
   assert.ok(invalid.every((entry) => entry.description));
   assert.equal(await readDraft(kind, locale), null, "Invalid input is not persisted without opt-in");
   await browser.click(`div[aria-label="${c.errors}"] button`);
+  await browser.wait("document.activeElement?.name === 'name'");
   assert.equal(await browser.evaluate("document.activeElement.name"), "name");
   pass(`${locale} ${kind}: inline errors are linked, summary receives focus, and its link focuses the field`);
 }
@@ -51,7 +58,7 @@ async function fillContact(locale) {
   await browser.fill('textarea[name="message"]', copy[locale].message);
 }
 async function fillCheckout(locale) {
-  for (const [name, value] of Object.entries({ name: copy[locale].name, email: `checkout-forms-${locale}@example.test`, phone: locale === "ar" ? "٠٨١٢٣٤٥٦٧٨" : "0812345678", address: "12 Example Road", district: "Example district", province: "Bangkok", postcode: locale === "ar" ? "١٠١١٠" : "10110", notes: "Fictional browser test. No delivery required." })) {
+  for (const [name, value] of Object.entries({ name: copy[locale].name, email: `checkout-forms-${locale}@example.test`, phone: locale === "ar" ? "٠٨١٢٣٤٥٦٧٨" : "0812345678", address: "12 Example Road", district: locale === "ar" ? "دبي" : "Example district", province: locale === "th" ? "Bangkok" : "", postcode: locale === "th" ? "10110" : locale === "ar" ? "" : "238880", ...(locale === "th" ? {} : { country: locale === "ar" ? "الإمارات العربية المتحدة" : "Singapore" }), notes: "Fictional browser test. No delivery required." })) {
     await browser.fill(`${form} [name="${name}"]`, value);
   }
 }
@@ -82,17 +89,20 @@ async function recovery(kind, locale) {
   await browser.clickText(c.restore);
   await browser.wait(`document.querySelector('input[name="name"]').value === ${JSON.stringify(c.name)}`);
   assert.equal(await browser.evaluate(`document.querySelector('input[name="consent"]').checked`), false);
-  if (kind === "checkout") assert.equal(await browser.evaluate(`document.querySelector('input[name="postcode"]').value`), "10110");
+  if (kind === "checkout") assert.equal(await browser.evaluate(`document.querySelector('input[name="postcode"]').value`), locale === "th" ? "10110" : locale === "ar" ? "" : "238880");
   else assert.equal(await browser.evaluate(`document.querySelector('textarea[name="message"]').value`), c.message);
   await layout(`${locale} ${kind} restored at 320px`);
   await screenshot(`forms-${kind}-${locale}-mobile-restored.png`);
   await browser.click(remember);
+  await browser.wait(`localStorage.getItem(${JSON.stringify(draftKey(kind, locale))}) === null`);
   assert.equal(await readDraft(kind, locale), null, "Opt-out deletes this form's saved details");
   assert.equal(await browser.evaluate(`document.querySelector('input[name="name"]').value`), c.name, "Opt-out preserves current input");
   pass(`${locale} ${kind}: recovery requires opt-in, survives reload, excludes consent/payment, and opt-out deletes only the saved copy`);
   await browser.click(remember);
+  await browser.wait(`Boolean(localStorage.getItem(${JSON.stringify(draftKey(kind, locale))}))`);
   await browser.command("Page.reload"); await ready();
   await browser.clickText(c.discard);
+  await browser.wait(`localStorage.getItem(${JSON.stringify(draftKey(kind, locale))}) === null`);
   assert.equal(await readDraft(kind, locale), null);
   assert.equal(await browser.evaluate(`document.querySelector('input[name="name"]').value`), "");
   pass(`${locale} ${kind}: saved details can be discarded without restoring them`);
@@ -143,13 +153,13 @@ try {
     await layout(`${locale} checkout details at 1440px`);
     await screenshot(`forms-checkout-${locale}-desktop.png`);
     if (locale === "ar") {
-      assert.equal(await browser.evaluate(`${JSON.stringify("10110")} === document.querySelector('input[name="postcode"]').value`), true);
+      assert.equal(await browser.evaluate("document.querySelector('input[name=postcode]').value"), "");
       await browser.click('input[name="consent"]'); await browser.click(remember);
       await browser.click(`${form} button[type="submit"]`);
       await browser.wait(`document.body.textContent.includes(${JSON.stringify(c.saved)})`);
       assert.equal(await readDraft("checkout", locale), null);
       assert.equal(await browser.evaluate("document.activeElement.tagName"), "H2");
-      pass("Arabic checkout with Arabic-Indic phone/postcode succeeds through the server and clears recovery");
+      pass("Arabic Dubai enquiry with an Arabic-Indic phone and no postcode succeeds through the server and clears recovery");
     }
   }
   assert.deepEqual(browser.errors, [], "No uncaught browser errors during customer form journeys");

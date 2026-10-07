@@ -26,7 +26,9 @@ const content = {
 };
 async function key(name) {
   const keyCode = { Escape: 27, Tab: 9, Enter: 13, ArrowLeft: 37, ArrowUp: 38, ArrowRight: 39, ArrowDown: 40, Home: 36, End: 35 }[name];
-  await browser.command("Input.dispatchKeyEvent", { type: "keyDown", key: name, code: name, windowsVirtualKeyCode: keyCode });
+  // Enter needs its carriage-return text for Chromium's native button
+  // activation, in addition to keydown handlers such as live search.
+  await browser.command("Input.dispatchKeyEvent", { type: "keyDown", key: name, code: name, windowsVirtualKeyCode: keyCode, ...(name === "Enter" ? { text: "\r", unmodifiedText: "\r" } : {}) });
   await browser.command("Input.dispatchKeyEvent", { type: "keyUp", key: name, code: name, windowsVirtualKeyCode: keyCode });
 }
 async function layout(label) {
@@ -44,6 +46,52 @@ async function readyGallery() {
   await browser.evaluate("document.fonts.ready.then(()=>true)");
 }
 async function assertClosed(id) { await browser.wait(`!${qs(`#${id}`)}?.open`); }
+async function checkCarousel(locale, prefix) {
+  const rotation = '[data-carousel-rotation]';
+  const currentSlide = 'document.querySelector("[aria-roledescription] [role=group][aria-hidden=false]")?.getAttribute("aria-label")';
+  await browser.goto(`${origin}${prefix || '/'}`);
+  await browser.wait(`document.querySelectorAll('[aria-roledescription] img').length >= 3 && Array.from(document.querySelectorAll('[aria-roledescription] img')).every(image => image.complete && image.naturalWidth > 0)`, 40000);
+  await browser.wait(`${qs(rotation)}?.dataset.rotation === 'playing'`);
+  assert.equal(await browser.evaluate(`${qs(rotation)}.parentElement.querySelector('button:not([disabled]),a[href]') === ${qs(rotation)}`), true, 'The rotation control is first in the carousel tab sequence.');
+  const pauseLabel = await browser.evaluate(`${qs(rotation)}.getAttribute('aria-label')`);
+  assert.match(pauseLabel, locale === 'ar' ? /[\u0600-\u06ff]/ : locale === 'th' ? /[\u0e00-\u0e7f]/ : /Pause/);
+
+  // A real pointer click focuses Pause before it clicks. That must stop
+  // rotation, rather than accidentally toggle straight back to Play.
+  await browser.click(rotation);
+  await browser.wait(`${qs(rotation)}.dataset.rotation === 'paused'`);
+  await browser.command('Input.dispatchMouseEvent', { type: 'mouseMoved', x: 0, y: 0 });
+  await browser.evaluate('document.querySelector("button[aria-controls=store-search]").focus()');
+  let stoppedSlide = await browser.evaluate(currentSlide);
+  await pause(3300);
+  assert.equal(await browser.evaluate(currentSlide), stoppedSlide, 'Pause remains effective after focus and pointer leave the carousel.');
+
+  await browser.evaluate(`${qs(rotation)}.focus()`);
+  await key('Enter');
+  await browser.wait(`${qs(rotation)}.dataset.rotation === 'playing'`);
+  await browser.wait(`${currentSlide} !== ${JSON.stringify(stoppedSlide)}`, 10000);
+  await browser.evaluate('document.querySelector("[role=group][aria-hidden=false] a").focus()');
+  await browser.wait(`${qs(rotation)}.dataset.rotation === 'paused'`);
+  await browser.evaluate('document.querySelector("button[aria-controls=store-search]").focus()');
+  stoppedSlide = await browser.evaluate(currentSlide);
+  await pause(3300);
+  assert.equal(await browser.evaluate(currentSlide), stoppedSlide, 'Any carousel focus pauses rotation until an explicit restart, including after focus leaves.');
+
+  await browser.evaluate(`${qs(rotation)}.focus()`);
+  await key('Enter');
+  await browser.wait(`${qs(rotation)}.dataset.rotation === 'playing'`);
+  await browser.command('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'reduce' }] });
+  try {
+    await browser.wait(`${qs(rotation)}.disabled && ${qs(rotation)}.dataset.rotation === 'paused'`);
+    stoppedSlide = await browser.evaluate(currentSlide);
+    await pause(3300);
+    assert.equal(await browser.evaluate(currentSlide), stoppedSlide, 'Reduced motion disables automatic rotation after an explicit restart.');
+    await layout(`${locale}: localized carousel rotation controls`);
+  } finally {
+    await browser.command('Emulation.setEmulatedMedia', { features: [{ name: 'prefers-reduced-motion', value: 'no-preference' }] });
+  }
+  pass(`${locale}: pointer Pause, persistent focus pause, keyboard restart and reduced-motion carousel controls`);
+}
 async function swipeImage(locale) {
   await browser.evaluate(`${qs(mainImage)}.scrollIntoView({block:'center',behavior:'instant'})`);
   const box = await browser.evaluate(`(() => { const r=${qs(mainImage)}.getBoundingClientRect(); return {left:r.left,width:r.width,y:Math.max(180,Math.min(innerHeight-120,r.top+r.width*.45))}; })()`);
@@ -62,6 +110,9 @@ async function swipeImage(locale) {
 try {
   await browser.command("Network.enable");
   for (const [locale, t] of Object.entries(content)) {
+    await browser.viewport(t.width, 960);
+    await checkCarousel(locale, t.prefix);
+    if (process.argv.includes('--carousel-only')) continue;
     if (locale === "ar") {
       for (const width of [390, 1440]) for (const route of ["", "/products"]) {
         await browser.viewport(width, 1000);
@@ -194,6 +245,7 @@ try {
     assert.equal(await browser.evaluate(`document.activeElement === ${qs(mainImage)}`), true);
     pass(`${locale}: image zoom contains keyboard focus and Escape restores focus to the image`);
   }
+  if (!process.argv.includes('--carousel-only')) {
   await browser.goto(`${origin}/products?category=honey&q=ESHAN#main-content`);
   for (const [locale, pathname] of [["ar", "/ar/products"], ["th", "/th/products"], ["en", "/products"]]) {
     await switchStoreLanguage(browser, locale, pathname);
@@ -202,6 +254,7 @@ try {
     await layout(`${locale}: language chooser and equivalent catalog page`);
   }
   pass("Language chooser orders English, Arabic, Thai and preserves the equivalent page, query and fragment");
+  }
   assert.deepEqual(browser.errors, [], "No uncaught browser exceptions");
   pass("no uncaught exceptions during the storefront journeys");
 } catch (error) {

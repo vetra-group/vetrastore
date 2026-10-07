@@ -153,6 +153,24 @@ try {
   assert.equal(foreignRecord.shippingQuote, undefined, "USD orders do not receive Thai delivery quotes");
   assert.deepEqual(await submitSharedDemo(foreignOrder, { ...deps, products: [] }), foreignSaved);
   await assert.rejects(submitSharedDemo({ ...foreignOrder, submissionId: key(), input: { ...foreignOrder.input, customer: { ...foreignCustomer, country: "" } } }, deps), (error) => error.status === 400);
+  for (const [locale, country, district] of [["ar", "United Arab Emirates", "Dubai"], ["ar", "Qatar", "Doha"], ["en", "Singapore", "Singapore"]]) {
+    const internationalCustomer = { ...customer, country, district, province: "", postcode: "" };
+    const internationalOrder = { ...foreignOrder, submissionId: key(), input: { ...foreignOrder.input, locale, customer: internationalCustomer } };
+    const internationalSaved = await submitSharedDemo(internationalOrder, deps);
+    const internationalRecord = await service.operationsDetail(internationalSaved.id, repository);
+    assert.equal(internationalRecord.customer.postcode, "");
+    assert.equal(internationalRecord.customer.province, "");
+    assert.equal(internationalRecord.shippingQuote, undefined);
+    const omitted = structuredClone(internationalOrder);
+    delete omitted.input.customer.province;
+    delete omitted.input.customer.postcode;
+    assert.deepEqual(await submitSharedDemo(omitted, deps), internationalSaved, "Empty and omitted optional fields preserve retry identity");
+    assert.ok((await submitSharedDemo({ ...omitted, submissionId: key() }, deps)).id, "New shared enquiries accept omitted international fields");
+    for (const change of [{ postcode: "--" }, { province: "x".repeat(101) }, { province: null }]) {
+      await assert.rejects(submitSharedDemo({ ...internationalOrder, submissionId: key(), input: { ...internationalOrder.input, customer: { ...internationalCustomer, ...change } } }, deps), (error) => error.status === 400);
+    }
+  }
+  for (const field of ["province", "postcode"]) await assert.rejects(submitSharedDemo({ ...publicOrder, submissionId: key(), input: { ...publicOrder.input, customer: { ...customer, [field]: "" } } }, deps), (error) => error.status === 400);
   pass("public test submissions require consent and valid data, reject payment claims and retain server prices across retries");
 
   const auth = load("src/lib/cms/auth.ts"), cmsApi = load("src/app/api/cms/operations/route.ts"), publicApi = load("src/app/api/demo/requests/route.ts");

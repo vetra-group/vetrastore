@@ -1,17 +1,13 @@
 import type { MetadataRoute } from "next";
-import { locales, localizedPath } from "@/lib/i18n";
 import { siteUrl, preventIndexing } from "@/lib/metadata";
 export default function robots(): MetadataRoute.Robots {
   return {
     rules: preventIndexing ? { userAgent: "*", disallow: "/" } : {
       userAgent: "*",
-      allow: "/",
-      disallow: [
-        "/api/",
-        ...["/cart", "/checkout", "/account", "/staff", "/cms"].flatMap((path) =>
-          locales.map((locale) => localizedPath(locale, path)),
-        ),
-      ],
+      // Public images must be crawlable; private APIs remain excluded. Page
+      // noindex directives require crawl access. Authentication protects CMS.
+      allow: ["/", "/api/cms-media/"],
+      disallow: ["/api/"],
     },
     sitemap: `${siteUrl}/sitemap.xml`,
   };

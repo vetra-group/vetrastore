@@ -10,6 +10,7 @@ import { getLocalizedPublishedContent } from "@/lib/localized-content";
 import { applyCopy } from "@/lib/cms/defaults";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import { siteUrl } from "@/lib/metadata";
+import { organizationSchema } from "@/lib/structured-data";
 import styles from "./BlogContent.module.css";
 
 export default async function BlogContent({ locale, searchParams = {} }: { locale: Locale; searchParams?: ListingSearchParams }) {
@@ -26,7 +27,7 @@ export default async function BlogContent({ locale, searchParams = {} }: { local
     "@context": "https://schema.org", "@type": "Blog",
     name: c.title, description: c.description, inLanguage: locale,
     url: new URL(localizedPath(locale, blogListingPath(listing.q, listing.category, listing.page)), siteUrl).href,
-    publisher: { "@type": "Organization", name: content.settings.storeName },
+    publisher: organizationSchema(content.settings, locale),
     blogPost: visibleCards.map((article) => ({ "@type": "BlogPosting", headline: article.title, url: new URL(localizedPath(locale, `/blog/${article.slug}`), siteUrl).href })),
   };
   return (

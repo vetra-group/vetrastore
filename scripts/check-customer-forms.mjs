@@ -37,12 +37,16 @@ check("Arabic validation preserves Thai delivery rules and accepts Arabic-Indic 
   assert.match(validate({}, rules, "ar").name, /[\u0600-\u06ff]/u);
   assert.equal(normalizeCustomerNumber("اسم@example.test"), "اسم@example.test", "Only digit characters change");
 });
-check("International postal codes and country are accepted without weakening Thai postcode validation", () => {
-  const foreign = { country: { label: "Country", required: true, max: 100 }, postcode: { label: "Postal code", required: true, max: 20, kind: "postal-code" } };
+check("International enquiries accept optional region and postal codes without weakening Thai requirements", () => {
+  const foreign = { country: { label: "Country", required: true, max: 100 }, province: { label: "Region", max: 100 }, postcode: { label: "Postal code", max: 20, kind: "postal-code" } };
   assert.deepEqual(validate({ country: "United Kingdom", postcode: "SW1A 1AA" }, foreign, "en"), {});
   assert.deepEqual(validate({ country: "Canada", postcode: "H0H 0H0" }, foreign, "en"), {});
   assert.deepEqual(validate({ country: "المملكة العربية السعودية", postcode: "١٢٣٤٥" }, foreign, "ar"), {});
+  assert.deepEqual(validate({ country: "الإمارات العربية المتحدة", province: "", postcode: "" }, foreign, "ar"), {});
+  assert.deepEqual(validate({ country: "Qatar" }, foreign, "en"), {});
   assert.deepEqual(Object.keys(validate({ country: "", postcode: "--" }, foreign, "en")), ["country", "postcode"]);
+  assert.equal(validate({ country: "Qatar", province: "x".repeat(101) }, foreign, "en").province, customerFormCopy.en.max(100));
+  assert.equal(validate({ phone: "+66 812345678", postcode: "" }, delivery, "th").postcode, customerFormCopy.th.required);
   assert.equal(validate({ phone: "+66 812345678", postcode: "SW1A 1AA" }, delivery, "th").postcode, customerFormCopy.th.postcode);
 });
 check("wholesale validates whole quantities, available products, and calendar dates", () => {

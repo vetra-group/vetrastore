@@ -24,7 +24,7 @@ export const storeDetails = {
     shipping: {
       title: "التوصيل",
       summary: "أرسل موقعك للاستفسار عن رسوم التوصيل",
-      description: "لم تُؤكَّد بعد رسوم التوصيل ومناطق الخدمة ومواعيد الوصول. أرسل اسم المحافظة والرمز البريدي للاستفسار عن التفاصيل قبل الطلب.",
+      description: "لم تُؤكَّد بعد رسوم التوصيل ومناطق الخدمة ومواعيد الوصول. أرسل بلد الوجهة والمدينة والرمز البريدي إن وُجد للاستفسار عن التفاصيل قبل الطلب.",
     },
     returns: {
       title: "مشكلات المنتج",
@@ -85,7 +85,7 @@ export const storeDetails = {
       title: "Delivery",
       summary: "Share your location for a delivery quote",
       description:
-        "Delivery charges, service areas, and delivery times are awaiting confirmation. Share your province and postal code to ask for details before ordering.",
+        "Delivery charges, service areas, and delivery times are awaiting confirmation. Share the destination country and city, with a postal code if applicable, to ask for details before ordering.",
     },
     returns: {
       title: "Product concerns",

@@ -9,6 +9,8 @@ const option = (name) => process.argv.find((value) => value.startsWith(`--${name
 const port = Number(option("port") || 3310);
 assert.ok(Number.isInteger(port) && port >= 1024 && port <= 65535, "Use a local test port between 1024 and 65535.");
 const origin = `http://127.0.0.1:${port}`, release = process.argv.includes("--release");
+const mediaOnly = process.argv.includes("--media-only");
+assert.ok(!mediaOnly || !["--release", "--storefront-only", "--forms-only", "--ui-only", "--backup-only"].some((flag) => process.argv.includes(flag)), "Choose --media-only separately from other test scopes.");
 const expectedSiteUrl = option("expected-site-url") || process.env.NEXT_PUBLIC_SITE_URL || origin;
 const output = path.join(root, "output");
 await mkdir(output, { recursive: true });
@@ -78,6 +80,8 @@ try {
     console.log("PASS: automated browser journeys completed against disposable CMS data.");
   } else if (process.argv.includes("--backup-only")) {
     await run("check-backup-cli-http.mjs");
+  } else if (mediaOnly) {
+    await run("check-cms-media-http.mjs");
   } else {
   if (release) {
     // Run public defaults before mutation tests create their disposable records.
@@ -110,7 +114,7 @@ try {
 } finally {
   const logDirectory = process.argv.includes("--storefront-only") || process.argv.includes("--forms-only") ? path.join(output, "qa", "storefront-polish") : process.argv.includes("--ui-only") ? path.join(output, "qa", "browser-regression") : path.join(output, "qa");
   await mkdir(logDirectory, { recursive: true });
-  await writeFile(path.join(logDirectory, process.argv.includes("--ui-only") ? "server.log" : process.argv.includes("--backup-only") ? "cms-backup-server.log" : "cms-release-server.log"), previousServerOutput + serverOutput);
+  await writeFile(path.join(logDirectory, process.argv.includes("--ui-only") ? "server.log" : process.argv.includes("--backup-only") ? "cms-backup-server.log" : mediaOnly ? "cms-media-server.log" : "cms-release-server.log"), previousServerOutput + serverOutput);
   await stopServer();
   if (exited) await rm(directory, { recursive: true, force: true });
   else console.warn(`Disposable test data retained because the owned preview did not exit: ${directory}`);

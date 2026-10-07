@@ -87,22 +87,24 @@ export async function POST(request: NextRequest) {
     ...(data.locale === "th" ? {} : { country: 100 }),
   };
   const customer: Record<string, string> = {};
+  const optionalFields = new Set(["notes", ...(data.locale === "th" ? [] : ["province", "postcode"])]);
   for (const [field, limit] of Object.entries(limits)) {
+    const value = input[field] === undefined && optionalFields.has(field) ? "" : input[field];
     if (
-      typeof input[field] !== "string" ||
-      input[field].length > limit ||
-      (field !== "notes" && !input[field].trim())
+      typeof value !== "string" ||
+      value.length > limit ||
+      (!optionalFields.has(field) && !value.trim())
     )
       return NextResponse.json(
         { error: "Please check your details." },
         { status: 400 },
       );
-    customer[field] = input[field].trim();
+    customer[field] = value.trim();
   }
   if (
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email) ||
     !/^[+()\d\s.-]{7,30}$/.test(customer.phone) ||
-    !(data.locale === "th" ? /^\d{5}$/.test(customer.postcode) : /^[\p{L}\p{N}][\p{L}\p{N} -]{1,18}[\p{L}\p{N}]$/u.test(customer.postcode))
+    !(data.locale === "th" ? /^\d{5}$/.test(customer.postcode) : !customer.postcode || /^[\p{L}\p{N}][\p{L}\p{N} -]{1,18}[\p{L}\p{N}]$/u.test(customer.postcode))
   )
     return NextResponse.json(
       { error: "Please check your contact details." },

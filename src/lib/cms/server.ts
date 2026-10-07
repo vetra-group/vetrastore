@@ -614,12 +614,13 @@ export async function restoreCmsTrashItem(revisionValue: unknown, idValue: unkno
     state.trash = state.trash.filter((item) => item.id !== idValue); activity(state, label); return persist(state);
   });
 }
-export async function readCmsMedia(filename: string): Promise<{ bytes: Uint8Array; mime: string } | null> {
+export async function readCmsMedia(filename: string): Promise<{ bytes: Uint8Array; mime: string; published: boolean } | null> {
   if (cmsMode() === "unavailable" || !/^[a-f0-9]{64}\.(jpg|png|webp|gif)$/.test(filename)) return null;
   const state = await getCmsState();
   const src = `/api/cms-media/${filename}`;
   if (![...state.draft.media, ...state.published.media].some((entry) => entry.src === src)) return null;
-  try { const bytes = await readFile(path.join(mediaDirectory(), filename)); const extension = path.extname(filename).slice(1); return { bytes, mime: ({ jpg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif" } as Record<string, string>)[extension] }; }
+  const published = publishedContentProjection(state.published).media.some((entry) => entry.src === src);
+  try { const bytes = await readFile(path.join(mediaDirectory(), filename)); const extension = path.extname(filename).slice(1); return { bytes, mime: ({ jpg: "image/jpeg", png: "image/png", webp: "image/webp", gif: "image/gif" } as Record<string, string>)[extension], published }; }
   catch (error) { if ((error as NodeJS.ErrnoException).code === "ENOENT") return null; throw error; }
 }
 export async function readTrashedCmsMedia(filename: string): Promise<{ bytes: Uint8Array; mime: string } | null> {

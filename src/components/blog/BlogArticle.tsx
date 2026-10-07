@@ -9,7 +9,7 @@ import { articleCard } from "@/lib/blog";
 import { getLocalizedPublishedContent } from "@/lib/localized-content";
 import { applyCopy } from "@/lib/cms/defaults";
 import { localizedPath, localizedContentHref, type Locale } from "@/lib/i18n";
-import { siteUrl } from "@/lib/metadata";
+import { absoluteUrl, breadcrumbSchema, organizationSchema, pageSchema, serializeSchema } from "@/lib/structured-data";
 import styles from "./BlogArticle.module.css";
 
 function Paragraphs({ text }: { text: string }) {
@@ -24,23 +24,24 @@ export default async function BlogArticle({ locale, article, overrideContent }: 
   const related = content.articles.filter((item) => item.status === "published" && item.slug !== article.slug)
     .sort((left, right) => Number(right.content[locale].category === a.category) - Number(left.content[locale].category === a.category))
     .slice(0, 3).map((item) => articleCard(item, locale, c.minutes));
-  const url = new URL(localizedPath(locale, `/blog/${article.slug}`), siteUrl).href;
-  const organization = { "@type": "Organization", name: content.settings.storeName, url: new URL(localizedPath(locale, "/about"), siteUrl).href };
+  const path = `/blog/${article.slug}`;
+  const url = absoluteUrl(localizedPath(locale, path));
+  const organization = organizationSchema(content.settings, locale);
   const schema = {
     "@context": "https://schema.org", "@type": "BlogPosting", headline: a.title,
-    description: a.excerpt, image: new URL(article.image, siteUrl).href,
+    "@id": `${absoluteUrl(path)}#article`,
+    description: a.excerpt, image: absoluteUrl(article.image),
     inLanguage: locale, mainEntityOfPage: url, url, author: a.author ? { "@type": "Person", name: a.author } : organization, publisher: organization,
     articleSection: a.category,
     ...(article.publishedAt ? { datePublished: article.publishedAt } : {}),
     ...(article.updatedAt ? { dateModified: article.updatedAt } : {}),
   };
-  const breadcrumbs = {
-    "@context": "https://schema.org", "@type": "BreadcrumbList",
-    itemListElement: [
-      { "@type": "ListItem", position: 1, name: c.home, item: new URL(localizedPath(locale), siteUrl).href },
-      { "@type": "ListItem", position: 2, name: c.blog, item: new URL(localizedPath(locale, "/blog"), siteUrl).href },
-      { "@type": "ListItem", position: 3, name: a.title, item: url },
-    ],
+  const breadcrumbs = breadcrumbSchema(locale, [
+    { name: c.home, path: "" }, { name: c.blog, path: "/blog" }, { name: a.title, path },
+  ]);
+  const webpage = {
+    ...pageSchema(locale, path, a.title), description: a.excerpt,
+    mainEntity: { "@id": schema["@id"] }, breadcrumb: { "@id": breadcrumbs["@id"] },
   };
   return (
     <div className={`container ${styles.page}`}>
@@ -97,7 +98,7 @@ export default async function BlogArticle({ locale, article, overrideContent }: 
         <div className={styles.relatedHeader}><div><p className="eyebrow">{c.count}</p><h2 id="related-heading">{c.related}</h2><p>{c.relatedIntro}</p></div><Link href={localizedPath(locale, "/blog")} className="textLink">{c.latest}<Icon name="chevron" size={18} /></Link></div>
         <div className={styles.relatedGrid}>{related.map((item) => <ArticleCard key={item.slug} article={item} locale={locale} read={c.read} />)}</div>
       </section>}
-      {!overrideContent && <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(schema).replace(/</g, "\\u003c") }} /><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs).replace(/</g, "\\u003c") }} /></>}
+      {!overrideContent && <><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeSchema(schema) }} /><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeSchema(breadcrumbs) }} /><script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeSchema(webpage) }} /></>}
     </div>
   );
 }

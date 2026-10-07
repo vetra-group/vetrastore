@@ -112,9 +112,14 @@ try {
   check(committedStatus.body.status === "committed" && committedStatus.body.state.revision === current.revision, "Status confirms a committed submission after an uncertain client response");
   const raw = await fetch(origin + first.src, { signal: AbortSignal.timeout(20_000) });
   check(raw.status === 200 && raw.headers.get("content-type") === fixtures[0].mime && raw.headers.get("x-content-type-options") === "nosniff", "Committed public media has its verified type and safe delivery headers");
+  check(raw.headers.get("x-robots-tag") === "noindex, nofollow", "Saved draft originals explicitly prevent image indexing");
+  check(/max-age=0.*must-revalidate/.test(raw.headers.get("cache-control")), "Original publication status is rechecked on subsequent requests");
   assert.equal(createHash("sha256").update(Buffer.from(await raw.arrayBuffer())).digest("hex"), first.id); checks++;
   const optimized = await fetch(`${origin}/_next/image?url=${encodeURIComponent(first.src)}&w=640&q=75`, { headers: { Accept: "image/webp" }, signal: AbortSignal.timeout(20_000) });
   check(optimized.status === 200 && optimized.headers.get("content-type")?.startsWith("image/") && (await optimized.arrayBuffer()).byteLength > 0, "Next image optimization serves committed uploaded media");
+  check(optimized.headers.get("x-robots-tag") === "noindex, nofollow", "Decoded CMS optimizer query receives noindex despite upstream header loss");
+  const bundled = await fetch(`${origin}/_next/image?url=${encodeURIComponent("/images/honey-product.png")}&w=640&q=75`, { headers: { Accept: "image/webp" }, signal: AbortSignal.timeout(20_000) });
+  check(bundled.status === 200 && (await bundled.arrayBuffer()).byteLength > 0 && !bundled.headers.has("x-robots-tag"), "CMS optimizer header does not block ordinary bundled product images");
   const duplicateId = randomUUID(); await stage(duplicateId, fixtures[0]);
   const abandonSaved = await request("/api/cms/media", json("PATCH", { submissionId: duplicateId }));
   check(abandonSaved.response.status === 200 && (await fetch(origin + first.src)).status === 200, "Abandoning a duplicate submission preserves previously saved media");
@@ -123,6 +128,8 @@ try {
   let deletion = await request("/api/cms/media", json("DELETE", { revision: current.revision, id: first.id }));
   check(deletion.response.status === 409 && deletion.body.code === "MEDIA_REFERENCED", "Deleting an image used by the draft is rejected");
   await save(draft, "publish");
+  const optimizedPublished = await fetch(`${origin}/_next/image?url=${encodeURIComponent(first.src)}&w=640&q=75`, { headers: { Accept: "image/webp" }, signal: AbortSignal.timeout(20_000) });
+  check(optimizedPublished.status === 200 && (await optimizedPublished.arrayBuffer()).byteLength > 0 && optimizedPublished.headers.get("x-robots-tag") === "noindex, nofollow", "Cached CMS optimizer variants remain noindex after publication; originals determine public image indexing");
   const html = await (await fetch(origin + "/coffee-blossom-honey", { signal: AbortSignal.timeout(20_000) })).text();
   check(html.includes(first.src) || html.includes(encodeURIComponent(first.src)), "Published product renders the committed image");
   draft = structuredClone(current.draft); draft.products.find((item) => item.id === "coffee-blossom-honey").image = baseline.draft.products.find((item) => item.id === "coffee-blossom-honey").image;
