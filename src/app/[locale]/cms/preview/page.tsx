@@ -1,6 +1,6 @@
 import { headers } from "next/headers";
 import { notFound, redirect } from "next/navigation";
-import Link from "next/link";
+import Link from "@/components/loading/NavigationLink";
 import { Eye, ArrowLeft } from "lucide-react";
 import { authorizeCms } from "@/lib/cms/auth";
 import { getCmsState } from "@/lib/cms/server";

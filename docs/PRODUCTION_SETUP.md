@@ -4,6 +4,22 @@ The storefront and CMS continue to use the existing local preview by default.
 No payment, email, shipping, hosting or storage account was connected during
 this implementation. Configuration checks never claim that a provider was tested.
 
+## Production search origin
+
+The owner-confirmed public origin is `https://vetrastore.asia`. In Vercel Project
+Settings, set `NEXT_PUBLIC_SITE_URL=https://vetrastore.asia` for **Production**,
+disable `NEXT_PUBLIC_DEMO_MODE`, and use `SITE_NOINDEX=false` only when the public
+indexing launch is approved. Keep preview/staging values separate. A Vercel
+production build now fails if the origin differs or demo mode is enabled. Changes
+to deployment environment variables require a new deployment.
+
+Configure `www.vetrastore.asia` to redirect to the apex host in Vercel Domains.
+After the approved deployment, run
+`node scripts/check-seo.mjs https://vetrastore.asia --expected-site-url=https://vetrastore.asia`
+and inspect the live robots file and a page in each language. As of 7 October
+2026, production still served `noindex`, `Disallow: /` and localhost canonical and
+sitemap URLs; the local source changes do not change that deployed output.
+
 ## CMS accounts
 
 The configured CMS uses server-side password verification, eight-hour signed

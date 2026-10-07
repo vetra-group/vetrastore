@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import Link from "next/link";
+import Link from "@/components/loading/NavigationLink";
 import Icon from "@/components/Icon";
 import { paymentCheckoutCopy } from "@/content/payment-checkout";
 import { localizedPath, type Locale } from "@/lib/i18n";

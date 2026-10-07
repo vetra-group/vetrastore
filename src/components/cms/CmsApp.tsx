@@ -3,7 +3,7 @@
 import { cmsAuditLabel } from "@/lib/cms/labels";
 import { cmsArabicUi } from "@/content/cms-ar-ui";
 
-import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useLayoutEffect, useMemo, useRef, useState, useTransition } from "react";
 import dynamic from "next/dynamic";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
@@ -30,10 +30,12 @@ import { useCmsRecovery } from "./useCmsRecovery";
 import { equalDraft, mergeDraft, type DraftConflict } from "@/lib/cms/draft-merge";
 import type { CmsWorkspaceState } from "@/lib/cms/workspace";
 import { useDemo } from "@/components/demo/DemoProvider";
+import LoadingScreen from "@/components/loading/LoadingScreen";
+import NavigationProgress from "@/components/loading/NavigationProgress";
 import styles from "./CmsApp.module.css";
 import editorStyles from "./CmsEditor.module.css";
 
-const loading = () => <div className={`${styles.panel} ${styles.moduleLoading}`} aria-busy="true"><LoaderCircle className={styles.spinning} aria-hidden="true" /><span role="status"><span className={styles.loadingThai} lang="th">กำลังโหลด…</span><span className={styles.loadingEnglish} lang="en">Loading…</span><span className={styles.loadingArabic} lang="ar">جارٍ التحميل…</span></span></div>;
+const loading = () => <LoadingScreen variant="panel" layout="form" />;
 const ArticleEditor = dynamic(() => import("./CmsArticleEditor").then((module) => module.ArticleEditor), { loading });
 const ProductEditor = dynamic(() => import("./CmsEditors").then((module) => module.ProductEditor), { loading });
 const SlideEditor = dynamic(() => import("./CmsEditors").then((module) => module.SlideEditor), { loading });
@@ -71,6 +73,7 @@ function cmsProductPrice(product: CmsProduct, locale: Locale) {
 export default function CmsApp({ locale }: { locale: Locale }) {
   const t = cmsCopy[locale];
   const router = useRouter();
+  const [navigating, startNavigation] = useTransition();
   const demo = useDemo();
   const { confirm, confirmation } = useCmsConfirm(locale);
   const [mode, setMode] = useState<"loading" | "local" | "configured" | "unavailable">("loading");
@@ -108,23 +111,26 @@ export default function CmsApp({ locale }: { locale: Locale }) {
 
   useEffect(() => {
     const controller = new AbortController();
+    const signal = AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]);
     const load = async () => {
       try {
-        const response = await fetch("/api/cms/session", { cache: "no-store", signal: controller.signal });
+        const response = await fetch("/api/cms/session", { cache: "no-store", signal });
         const session = await response.json();
+        if (controller.signal.aborted) return;
         if (!response.ok) throw new Error("Session unavailable");
         setIdentity(session.identity ?? null);
         setAuthenticated(!!session.authenticated);
         const requestedView = new URLSearchParams(window.location.search).get("view");
         if (cmsViews.includes(requestedView as CmsView)) setView(requestedView as CmsView);
         if (session.authenticated) {
-          const cmsResponse = await fetch("/api/cms/workspace", { cache: "no-store", signal: controller.signal });
+          const cmsResponse = await fetch("/api/cms/workspace", { cache: "no-store", signal });
           const result = await cmsResponse.json();
+          if (controller.signal.aborted) return;
           if (!cmsResponse.ok || !result.state) throw new Error("Content unavailable");
           setState(result.state); setContent(structuredClone(result.state.draft));
         }
         setMode(session.mode === "local" ? "local" : session.mode === "configured" ? "configured" : "unavailable");
-      } catch (error) { if (!controller.signal.aborted) { setMode("unavailable"); setMessage({ text: cmsCopy[locale].requestError, error: true }); } if (error instanceof Error && error.name === "AbortError") return; }
+      } catch { if (!controller.signal.aborted) { setMode("unavailable"); setMessage({ text: cmsCopy[locale].requestError, error: true }); } }
     };
     void load();
     return () => controller.abort();
@@ -160,14 +166,15 @@ export default function CmsApp({ locale }: { locale: Locale }) {
   const login = async (credentials: { email?: string; password?: string } = {}) => {
     if (busy) return;
     setBusy("login"); setMessage(null);
+    const signal = AbortSignal.timeout(15000);
     try {
-      const response = await fetch("/api/cms/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "login", ...credentials }) });
+      const response = await fetch("/api/cms/session", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "login", ...credentials }), signal });
       if (!response.ok) throw new Error("Login failed");
-      const identityResponse = await fetch("/api/cms/session", { cache: "no-store" });
+      const identityResponse = await fetch("/api/cms/session", { cache: "no-store", signal });
       const session = await identityResponse.json();
       if (!identityResponse.ok || !session.authenticated || !session.identity) throw new Error("Session unavailable");
       setIdentity(session.identity);
-      const cmsResponse = await fetch("/api/cms/workspace", { cache: "no-store" });
+      const cmsResponse = await fetch("/api/cms/workspace", { cache: "no-store", signal });
       const result = await cmsResponse.json();
       if (!cmsResponse.ok || !result.state) throw new Error("Content unavailable");
       adopt(result.state); setAuthenticated(true);
@@ -187,7 +194,7 @@ export default function CmsApp({ locale }: { locale: Locale }) {
   };
   const switchLanguage = async (nextLocale: Locale) => {
     if ((dirty || pendingMedia || operationsDirty) && !await confirm({ title: t.switchLanguage, body: t.leavePageConfirm, label: t.switchLanguage, destructive: true })) return;
-    router.push(`${localizedPath(nextLocale, "/cms")}?view=${view}`);
+    if (nextLocale !== locale) startNavigation(() => router.push(`${localizedPath(nextLocale, "/cms")}?view=${view}`));
   };
   const navigate = async (next: CmsView) => {
     if (busy) return;
@@ -378,7 +385,7 @@ export default function CmsApp({ locale }: { locale: Locale }) {
 
   const navigation = <><nav className={styles.navigation} aria-label={t.workspace}>{groups.map((group) => <div className={styles.group} key={group.label}><p className={styles.groupTitle}>{t[group.label]}</p>{group.views.map((item) => { const Icon = icons[item]; return <button key={item} type="button" title={t.nav[item]} className={styles.navButton} disabled={!!busy} aria-current={view === item ? "page" : undefined} onClick={() => navigate(item)}><Icon aria-hidden="true" /><span>{t.nav[item]}</span>{item === "trash" && trashCount > 0 && <b className={styles.navCount}>{trashCount}</b>}</button>; })}</div>)}</nav><div className={styles.sidebarFooter}><div className={styles.drawerUtilities}>{languageConfig.locales.map((language) => <button key={language.code} type="button" className={styles.navButton} disabled={!!busy} aria-current={locale === language.code ? "true" : undefined} title={language.label} onClick={() => void switchLanguage(language.code)}><Globe aria-hidden="true" /><span lang={language.code} dir={language.direction}>{language.label}</span></button>)}<a className={styles.navButton} title={t.viewStore} href={localizedPath(locale)} target="_blank" rel="noopener noreferrer"><ExternalLink aria-hidden="true" /><span>{t.viewStore}</span></a></div><button type="button" title={t.logout} className={styles.navButton} disabled={!!busy} onClick={() => void logout()}><LogOut aria-hidden="true" /><span>{t.logout}</span></button></div></>;
   const brand = <><Image src="/vetra-store-logo.svg" alt="VETRA STORE" width={1352} height={541} className={styles.brandLogo} /><div className={styles.brandText}><span>{t.workspace}</span></div></>;
-  if (mode === "loading") return <main className={styles.loading} aria-busy="true"><LoaderCircle aria-hidden="true" /><p>{t.loading}</p></main>;
+  if (mode === "loading") return <main id="main-content"><LoadingScreen variant="admin" locale={locale} /></main>;
   if (!authenticated || !state || !content) return <main className={styles.login}><div className={styles.loginBrand}>{brand}<p>{t.loginIntro}</p><a className={styles.button} href={localizedPath(locale)}><ArrowLeft aria-hidden="true" />{t.viewStore}</a></div><CmsSignIn locale={locale} mode={mode} busy={!!busy} onLogin={(credentials) => void login(credentials)} error={message?.text} onRetry={() => window.location.reload()} /></main>;
 
   const selectedProduct = content.products.find((product) => product.id === productId);
@@ -437,7 +444,7 @@ export default function CmsApp({ locale }: { locale: Locale }) {
   } else {
     page = <div className={styles.stack}><CmsHistory locale={locale} state={state} disabled={!!busy || dirty || pendingMedia || operationsDirty} canRestore={identity?.role === "owner"} onState={adopt} onMessage={notify} /><section className={styles.panel}>{state.audit.length ? audit() : <p className={styles.hint}>{t.noActivity}</p>}</section></div>;
   }
-  return <main className={styles.shell}><div className={styles.workspace}><header className={styles.topbar}><div className={styles.topbarLeft}><button className={`${styles.iconButton} ${styles.drawerToggle}`} type="button" aria-label={t.menu} aria-expanded={drawer} aria-controls="cms-navigation" onClick={() => setDrawer(true)}><Menu aria-hidden="true" /></button><div><span className={styles.crumb}>VETRA / CMS</span><span className={styles.topbarTitle}>{t.nav[view]}</span></div></div><div className={styles.actions}><button className={styles.button} type="button" disabled={!!busy || !dirty} onClick={() => void save("save")}>{busy === "save" ? <LoaderCircle className={styles.spinning} aria-hidden="true" /> : <Save aria-hidden="true" />}{busy === "save" ? t.saving : t.save}</button><button className={styles.primary} type="button" disabled={!!busy || (!publishPending && !dirty) || identity?.role !== "owner"} onClick={() => void openPublishing()}>{busy === "publish" ? <LoaderCircle className={styles.spinning} aria-hidden="true" /> : <CloudUpload aria-hidden="true" />}{busy === "publish" ? t.publishing : t.publish}</button></div></header><div className={styles.content}>{recoveryBanner}{message && <div className={styles.notice} data-error={message.error} role={message.error ? "alert" : "status"}>{message.error ? <AlertTriangle aria-hidden="true" /> : <Check aria-hidden="true" />}<div><p>{message.text}</p>{conflict && <div className={styles.actions}><button className={styles.button} type="button" disabled={!!busy} onClick={() => void merge()}><RefreshCw aria-hidden="true" />{t.reviewLatest}</button><button className={styles.button} type="button" disabled={!!busy} onClick={() => void reload()}>{t.reload}</button></div>}</div><button className={styles.iconButton} type="button" aria-label={t.close} onClick={() => setMessage(null)}><X aria-hidden="true" /></button></div>}<div className={styles.heading}><div><h1 ref={headingRef} tabIndex={-1}>{t.nav[view]}</h1>{intro[view] && <p>{intro[view]}</p>}</div><span className={styles.status}>{dirty || pendingMedia || operationsDirty ? <Pencil aria-hidden="true" /> : <Check aria-hidden="true" />}{dirty || pendingMedia || operationsDirty ? t.unsaved : t.saved}</span></div><div inert={!!busy} aria-busy={!!busy}>{page}</div></div><footer className={styles.footerStatus}>{recovery.status === "saved" && dirty && <span role="status">{locale === "ar" ? cmsArabicUi["Recovery copy saved in this browser · expires in 7 days"] : locale === "th" ? "เก็บสำเนาในเบราว์เซอร์แล้ว · หมดอายุใน 7 วัน" : "Recovery copy saved in this browser · expires in 7 days"}</span>}<span>{t.revision} {state.revision}</span><span>{state.publishedAt ? `${t.lastPublished}: ${date(state.publishedAt, locale)}` : t.neverPublished}</span></footer></div>{<CmsDialog open={drawer} animate onAfterClose={() => { if (focusAfterDrawer.current) { focusAfterDrawer.current = false; headingRef.current?.focus({ preventScroll: true }); } }} id="cms-navigation" label={t.workspace} className={styles.drawerDialog} onClose={() => setDrawer(false)}><div className={styles.brand}>{brand}<button className={styles.iconButton} type="button" aria-label={t.closeMenu} onClick={() => setDrawer(false)}><X aria-hidden="true" /></button></div>{navigation}</CmsDialog>}{reviewPublishing && <CmsPublishing locale={locale} state={state} onClose={() => setReviewPublishing(false)} onState={(next) => { adopt(next); router.refresh(); }} onMessage={notify} />}{conflictDialog}{confirmation}</main>;
+  return <main className={styles.shell}><NavigationProgress pending={navigating} locale={locale} /><div className={styles.workspace}><header className={styles.topbar}><div className={styles.topbarLeft}><button className={`${styles.iconButton} ${styles.drawerToggle}`} type="button" aria-label={t.menu} aria-expanded={drawer} aria-controls="cms-navigation" onClick={() => setDrawer(true)}><Menu aria-hidden="true" /></button><div><span className={styles.crumb}>VETRA / CMS</span><span className={styles.topbarTitle}>{t.nav[view]}</span></div></div><div className={styles.actions}><button className={styles.button} type="button" disabled={!!busy || !dirty} onClick={() => void save("save")}>{busy === "save" ? <LoaderCircle className={styles.spinning} aria-hidden="true" /> : <Save aria-hidden="true" />}{busy === "save" ? t.saving : t.save}</button><button className={styles.primary} type="button" disabled={!!busy || (!publishPending && !dirty) || identity?.role !== "owner"} onClick={() => void openPublishing()}>{busy === "publish" ? <LoaderCircle className={styles.spinning} aria-hidden="true" /> : <CloudUpload aria-hidden="true" />}{busy === "publish" ? t.publishing : t.publish}</button></div></header><div className={styles.content}>{recoveryBanner}{message && <div className={styles.notice} data-error={message.error} role={message.error ? "alert" : "status"}>{message.error ? <AlertTriangle aria-hidden="true" /> : <Check aria-hidden="true" />}<div><p>{message.text}</p>{conflict && <div className={styles.actions}><button className={styles.button} type="button" disabled={!!busy} onClick={() => void merge()}><RefreshCw aria-hidden="true" />{t.reviewLatest}</button><button className={styles.button} type="button" disabled={!!busy} onClick={() => void reload()}>{t.reload}</button></div>}</div><button className={styles.iconButton} type="button" aria-label={t.close} onClick={() => setMessage(null)}><X aria-hidden="true" /></button></div>}<div className={styles.heading}><div><h1 ref={headingRef} tabIndex={-1}>{t.nav[view]}</h1>{intro[view] && <p>{intro[view]}</p>}</div><span className={styles.status}>{dirty || pendingMedia || operationsDirty ? <Pencil aria-hidden="true" /> : <Check aria-hidden="true" />}{dirty || pendingMedia || operationsDirty ? t.unsaved : t.saved}</span></div><div inert={!!busy} aria-busy={!!busy}>{page}</div></div><footer className={styles.footerStatus}>{recovery.status === "saved" && dirty && <span role="status">{locale === "ar" ? cmsArabicUi["Recovery copy saved in this browser · expires in 7 days"] : locale === "th" ? "เก็บสำเนาในเบราว์เซอร์แล้ว · หมดอายุใน 7 วัน" : "Recovery copy saved in this browser · expires in 7 days"}</span>}<span>{t.revision} {state.revision}</span><span>{state.publishedAt ? `${t.lastPublished}: ${date(state.publishedAt, locale)}` : t.neverPublished}</span></footer></div>{<CmsDialog open={drawer} animate onAfterClose={() => { if (focusAfterDrawer.current) { focusAfterDrawer.current = false; headingRef.current?.focus({ preventScroll: true }); } }} id="cms-navigation" label={t.workspace} className={styles.drawerDialog} onClose={() => setDrawer(false)}><div className={styles.brand}>{brand}<button className={styles.iconButton} type="button" aria-label={t.closeMenu} onClick={() => setDrawer(false)}><X aria-hidden="true" /></button></div>{navigation}</CmsDialog>}{reviewPublishing && <CmsPublishing locale={locale} state={state} onClose={() => setReviewPublishing(false)} onState={(next) => { adopt(next); router.refresh(); }} onMessage={notify} />}{conflictDialog}{confirmation}</main>;
 }
 
 function SearchIcon() { return <Search aria-hidden="true" />; }

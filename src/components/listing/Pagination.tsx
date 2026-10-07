@@ -1,4 +1,4 @@
-import Link from "next/link";
+import Link from "@/components/loading/NavigationLink";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { pageLinks, type PageSlice } from "@/lib/listing";
 import type { Locale } from "@/lib/i18n";

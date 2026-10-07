@@ -28,6 +28,7 @@
     "test:operations": "node scripts/check-operations.mjs",
     "test:backups": "node scripts/check-backup-transfers.mjs && node scripts/check-backup-folder.mjs",
     "test:browser": "node scripts/check-cms-live.mjs --ui-only",
+    "test:loading": "node scripts/check-cms-live.mjs --loading-only",
     "test:release": "node scripts/check-cms-live.mjs --release",
     "audit:serve": "node scripts/serve-audit.mjs",
     "check:launch": "node scripts/check-launch.mjs",

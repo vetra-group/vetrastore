@@ -1,8 +1,7 @@
 "use client";
 
 import Image from "next/image";
-import Link from "next/link";
-import { useRouter } from "next/navigation";
+import Link from "@/components/loading/NavigationLink";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, LoaderCircle, Search, X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
@@ -37,7 +36,6 @@ export default function LiveSearch({
   onClose: () => void;
 }) {
   const t = quickSearchCopy[locale];
-  const router = useRouter();
   const input = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(-1);
@@ -170,8 +168,7 @@ export default function LiveSearch({
               }
             } else if (event.key === "Enter" && selected >= 0) {
               event.preventDefault();
-              onClose();
-              router.push(results[selected].href);
+              document.getElementById(`quick-result-${selected}`)?.click();
             }
           }}
         />

@@ -18,8 +18,8 @@ export async function generateMetadata({
   const article = articleForRoute(content, slug)?.article;
   if (!article) return {};
   const copy = article.content[locale];
-  const metadata = pageMetadata(locale, `/blog/${article.slug}`, copy.seoTitle || copy.title, copy.seoDescription || copy.excerpt, content.settings.storeName, locales.filter((language) => articleLocaleReady(article, language)));
-  const socialMetadata = withSocialImage(metadata, copy.socialImage || article.image, copy.imageAlt || copy.title);
+  const metadata = pageMetadata(locale, `/blog/${article.slug}`, copy.seoTitle || copy.title, copy.seoDescription || copy.excerpt, content.settings.storeName, locales.filter((language) => articleLocaleReady(article, language)), [article.image, copy.title, copy.category].join("|"));
+  const socialMetadata = copy.socialImage ? withSocialImage(metadata, copy.socialImage, copy.imageAlt || copy.title) : metadata;
   return {
     ...socialMetadata,
     openGraph: {

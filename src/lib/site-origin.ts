@@ -21,5 +21,18 @@ export function isPublicHttpsOrigin(value: string): boolean {
   }
 }
 
+/** The owner-confirmed canonical host for Vercel production deployments. */
+export const productionSiteOrigin = 'https://vetrastore.asia';
+
+export function assertProductionSiteConfig(env: Record<string, string | undefined>): void {
+  if (env.VERCEL_ENV !== 'production') return;
+  if (env.NEXT_PUBLIC_SITE_URL !== productionSiteOrigin) {
+    throw new Error(`Vercel production requires NEXT_PUBLIC_SITE_URL=${productionSiteOrigin}; the current value would publish incorrect canonical URLs and a sitemap.`);
+  }
+  if (env.NEXT_PUBLIC_DEMO_MODE === 'true') {
+    throw new Error('Vercel production requires NEXT_PUBLIC_DEMO_MODE=false; demo mode blocks search indexing.');
+  }
+}
+
 export const siteUrl = normalizeSiteOrigin(process.env.NEXT_PUBLIC_SITE_URL || 'http://localhost:3000');
 export const preventIndexing = process.env.NEXT_PUBLIC_DEMO_MODE === 'true' || process.env.SITE_NOINDEX === 'true' || !isPublicHttpsOrigin(siteUrl);

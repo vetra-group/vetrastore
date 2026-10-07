@@ -1,6 +1,6 @@
 "use client";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/loading/NavigationLink";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
 import { localizedPath, type Locale } from "@/lib/i18n";
@@ -33,8 +33,12 @@ export default function Header({ locale, availability = {} }: { locale: Locale; 
   const isActive = (path: string) => {
     const destination = localizedPath(locale, path);
     return activePath === destination ||
+      (path === "/products" && (activePath.startsWith(`${destination}/`) || activePath === localizedPath(locale, "/coffee-blossom-honey"))) ||
       (path === "/blog" && activePath.startsWith(`${destination}/`));
   };
+  const currentLocation = (path: string) => activePath === localizedPath(locale, path)
+    ? "page" as const
+    : isActive(path) ? "location" as const : undefined;
   useEffect(() => {
     const header = headerElement.current;
     if (!header) return;
@@ -110,9 +114,7 @@ export default function Header({ locale, availability = {} }: { locale: Locale; 
                 className={
                   isActive(path) ? styles.active : ""
                 }
-                aria-current={
-                  isActive(path) ? "page" : undefined
-                }
+                aria-current={currentLocation(path)}
               >
                 {c.nav[key]}
               </Link>
@@ -155,17 +157,18 @@ export default function Header({ locale, availability = {} }: { locale: Locale; 
             </button>
           </div>
         </div>
-        {menu && (
           <nav
             id="mobile-navigation"
             className={styles.mobileNav}
             aria-label={c.mobileNav}
+            hidden={!menu}
           >
             {mainNavigation.map(({ key, path }) => (
               <Link
                 key={key}
                 href={localizedPath(locale, path)}
-                aria-current={isActive(path) ? "page" : undefined}
+                prefetch={false}
+                aria-current={currentLocation(path)}
                 onClick={() => setMenu(false)}
               >
                 {c.nav[key]}
@@ -174,6 +177,7 @@ export default function Header({ locale, availability = {} }: { locale: Locale; 
             ))}
             <Link
               href={localizedPath(locale, "/account")}
+              prefetch={false}
               onClick={() => setMenu(false)}
             >
               {c.account}
@@ -181,13 +185,13 @@ export default function Header({ locale, availability = {} }: { locale: Locale; 
             </Link>
             <Link
               href={localizedPath(locale, "/contact")}
+              prefetch={false}
               onClick={() => setMenu(false)}
             >
               {c.links.contact}
               <Icon name="arrow" size={17} />
             </Link>
           </nav>
-        )}
       </header>
       <LiveSearch locale={locale} open={searchOpen} onClose={() => setSearchOpen(false)} />
     </>

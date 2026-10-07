@@ -1,7 +1,7 @@
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/loading/NavigationLink";
 import { notFound } from "next/navigation";
-import { isLocale, localizedPath, localizedDestination } from "@/lib/i18n";
+import { isLocale, locales, localizedPath, localizedDestination } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/metadata";
 import { pageSchema, serializeSchema } from "@/lib/structured-data";
 import { siteCopy } from "@/content/site";
@@ -25,14 +25,12 @@ export async function generateMetadata({
   if (!isLocale(locale)) return {};
   const content = await getLocalizedPublishedContent(locale);
   const c = applyCopy(siteCopy[locale], `site.${locale}`, content.copy);
-  const featured = content.products.find((product) => product.status === "published" && product.featured);
-  const title = content.copy[`site.${locale}.homeTitle`] ?? (featured ? `${featured.brand} ${featured.name[locale]}` : c.homeTitle);
-  const description = content.copy[`site.${locale}.homeDescription`] ?? (featured ? `${featured.description[locale]} ${c.homeDescription}` : c.homeDescription);
+  // The homepage describes the retailer; featured product brands belong to their pages.
   return pageMetadata(
     locale,
     "",
-    title,
-    description.replace(/\n/g, " "), content.settings.storeName,
+    c.homeTitle,
+    c.homeDescription.replace(/\n/g, " "), content.settings.storeName, locales,
   );
 }
 export default async function Home({

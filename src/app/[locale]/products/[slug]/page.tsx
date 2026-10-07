@@ -3,7 +3,7 @@ import { HONEY_ID } from "@/lib/catalog";
 import { isLocale, locales, localizedPath } from "@/lib/i18n";
 import { productLocaleReady } from "@/lib/cms/localization";
 import { getPublishedContent } from "@/lib/cms/server";
-import { pageMetadata, withSocialImage } from "@/lib/metadata";
+import { pageMetadata } from "@/lib/metadata";
 import ProductDetail from "@/components/commerce/ProductDetail";
 import { checkoutPaymentOptions } from "@/lib/public-payment-availability";
 import { commerce } from "@/content/commerce";
@@ -19,8 +19,7 @@ export async function generateMetadata({ params }: Props) {
   const content = await getPublishedContent();
   const product = await findProduct(slug);
   if (!isLocale(locale) || !product || !productLocaleReady(product, locale)) return {};
-  const metadata = pageMetadata(locale, `/products/${product.slug}`, `${product.brand} ${product.name[locale]}`, product.description[locale], content.settings.storeName, locales.filter((language) => productLocaleReady(product, language)));
-  return withSocialImage(metadata, product.image, product.card[locale].imageAlt);
+  return pageMetadata(locale, `/products/${product.slug}`, `${product.brand} ${product.name[locale]}`, product.description[locale], content.settings.storeName, locales.filter((language) => productLocaleReady(product, language)), product.image);
 }
 export default async function ProductPage({ params, searchParams }: Props) {
   const { locale, slug } = await params;

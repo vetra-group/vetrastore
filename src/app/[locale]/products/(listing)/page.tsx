@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Catalog from "@/components/commerce/Catalog";
-import { isLocale } from "@/lib/i18n";
+import { isLocale, locales } from "@/lib/i18n";
 import { pageMetadata } from "@/lib/metadata";
 import { commerce } from "@/content/commerce";
 import { siteCopy } from "@/content/site";
@@ -20,7 +20,7 @@ export async function generateMetadata({ params, searchParams }: Props) {
     locale,
     "/products",
     c.collectionTitle,
-    t.collectionIntro, content.settings.storeName,
+    t.collectionIntro, content.settings.storeName, locales,
   );
   const query = await searchParams;
   const filtered = [query.search, query.q].some((value) => typeof value === "string" && value.trim()) || (typeof query.category === "string" && !!query.category.trim() && query.category !== "all");

@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { Archive, ChevronLeft, ChevronRight, Plus, RefreshCw, Save, Send, X } from "lucide-react";
+import LoadingScreen from "@/components/loading/LoadingScreen";
 import { usePublished } from "./PublishedProvider";
 import { CmsDialog } from "./CmsDialog";
 import { useCmsConfirm } from "./CmsConfirm";
@@ -110,24 +111,45 @@ export default function SharedOperations({ locale, view, onDirtyChange }: { loca
   const [data, setData] = useState<Inbox | null>(null), [query, setQuery] = useState(""), [debounced, setDebounced] = useState(""), [page, setPage] = useState(1), [revision, setRevision] = useState(0);
   const [kind, setKind] = useState("all"), [status, setStatus] = useState("all"), [assignment, setAssignment] = useState("all"), [archived, setArchived] = useState(false), [email, setEmail] = useState("");
   const [record, setRecord] = useState<OperationsRequest | null>(null), [creating, setCreating] = useState(false), [loadingDetail, setLoadingDetail] = useState(false), [busy, setBusy] = useState(false), [error, setError] = useState(""), [feedback, setFeedback] = useState("");
+  const detailRequest = useRef<AbortController | null>(null);
+  const loadKey = JSON.stringify([view, debounced, page, kind, status, assignment, archived, email, revision, locale]);
+  const [request, setRequest] = useState({ key: loadKey, version: 0 });
+  const [loadedRequest, setLoadedRequest] = useState<number | null>(null);
+  // Returning to a previous filter still starts a new read with its own version.
+  if (request.key !== loadKey) setRequest({ key: loadKey, version: request.version + 1 });
+  const listLoading = loadedRequest !== request.version;
   const [dirty, setDirty] = useState(false), { confirm, confirmation } = useCmsConfirm(locale);
   useEffect(() => { onDirtyChange?.(dirty); return () => onDirtyChange?.(false); }, [dirty, onDirtyChange]);
+  useEffect(() => () => detailRequest.current?.abort(), []);
   useEffect(() => { const timer = setTimeout(() => setDebounced(query), 200); return () => clearTimeout(timer); }, [query]);
   useEffect(() => {
     const controller = new AbortController(), params = new URLSearchParams({ view: view === "notifications" ? "outbox" : "requests", q: debounced, page: String(page), kind: view === "orders" ? "order" : kind, status, assignment, archived: String(archived), email });
-    void api(`/api/cms/operations?${params}`, { signal: controller.signal }).then((value: Inbox) => { setData(value); setError(""); }).catch((reason) => { if (!controller.signal.aborted) setError(errorText(reason, locale)); });
+    void api(`/api/cms/operations?${params}`, { signal: controller.signal })
+      .then((value: Inbox) => { if (!controller.signal.aborted) { setData(value); setError(""); } })
+      .catch((reason) => { if (!controller.signal.aborted) setError(errorText(reason, locale)); })
+      .finally(() => { if (!controller.signal.aborted) setLoadedRequest(request.version); });
     return () => controller.abort();
-  }, [view, debounced, page, kind, status, assignment, archived, email, revision, locale]);
+  }, [view, debounced, page, kind, status, assignment, archived, email, revision, locale, request.version]);
   const reload = () => setRevision((value) => value + 1);
   async function sync() { if (busy) return; setBusy(true); setError(""); try { const result = await api("/api/cms/operations", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ action: "sync" }) }); setFeedback(!result.configured ? t.noSource : result.remaining ? t.pendingImports : t.synced); reload(); } catch (reason) { setError(errorText(reason, locale)); } finally { setBusy(false); } }
-  async function open(id: string) { setLoadingDetail(true); setError(""); try { const result = await api(`/api/cms/operations?id=${encodeURIComponent(id)}`); setRecord(result.record); } catch (reason) { setError(errorText(reason, locale)); } finally { setLoadingDetail(false); } }
+  async function open(id: string) {
+    if (loadingDetail) return;
+    const controller = new AbortController();
+    detailRequest.current = controller;
+    setLoadingDetail(true); setError("");
+    try { const result = await api(`/api/cms/operations?id=${encodeURIComponent(id)}`, { signal: controller.signal }); if (!controller.signal.aborted) setRecord(result.record); }
+    catch (reason) { if (!controller.signal.aborted) setError(errorText(reason, locale)); }
+    finally { if (!controller.signal.aborted) { setLoadingDetail(false); detailRequest.current = null; } }
+  }
   async function close() { if (dirty && !await confirm({ title: operationsCopy[locale].unsavedTitle, body: operationsCopy[locale].discardBody, label: operationsCopy[locale].discard, destructive: true })) return; setRecord(null); setCreating(false); setDirty(false); }
   return <div className={styles.workspace}><p>{t.intro}</p><p className={styles.note}>{t.sourceNote}</p><div className={styles.actions}><button className={styles.quiet} type="button" disabled={busy} onClick={() => void sync()}><RefreshCw aria-hidden="true" />{t.refresh}</button>{data?.owner && view !== "notifications" && <button type="button" className={styles.primary} onClick={() => setCreating(true)}><Plus aria-hidden="true" />{t.add}</button>}</div>
     <div className={styles.filters}><input type="search" maxLength={100} aria-label={t.search} placeholder={t.search} value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} />{view !== "notifications" && <><select aria-label={t.kind} disabled={view === "orders"} value={view === "orders" ? "order" : kind} onChange={(event) => { setKind(event.target.value); setPage(1); }}><option value="all">{w.allRequests}</option>{(["contact", "wholesale", "order", "newsletter"] as const).map((value) => <option key={value} value={value}>{c.kinds[value]}</option>)}</select><select aria-label={c.status} value={status} onChange={(event) => { setStatus(event.target.value); setPage(1); }}><option value="all">{t.filters}</option>{demoStatuses.map((value) => <option value={value} key={value}>{c.statuses[value]}</option>)}</select><select aria-label={w.assignedTo} value={assignment} onChange={(event) => { setAssignment(event.target.value); setPage(1); }}><option value="all">{w.allAssignees}</option><option value="assigned">{w.assigned}</option><option value="unassigned">{w.unassigned}</option></select><select aria-label={t.archived} value={String(archived)} onChange={(event) => { setArchived(event.target.value === "true"); setPage(1); }}><option value="false">{t.active}</option><option value="true">{t.archived}</option></select></>}</div>
     {email && <button type="button" className={styles.quiet} onClick={() => { setEmail(""); setPage(1); }}>{t.clearEmail}: {email}</button>}
-    {error && <p className={styles.error} role="alert">{error}</p>}<p role="status">{feedback || (loadingDetail ? t.loadingDetail : !data ? t.load : "")}</p>
+    {error && <p className={styles.error} role="alert">{error}</p>}{feedback && <p role="status">{feedback}</p>}
+    {listLoading && <LoadingScreen variant={data ? "compact" : "panel"} layout="content" locale={locale} label={t.load} />}
+    {loadingDetail && <LoadingScreen variant="compact" locale={locale} label={t.loadingDetail} />}
     {data && (view === "notifications" ? data.notices.map((notice) => <Notice key={`${notice.id}-${notice.revision}`} notice={notice} locale={locale} owner={data.owner} done={reload} />) : data.records.map((entry) => <button className={styles.record} type="button" key={entry.id} disabled={loadingDetail} onClick={() => void open(entry.id)}><span><strong>{entry.name}</strong><span>{entry.reference} · {c.kinds[entry.kind]}</span><span>{entry.email}</span><span>{entry.assignedTo || w.unassigned}</span></span><span>{c.statuses[entry.status]}</span><ChevronRight aria-hidden="true" /></button>))}
-    {data?.total === 0 && <p className={styles.empty}>{t.empty}</p>}{data && data.total > data.pageSize && <nav className={styles.pagination} aria-label={t.page}><button type="button" className={styles.icon} aria-label={t.previous} disabled={page <= 1} onClick={() => setPage(page - 1)}><ChevronLeft aria-hidden="true" /></button><span>{t.page} {page} / {Math.ceil(data.total / data.pageSize)}</span><button type="button" className={styles.icon} aria-label={t.next} disabled={page * data.pageSize >= data.total} onClick={() => setPage(page + 1)}><ChevronRight aria-hidden="true" /></button></nav>}
+    {data?.total === 0 && <p className={styles.empty}>{t.empty}</p>}{data && data.total > data.pageSize && <nav className={styles.pagination} aria-label={t.page}><button type="button" className={styles.icon} aria-label={t.previous} disabled={listLoading || page <= 1} onClick={() => setPage(page - 1)}><ChevronLeft aria-hidden="true" /></button><span>{t.page} {data.page} / {Math.ceil(data.total / data.pageSize)}</span><button type="button" className={styles.icon} aria-label={t.next} disabled={listLoading || page * data.pageSize >= data.total} onClick={() => setPage(page + 1)}><ChevronRight aria-hidden="true" /></button></nav>}
     {(record || creating) && <CmsDialog label={record?.reference || t.add} className={styles.dialog} onClose={() => void close()}>{creating ? <NewTestRequest locale={locale} done={() => { setCreating(false); setDirty(false); setFeedback(t.saved); reload(); }} onDirtyChange={setDirty} /> : record && <RequestDetails key={`${record.id}-${record.revision}`} record={record} locale={locale} owner={data?.owner || false} done={(updated) => { setRecord(updated); setDirty(false); setFeedback(t.saved); reload(); }} history={(customerEmail) => { if (!dirty) { setEmail(customerEmail); setPage(1); setRecord(null); } }} close={() => void close()} onDirtyChange={setDirty} />}</CmsDialog>}{confirmation}
   </div>;
 }

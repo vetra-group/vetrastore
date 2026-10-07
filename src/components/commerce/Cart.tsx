@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/loading/NavigationLink";
 import Icon from "@/components/Icon";
 import { formatPrice } from "@/lib/catalog";
 import { tryQuoteCart } from "@/lib/cart-pricing";
@@ -10,6 +10,7 @@ import { cartQuantityLimit } from "@/lib/cart-actions";
 import { miniCartCopy } from "@/content/mini-cart";
 import { Undo2 } from "lucide-react";
 import { usePublishedCopy } from "@/components/cms/PublishedProvider";
+import LoadingScreen from "@/components/loading/LoadingScreen";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import { commerce } from "@/content/commerce";
 import { publicPricingCopy } from "@/content/public-pricing";
@@ -50,9 +51,7 @@ export default function Cart({ locale, paymentsEnabled = false }: { locale: Loca
         }}><Undo2 aria-hidden="true" />{c.undo}</button>
       </div>}
       {!hydrated ? (
-        <p role="status" className={styles.loading}>
-          {t.loading}
-        </p>
+        <LoadingScreen locale={locale} variant="panel" layout="content" label={t.loading} />
       ) : !itemCount ? (
         <div className={styles.empty}>
           <Icon name="bag" size={43} />

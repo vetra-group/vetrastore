@@ -1,10 +1,11 @@
 "use client";
-import Link from "next/link";
+import Link from "@/components/loading/NavigationLink";
 import Icon from "@/components/Icon";
 import { commerce } from "@/content/commerce";
 import { localeSettings, localizedPath, type Locale } from "@/lib/i18n";
 import { savedProductDetails } from "@/lib/saved-product";
 import { usePublishedCopy } from "@/components/cms/PublishedProvider";
+import LoadingScreen from "@/components/loading/LoadingScreen";
 import { useStore } from "./StoreProvider";
 import ProductCard from "./ProductCard";
 import RequestProgress from "./RequestProgress";
@@ -36,7 +37,7 @@ export default function Account({ locale }: { locale: Locale }) {
         <div className={styles.main}>
           <h2>{t.favourites}</h2>
           {!hydrated ? (
-            <p role="status">{t.loading}</p>
+            <LoadingScreen locale={locale} variant="panel" layout="cards" label={t.loading} />
           ) : wishlist.length ? (
             <div className={styles.products}>
               {products.filter((product) => wishlist.includes(product.id)).map((product) => {

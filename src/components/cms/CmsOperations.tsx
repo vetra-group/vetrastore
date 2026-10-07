@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
 import dynamic from "next/dynamic";
 import { ChevronLeft, ChevronRight, Copy, Download, Inbox, Mail, MessageSquare, Plus, Save, ShoppingBag, Trash2, Users, X } from "lucide-react";
 import { useDemo } from "@/components/demo/DemoProvider";
+import LoadingScreen from "@/components/loading/LoadingScreen";
 import { useStore } from "@/components/commerce/StoreProvider";
 import { staffCopy } from "@/content/staff";
 import { operationsCopy } from "@/content/cms-operations";
@@ -18,8 +19,9 @@ import { useCmsConfirm } from "./CmsConfirm";
 import styles from "./CmsOperations.module.css";
 
 type View = "orders" | "messages" | "customers" | "notifications";
-const SharedOperations = dynamic(() => import("./SharedOperations"));
-const PaidOrders = dynamic(() => import("./PaidOrders").then((module) => module.PaidOrders));
+const loading = () => <LoadingScreen variant="panel" layout="content" />;
+const SharedOperations = dynamic(() => import("./SharedOperations"), { loading });
+const PaidOrders = dynamic(() => import("./PaidOrders").then((module) => module.PaidOrders), { loading });
 export function CmsOperations({ locale, view, onDirtyChange }: { locale: Locale; view: View; onDirtyChange?: (dirty: boolean) => void }) {
   const { enabled } = useDemo(), t = sharedOperationsCopy[locale], c = operationsCopy[locale];
   const [source, setSource] = useState<"shared" | "browser">("shared"), [dirty, setDirty] = useState(false);
@@ -136,7 +138,7 @@ function BrowserOperations({ locale, view, onDirtyChange }: { locale: Locale; vi
   function seed() { try { demo.seedSamples(); setError(""); } catch { setError(t.failed); } }
   const recordsExport = () => downloadCsv([["Reference", "Kind", "Name", "Email", "Phone", "Status", "Assigned to", "Order stage", "Tracking", "Business", "Quantity", "Destination", "Needed by", "Currency", "Subtotal", "Created", "Notes"], ...filtered.map((r) => [r.reference, r.kind, r.name, r.email, r.phone ?? "", r.status, r.assignedTo || "", r.order?.stage || "", r.order?.tracking || "", r.wholesale?.business || "", String(r.wholesale?.quantity || ""), r.wholesale?.destination || "", r.wholesale?.neededBy || "", r.kind === "order" ? r.currency ?? "THB" : "", String(r.subtotal ?? ""), r.createdAt, r.notes])], `vetra-${view}.csv`);
   if (!demo.enabled) return <p>{t.unavailable}</p>;
-  if (!demo.hydrated) return <p role="status">{c.loading}</p>;
+  if (!demo.hydrated) return <LoadingScreen variant="panel" layout="content" locale={locale} label={c.loading} />;
   return <div className={styles.workspace}>
     <div className={styles.stats}>
       <article><ShoppingBag aria-hidden="true" /><span>{t.orderCount}</span><strong>{demo.records.filter((record) => record.kind === "order").length}</strong></article>

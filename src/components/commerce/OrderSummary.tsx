@@ -1,7 +1,7 @@
 "use client";
 import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/loading/NavigationLink";
 import Icon from "@/components/Icon";
 import { commerce } from "@/content/commerce";
 import { mockCheckoutCopy } from "@/content/mock-checkout";

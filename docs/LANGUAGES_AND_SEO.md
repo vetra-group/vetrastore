@@ -22,5 +22,11 @@ Use crawlable localized pages, semantic HTML, page-specific metadata,
 self-referencing canonicals, hreflang, sitemap, and relevant structured
 data matching visible content.
 
+Keep VETRA STORE as the retailer identity in the homepage title, description,
+share card, header and Organization/WebSite markup. Homepage and catalog SEO
+must not automatically inherit a featured product's brand or description.
+Each product keeps its own brand in its title, facts, images and Product markup.
+Adding or featuring another product must not rename the store in search or shares.
+
 Write useful, factual content with clear headings and direct answers.
 Avoid keyword stuffing, invented claims, and ranking promises.

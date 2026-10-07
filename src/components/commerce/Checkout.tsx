@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useRef, useState, type FormEvent } from "react";
-import Link from "next/link";
+import Link from "@/components/loading/NavigationLink";
 import Icon from "@/components/Icon";
 import { useDemo } from "@/components/demo/DemoProvider";
 import { SharedDemoTarget, sharedDemoCopy, submitSharedDemoRequest, useSharedDemoTarget } from "@/components/demo/SharedDemoTarget";
@@ -15,6 +15,7 @@ import { formatPrice } from "@/lib/catalog";
 import type { PaymentProviderId } from "@/lib/payments/providers";
 import { resolveSellingDetails } from "@/lib/business-settings";
 import { usePublished, usePublishedCopy } from "@/components/cms/PublishedProvider";
+import LoadingScreen from "@/components/loading/LoadingScreen";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import { useStore } from "./StoreProvider";
 import OrderSummary from "./OrderSummary";
@@ -182,7 +183,7 @@ export default function Checkout({ locale, enquiriesEnabled, paymentsEnabled = f
         <h1>{t.checkoutTitle}</h1>
       </header>
       {!hydrated || (demo.enabled && !demo.hydrated) ? (
-        <p role="status" className={styles.loading}>{t.loading}</p>
+        <LoadingScreen locale={locale} variant="panel" layout="form" label={t.loading} />
       ) : status === "success" ? (
         <div className={styles.success} role="status" aria-live="polite">
           <span className={styles.successIcon}><Icon name="check" size={29} /></span>

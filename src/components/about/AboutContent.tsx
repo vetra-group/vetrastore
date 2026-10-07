@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/loading/NavigationLink";
 import Icon from "@/components/Icon";
 import { storyCopy } from "@/content/pages";
 import { applyCopy } from "@/lib/cms/defaults";

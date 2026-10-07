@@ -1,0 +1,55 @@
+.stage { width: 100%; min-width: 0; color: var(--ink-strong); background: var(--background); animation: appear 240ms var(--motion-ease-standard) 100ms both; }
+.body { min-width: 0; width: 100%; padding: var(--space-6) var(--page-gutter); }
+.identity { display: flex; flex-direction: column; align-items: center; text-align: center; gap: var(--space-4); }
+.emblem { position: relative; width: 10rem; height: 10rem; display: grid; place-items: center; border: 1px solid var(--line); border-radius: 50%; background: var(--paper); box-shadow: 0 0 0 .6rem var(--background), 0 0 0 calc(.6rem + 1px) var(--line); }
+.orbit { position: absolute; inset: -.65rem; border: 2px solid transparent; border-block-start-color: var(--gold-deep); border-inline-end-color: var(--gold-light); border-radius: 50%; animation: orbit 2.4s linear infinite; }
+.logo { width: 6.8rem; height: auto; }
+.copy { min-width: 0; max-width: min(100%, 42ch); }
+.title { font-family: var(--font-heading); font-size: var(--font-size-6); line-height: var(--line-height-heading); font-weight: 400; margin: 0; text-wrap: balance; }
+.detail { font-size: var(--font-size-1); color: var(--ink-soft); margin: var(--space-1) 0 0; }
+.rule { display: block; width: 3.5rem; height: 2px; background: var(--gold-deep); }
+.skeleton { width: 100%; max-width: 72rem; margin: var(--space-6) auto 0; }
+.cards { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: var(--space-4); }
+.card { min-width: 0; display: grid; gap: var(--space-3); padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+.photo, .line, .field, .action { display: block; position: relative; overflow: hidden; background: var(--surface); border-radius: var(--radius); }
+.photo::after, .line::after, .field::after, .action::after { content: ""; position: absolute; inset: 0; background: linear-gradient(105deg, transparent 25%, var(--paper) 50%, transparent 75%); transform: translateX(-100%); animation: shimmer 2.6s ease-in-out infinite; opacity: .6; }
+.photo { width: 100%; aspect-ratio: 2.3; }
+.line { width: 76%; height: .8rem; }
+.short { width: 48%; }
+.action { width: min(12rem, 55%); height: var(--control-size); }
+.content { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: var(--space-5); border: 1px solid var(--line); background: var(--paper); padding: var(--space-4); }
+.content .photo { aspect-ratio: 2; }
+.prose { display: flex; flex-direction: column; justify-content: center; gap: var(--space-4); min-width: 0; }
+.form { display: grid; gap: var(--space-4); border: 1px solid var(--line); padding: var(--space-4); background: var(--paper); }
+.fields { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-3); }
+.field { height: var(--field-min-height); border: 1px solid var(--line); }
+.stage[data-loading="page"] .body { min-height: 40rem; display: flex; flex-direction: column; justify-content: center; }
+.stage[data-loading="admin"] { display: grid; grid-template-columns: 15rem minmax(0, 1fr); min-height: 100svh; }
+.stage[data-loading="admin"] .body { display: flex; flex-direction: column; justify-content: center; }
+.rail { background: var(--navy); padding: var(--space-5) var(--space-4); display: flex; flex-direction: column; gap: var(--space-6); }
+.rail > img { width: 7rem; height: auto; filter: brightness(0) invert(1); }
+.rail > div { display: grid; gap: var(--space-4); }
+.rail span { width: 80%; height: .75rem; display: block; border-radius: var(--radius); background: var(--overlay-navy-soft); border: 1px solid var(--gold-deep); opacity: .3; }
+.rail span:nth-child(even) { width: 60%; }
+.rail .railFoot { margin-top: auto; width: 50%; }
+.stage[data-loading="panel"] { border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+.stage[data-loading="panel"] .body { padding: var(--space-5) var(--space-4); }
+.stage[data-loading="panel"] .emblem { width: 5.5rem; height: 5.5rem; box-shadow: none; }
+.stage[data-loading="panel"] .logo { width: 3.8rem; }
+.stage[data-loading="panel"] .orbit { inset: -.3rem; }
+.stage[data-loading="panel"] .identity { gap: var(--space-3); }
+.stage[data-loading="panel"] .title { font-family: var(--font-body); font-size: var(--font-size-3); font-weight: 500; }
+.stage[data-loading="panel"] .skeleton { margin-top: var(--space-5); }
+.stage[data-loading="compact"] { background: transparent; }
+.stage[data-loading="compact"] .body { padding: var(--space-3) 0; }
+.stage[data-loading="compact"] .identity { flex-direction: row; text-align: start; gap: var(--space-3); }
+.stage[data-loading="compact"] .emblem { width: 1.5rem; height: 1.5rem; flex-shrink: 0; background: transparent; border-color: var(--line); box-shadow: none; }
+.stage[data-loading="compact"] .orbit { inset: -1px; border-width: 2px; }
+.stage[data-loading="compact"] .title { font-family: var(--font-body); font-size: var(--font-size-1); font-weight: 500; color: var(--ink-soft); }
+:lang(th) .title { line-height: var(--line-height-heading-th); }
+@keyframes orbit { to { transform: rotate(360deg); } }
+@keyframes shimmer { to { transform: translateX(100%); } }
+@keyframes appear { from { opacity: 0; } to { opacity: 1; } }
+@media (max-width: 52rem) { .stage[data-loading="admin"] { grid-template-columns: minmax(0, 1fr); } .rail { display: none; } .cards { grid-template-columns: repeat(2, minmax(0, 1fr)); } .card:last-child { display: none; } }
+@media (max-width: 34rem) { .body { padding-block: var(--space-5); } .emblem { width: 8rem; height: 8rem; } .logo { width: 5.5rem; } .cards { grid-template-columns: minmax(0, 1fr); } .card:not(:first-child) { display: none; } .photo { aspect-ratio: 3; } .content { grid-template-columns: minmax(0, 1fr); gap: var(--space-4); } .content .photo { aspect-ratio: 3; } .fields { grid-template-columns: minmax(0, 1fr); } .fields .field:nth-child(n+3) { display: none; } .stage[data-loading="page"] .body { min-height: 36rem; } .skeleton { margin-top: var(--space-5); } }
+@media (prefers-reduced-motion: reduce) { .stage, .orbit, .photo::after, .line::after, .field::after, .action::after { animation: none; } .photo::after, .line::after, .field::after, .action::after { display: none; } }

@@ -1,0 +1,6 @@
+.progress { position: fixed; inset-block-start: 0; inset-inline: 0; height: .1875rem; z-index: 1000; overflow: hidden; pointer-events: none; background: var(--line); animation: appear 160ms ease 120ms both; }
+.track { display: block; height: 100%; width: 35%; background: var(--gold-deep); box-shadow: 0 0 .75rem var(--gold-light); animation: travel 1.6s ease-in-out infinite; }
+:dir(rtl) .track { animation-direction: reverse; }
+@keyframes travel { from { transform: translateX(-110%); } to { transform: translateX(390%); } }
+@keyframes appear { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .progress { animation: none; } .track { width: 100%; animation: none; box-shadow: none; } }

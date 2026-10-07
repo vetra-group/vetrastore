@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/loading/NavigationLink";
 import { ArrowDown, ArrowRight, ArrowUpRight, ChevronRight, Coffee, Flower2, Plus, Sandwich, Utensils } from "lucide-react";
 import { honeyStory } from "@/content/honey";
 import { commerce } from "@/content/commerce";

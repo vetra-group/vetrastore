@@ -2,7 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/loading/NavigationLink";
 import { Check, ChevronRight, CircleAlert, ShoppingBag, Trash2, Undo2, X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { commerce } from "@/content/commerce";

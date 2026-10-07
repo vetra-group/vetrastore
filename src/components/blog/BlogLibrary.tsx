@@ -1,5 +1,5 @@
 import Form from "next/form";
-import Link from "next/link";
+import Link from "@/components/loading/NavigationLink";
 import ArticleCard from "./ArticleCard";
 import Icon from "@/components/Icon";
 import Pagination from "@/components/listing/Pagination";

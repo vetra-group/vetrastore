@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import Link from "next/link";
+import Link from "@/components/loading/NavigationLink";
 import { ArrowUpRight, Check, Heart, ShoppingBag } from "lucide-react";
 import Quantity from "@/components/commerce/Quantity";
 import PriceTiers from "@/components/commerce/PriceTiers";

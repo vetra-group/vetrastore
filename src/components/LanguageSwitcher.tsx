@@ -1,17 +1,19 @@
 "use client";
 
-import { Suspense, useEffect, useRef, useState } from "react";
+import { Suspense, useEffect, useRef, useState, useTransition } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { Check } from "lucide-react";
 import { languageConfig, locales, localizedPath, type Locale } from "@/lib/i18n";
 import styles from "./LanguageSwitcher.module.css";
+import NavigationProgress from "@/components/loading/NavigationProgress";
 
 const labels = { en: "Choose language", ar: "اختر اللغة", th: "เลือกภาษา" };
 const unavailableLabels = { en: "Translation not available yet", ar: "الترجمة غير متاحة بعد", th: "ยังไม่มีคำแปล" };
 
 function LanguageLinks({ locale, path, availableLocales = locales, query = "", close }: { locale: Locale; path: string; availableLocales?: readonly Locale[]; query?: string; close: () => void }) {
   const router = useRouter();
-  return languageConfig.locales.map(language => !availableLocales.includes(language.code) ? <span key={language.code} className={styles.unavailable} role="link" aria-disabled="true">
+  const [navigating, startNavigation] = useTransition();
+  return <><NavigationProgress pending={navigating} locale={locale} />{languageConfig.locales.map(language => !availableLocales.includes(language.code) ? <span key={language.code} className={styles.unavailable} role="link" aria-disabled="true">
     <span lang={language.code} dir={language.direction}>{language.label}</span>
     <small>{unavailableLabels[locale]}</small>
   </span> : <a
@@ -32,12 +34,12 @@ function LanguageLinks({ locale, path, availableLocales = locales, query = "", c
           event.preventDefault();
         } else if (language.code === "th") {
           event.preventDefault();
-          router.push(destination);
+          startNavigation(() => router.push(destination));
         }
       }
       close();
     }}
-  ><span>{language.label}</span>{locale === language.code && <Check aria-hidden="true" />}</a>);
+  ><span>{language.label}</span>{locale === language.code && <Check aria-hidden="true" />}</a>)}</>;
 }
 
 function QueryLinks(props: Omit<Parameters<typeof LanguageLinks>[0], "query">) {

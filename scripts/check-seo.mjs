@@ -25,6 +25,11 @@ function load(relative, mocks = {}, cache = new Map()) {
 }
 
 const origins = load("src/lib/site-origin.ts");
+const socialImages = load("src/lib/social-image.ts");
+assert.match(socialImages.socialImagePath("ar", "/blog/article-one", "Title", "Description"), /^\/og\/ar\/blog\/article-one\.png\?v=[a-f0-9]{12}$/);
+assert.equal(socialImages.socialImagePath("th", "/products", "Products", "Intro"), socialImages.socialImagePath("th", "/products", "Products", "Intro"));
+assert.notEqual(socialImages.socialImagePath("th", "/products", "Products", "Intro", "new-photo"), socialImages.socialImagePath("th", "/products", "Products", "Intro"));
+assert.match(socialImages.socialImagePath("en", "/account", "Account", "Private"), /^\/og\/en\/home\.png\?/);
 assert.equal(origins.normalizeSiteOrigin("https://VETRA.example/"), "https://vetra.example");
 for (const value of ["https://vetra.example/store", "https://vetra.example/?campaign=x", "https://vetra.example/#top", "https://user:password@vetra.example", "ftp://vetra.example", "invalid"]) {
   assert.throws(() => origins.normalizeSiteOrigin(value));
@@ -32,6 +37,11 @@ for (const value of ["https://vetra.example/store", "https://vetra.example/?camp
 }
 for (const value of ["http://store.example.com", "https://localhost", "https://localhost.", "https://preview.localhost", "https://127.0.0.2", "https://[::1]", "https://[::ffff:127.0.0.1]", "https://10.0.0.1", "https://192.168.1.1", "https://0.0.0.0", "https://preview.local", "https://store.invalid", "https://store.test", "https://store.example", "https://bad_host.example.com"]) assert.equal(origins.isPublicHttpsOrigin(value), false);
 assert.equal(origins.isPublicHttpsOrigin("https://store.example.com/"), true);
+assert.doesNotThrow(() => origins.assertProductionSiteConfig({ VERCEL_ENV: "preview" }));
+assert.doesNotThrow(() => origins.assertProductionSiteConfig({ VERCEL_ENV: "production", NEXT_PUBLIC_SITE_URL: "https://vetrastore.asia", NEXT_PUBLIC_DEMO_MODE: "false" }));
+assert.throws(() => origins.assertProductionSiteConfig({ VERCEL_ENV: "production" }), /NEXT_PUBLIC_SITE_URL/);
+assert.throws(() => origins.assertProductionSiteConfig({ VERCEL_ENV: "production", NEXT_PUBLIC_SITE_URL: "https:\/\/www.vetrastore.asia" }), /NEXT_PUBLIC_SITE_URL/);
+assert.throws(() => origins.assertProductionSiteConfig({ VERCEL_ENV: "production", NEXT_PUBLIC_SITE_URL: "https://vetrastore.asia", NEXT_PUBLIC_DEMO_MODE: "true" }), /NEXT_PUBLIC_DEMO_MODE/);
 
 const metadata = load("src/lib/metadata.ts", { "./site-origin": { siteUrl: "https://store.example", preventIndexing: false } });
 const productionRobots = load("src/app/robots.ts", { "@/lib/metadata": { siteUrl: "https://store.example", preventIndexing: false } }).default();
@@ -43,12 +53,44 @@ assert.equal(stagingRobots.rules.disallow, "/");
 const content = load("src/lib/cms/defaults.ts").defaultContent();
 const mocks = {
   "@/lib/cms/server": { getPublishedContent: async () => content },
+  "@/lib/localized-content": { getLocalizedPublishedContent: async () => content },
   "@/lib/metadata": metadata,
   "@/components/commerce/Catalog": { default: () => null },
   "@/components/blog/BlogContent": { default: () => null },
   "next/navigation": { notFound: () => { throw new Error("not found"); } },
 };
-const catalog = load("src/app/[locale]/products/page.tsx", mocks);
+const home = load("src/app/[locale]/(home)/page.tsx", {
+  ...mocks,
+  "@/components/loading/NavigationLink": { default: () => null },
+  "@/components/commerce/ProductCard": { default: () => null },
+  "@/components/HeroSlider": { default: () => null },
+  "@/components/Icon": { default: () => null },
+  "./page.module.css": {},
+});
+const originalProducts = structuredClone(content.products);
+const homepageDefaults = new Map();
+for (const locale of ["en", "ar", "th"]) {
+  const result = await home.generateMetadata({ params: Promise.resolve({ locale }) });
+  assert.ok(result.title.absolute.startsWith("VETRA STORE | "));
+  assert.ok(!result.title.absolute.includes("ESHAN") && !result.description.includes("ESHAN"));
+  assert.equal(result.openGraph.title, result.title.absolute);
+  assert.equal(result.twitter.title, result.title.absolute);
+  homepageDefaults.set(locale, result);
+}
+content.products = [{ ...structuredClone(originalProducts[0]), brand: "Audit Second Brand", image: "/images/other-product.webp", description: { en: "Another product", ar: "منتج آخر", th: "สินค้าอื่น" } }];
+for (const locale of ["en", "ar", "th"]) {
+  assert.deepEqual(await home.generateMetadata({ params: Promise.resolve({ locale }) }), homepageDefaults.get(locale), "Featuring another brand must not change the retailer's homepage metadata or share URL");
+  content.copy[`site.${locale}.homeTitle`] = "Owner homepage title";
+  content.copy[`site.${locale}.homeDescription`] = "Owner homepage description";
+  const edited = await home.generateMetadata({ params: Promise.resolve({ locale }) });
+  assert.equal(edited.title.absolute, "VETRA STORE | Owner homepage title");
+  assert.equal(edited.description, "Owner homepage description");
+  delete content.copy[`site.${locale}.homeTitle`];
+  delete content.copy[`site.${locale}.homeDescription`];
+}
+content.products = originalProducts;
+console.log("PASS: retailer homepage identity survives featured-brand changes and respects explicit CMS homepage overrides.");
+const catalog = load("src/app/[locale]/products/(listing)/page.tsx", mocks);
 for (const locale of ["en", "ar", "th"]) {
   const base = await catalog.generateMetadata({ params: Promise.resolve({ locale }), searchParams: Promise.resolve({}) });
   assert.equal(base.robots, undefined);
@@ -95,6 +137,7 @@ assert.equal(new Set(urls.map(String)).size, urls.length);
 const expectedArgument = process.argv.find((value) => value.startsWith("--expected-site-url="));
 const expected = new URL(expectedArgument ? expectedArgument.slice("--expected-site-url=".length) : urls[0].origin);
 const records = new Map(), seenTitles = new Set();
+let generatedCards = 0;
 const meta = (html, attribute, key) => decode([...html.matchAll(/<meta\b([^>]+)>/g)].find(([, attrs]) => attrs.includes(`${attribute}="${key}"`))?.[1].match(/content="([^"]*)"/)?.[1] ?? "");
 for (const url of urls) {
   assert.equal(url.origin, expected.origin, "Sitemap origin");
@@ -118,6 +161,22 @@ for (const url of urls) {
   assert.equal(meta(html, "name", "twitter:card"), "summary_large_image");
   assert.equal(meta(html, "name", "twitter:image"), meta(html, "property", "og:image"), `${url.pathname}: social image parity`);
   assert.ok(meta(html, "property", "og:image:alt"), `${url.pathname}: social image description`);
+  const imageUrl = new URL(meta(html, "property", "og:image"));
+  if (/^\/og\/(?:en|ar|th)\/.+\.png$/.test(imageUrl.pathname)) {
+    assert.equal(imageUrl.origin, expected.origin, `${url.pathname}: generated image origin`);
+    assert.equal(meta(html, "property", "og:image:type"), "image/png", `${url.pathname}: image MIME metadata`);
+    assert.equal(meta(html, "property", "og:image:width"), "1200", `${url.pathname}: image width metadata`);
+    assert.equal(meta(html, "property", "og:image:height"), "630", `${url.pathname}: image height metadata`);
+    const response = await fetch(new URL(imageUrl.pathname + imageUrl.search, origin), { signal: AbortSignal.timeout(30000) });
+    assert.equal(response.status, 200, `${url.pathname}: generated image HTTP 200`);
+    assert.match(response.headers.get("content-type") ?? "", /^image\/png/, `${url.pathname}: image response MIME`);
+    const bytes = Buffer.from(await response.arrayBuffer());
+    assert.ok(bytes.length > 1000 && bytes.length < 8 * 1024 * 1024, `${url.pathname}: image size`);
+    assert.equal(bytes.subarray(0, 8).toString("hex"), "89504e470d0a1a0a", `${url.pathname}: PNG signature`);
+    assert.equal(bytes.readUInt32BE(16), 1200, `${url.pathname}: rendered image width`);
+    assert.equal(bytes.readUInt32BE(20), 630, `${url.pathname}: rendered image height`);
+    generatedCards++;
+  }
   const schemas = [...html.matchAll(/<script type="application\/ld\+json">([\s\S]*?)<\/script>/g)].map(([, value]) => JSON.parse(value));
   const organization = schemas.find((schema) => schema["@type"] === "Organization");
   assert.equal(organization?.["@id"], `${expected.origin}/#organization`);
@@ -138,7 +197,11 @@ for (const locale of ["en", "ar", "th"]) {
     assert.match(meta(html, "name", "robots"), /noindex/, `${prefix + route}: noindex`);
   }
 }
+for (const route of ["/og/en/account.png", "/og/en/blog/missing-article.png", "/og/fr/home.png"]) {
+  const response = await fetch(new URL(route, origin), { redirect: "manual", signal: AbortSignal.timeout(30000) });
+  assert.equal(response.status, 404, `${route}: no social card for private, missing or invalid routes`);
+}
 const report = { checkedAt: new Date().toISOString(), crawledOrigin: origin.origin, metadataOrigin: expected.origin, publicPages: records.size, pages: [...records.values()] };
 const output = path.join(root, "output", "qa", "seo"); fs.mkdirSync(output, { recursive: true });
 fs.writeFileSync(path.join(output, origin.protocol === "https:" ? "live-crawl.json" : "crawl.json"), JSON.stringify(report, null, 2) + "\n");
-console.log(`PASS: ${records.size} sitemap pages plus 18 localized query/private pages; canonical origins, reciprocal hreflang, headings, social previews, shared entities and noindex.`);
+console.log(`PASS: ${records.size} sitemap pages and ${generatedCards} rendered social cards plus 18 localized query/private pages; canonical origins, reciprocal hreflang, headings, social previews, shared entities and noindex.`);

@@ -6,7 +6,7 @@ import { applyCopy } from "@/lib/cms/defaults";
 import { getPublishedContent } from "@/lib/cms/server";
 import { articleLocaleReady } from "@/lib/cms/localization";
 import { isLocale, locales } from "@/lib/i18n";
-import { pageMetadata, withSocialImage } from "@/lib/metadata";
+import { pageMetadata } from "@/lib/metadata";
 import { blogListing, blogListingPath } from "@/lib/blog";
 import type { ListingSearchParams } from "@/lib/listing";
 
@@ -27,10 +27,9 @@ export async function generateMetadata({
   const listing = blogListing(publishedArticles, locale, await searchParams);
   const title = listing.page > 1 ? `${copy.title} · ${locale === "th" ? "หน้า" : locale === "ar" ? "الصفحة" : "Page"} ${listing.page}` : copy.title;
   const availableLocales = locales.filter((language) => blogListing(publishedArticles, language, { q: listing.q, category: listing.category }).pageCount >= listing.page);
-  const metadata = pageMetadata(locale, blogListingPath(listing.q, listing.category, listing.page), title, copy.description, content.settings.storeName, availableLocales);
-  const socialMetadata = featured ? withSocialImage(metadata, featured.image, featured.content[locale].imageAlt || featured.content[locale].title) : metadata;
+  const metadata = pageMetadata(locale, blogListingPath(listing.q, listing.category, listing.page), title, copy.description, content.settings.storeName, availableLocales, featured?.image);
   return {
-    ...socialMetadata,
+    ...metadata,
     ...((listing.q || listing.category) && !metadata.robots ? { robots: { index: false, follow: true } } : {}),
   };
 }

@@ -1,6 +1,6 @@
 "use client";
 
-import Link from "next/link";
+import Link from "@/components/loading/NavigationLink";
 import { useRef, useState, type FormEvent } from "react";
 import {
   ArrowLeft,
@@ -22,6 +22,7 @@ import {
   X,
 } from "lucide-react";
 import { staffCopy } from "@/content/staff";
+import LoadingScreen from "@/components/loading/LoadingScreen";
 import { workflowCopy } from "@/content/workflow";
 import { NotificationDelivery, RequestWorkflow } from "./RequestWorkflow";
 import { catalogProducts, formatPrice } from "@/lib/catalog";
@@ -241,7 +242,7 @@ export default function StaffDashboard({ locale }: { locale: Locale }) {
         <FlaskConical aria-hidden="true" />
         <div><strong>{c.demoTitle}</strong><p>{c.demoNote}</p></div>
       </aside>
-      {!hydrated ? <p className={styles.loading} role="status">{c.loading}</p> : <>
+      {!hydrated ? <LoadingScreen variant="panel" layout="content" locale={locale} label={c.loading} /> : <>
         <dl className={styles.stats}>
           {(Object.keys(totals) as (keyof typeof totals)[]).map((key) => <div className={styles.stat} key={key}><dt>{c.totals[key]}</dt><dd>{totals[key]}</dd></div>)}
         </dl>

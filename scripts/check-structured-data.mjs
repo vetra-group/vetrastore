@@ -34,6 +34,11 @@ for (const locale of ["en", "ar", "th"]) {
   assert.equal(page.publisher["@id"], organization["@id"]);
   assert.equal(page.inLanguage, locale);
   const schema = productSchema(product, locale, settings, true);
+  assert.equal(schema.brand.name, "ESHAN");
+  const secondBrand = productSchema({ ...product, id: "audit-product", slug: "audit-product", brand: "Audit Second Brand" }, locale, settings, false);
+  assert.equal(secondBrand.brand.name, "Audit Second Brand");
+  assert.equal(secondBrand.mainEntityOfPage["@id"], `https://vetra.example${locale === "en" ? "" : `/${locale}`}/products/audit-product#webpage`);
+  assert.equal(organization.name, "VETRA STORE");
   assert.equal(schema["@id"], "https://vetra.example/coffee-blossom-honey#product");
   assert.equal(schema.mainEntityOfPage["@id"], page["@id"]);
   assert.ok(schema.image.includes("https://vetra.example/api/cms-media/current.webp"));
@@ -46,7 +51,13 @@ for (const locale of ["en", "ar", "th"]) {
   assert.equal(productSchema(product, locale, settings, false).offers, undefined, "Demo or disabled payment must not advertise a purchasable offer");
   assert.equal(productSchema({ ...product, stock: null }, locale, settings, true).offers, undefined, "Unknown stock must not advertise a purchasable offer");
   const metadata = pageMetadata(locale, "/coffee-blossom-honey", "Title", "Description");
-  assert.equal(metadata.openGraph.images[0].alt, honey.card[locale].imageAlt);
+  assert.equal(metadata.openGraph.images[0].alt, "Title | VETRA STORE");
+  assert.match(metadata.openGraph.images[0].url, new RegExp(`^/og/${locale}/coffee-blossom-honey\\.png\\?v=[a-f0-9]{12}$`));
+  assert.equal(metadata.openGraph.images[0].width, 1200);
+  assert.equal(metadata.openGraph.images[0].height, 630);
+  assert.equal(metadata.openGraph.images[0].type, "image/png");
+  assert.equal(metadata.openGraph.images[0].url, metadata.twitter.images[0].url);
+  assert.equal(metadata.openGraph.images[0].alt, metadata.twitter.images[0].alt);
   const social = withSocialImage(metadata, "/api/cms-media/current.webp", "Current published product");
   assert.equal(social.twitter.card, "summary_large_image");
   assert.deepEqual(social.openGraph.images, social.twitter.images);

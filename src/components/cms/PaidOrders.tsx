@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { AlertTriangle, ChevronLeft, ChevronRight, RefreshCw, ShoppingBag, X } from "lucide-react";
 import type { Locale } from "@/lib/i18n";
+import LoadingScreen from "@/components/loading/LoadingScreen";
 import { CmsDialog } from "./CmsDialog";
 import styles from "./PaidOrders.module.css";
 
@@ -99,13 +100,17 @@ function PaymentOrderGroup({ locale, group }: { locale: Locale; group: Group }) 
   const [revision, setRevision] = useState(0);
   const [list, setList] = useState<PaidOrderList | null>(null);
   const [error, setError] = useState(false);
+  const [loadedKey, setLoadedKey] = useState<string | null>(null);
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [detail, setDetail] = useState<PaidOrderDetail | null>(null);
   const [detailError, setDetailError] = useState(false);
+  const loadKey = `${group}:${page}:${revision}`;
+  const listLoading = loadedKey !== loadKey;
+  const listError = error && !listLoading;
 
   useEffect(() => {
     const controller = new AbortController();
-    void fetch(`/api/cms/payment-orders?group=${group}&page=${page}`, { cache: "no-store", signal: controller.signal })
+    void fetch(`/api/cms/payment-orders?group=${group}&page=${page}`, { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]) })
       .then(async (response) => {
         if (!response.ok) throw new Error("Paid orders unavailable");
         return await response.json() as PaidOrderList;
@@ -116,14 +121,15 @@ function PaymentOrderGroup({ locale, group }: { locale: Locale; group: Group }) 
         setList(result);
         setError(false);
       })
-      .catch(() => { if (!controller.signal.aborted) setError(true); });
+      .catch(() => { if (!controller.signal.aborted) setError(true); })
+      .finally(() => { if (!controller.signal.aborted) setLoadedKey(loadKey); });
     return () => controller.abort();
-  }, [group, page, revision]);
+  }, [group, page, revision, loadKey]);
 
   useEffect(() => {
     if (!selectedId) return;
     const controller = new AbortController();
-    void fetch(`/api/cms/payment-orders?id=${encodeURIComponent(selectedId)}`, { cache: "no-store", signal: controller.signal })
+    void fetch(`/api/cms/payment-orders?id=${encodeURIComponent(selectedId)}`, { cache: "no-store", signal: AbortSignal.any([controller.signal, AbortSignal.timeout(15000)]) })
       .then(async (response) => {
         if (!response.ok) throw new Error("Paid order unavailable");
         return await response.json() as { order: PaidOrderDetail };
@@ -138,38 +144,38 @@ function PaymentOrderGroup({ locale, group }: { locale: Locale; group: Group }) 
     return () => controller.abort();
   }, [selectedId]);
 
-  function refresh() { setList(null); setError(false); setRevision((value) => value + 1); }
-  function changePage(next: number) { setList(null); setError(false); setPage(next); }
+  function refresh() { setError(false); setRevision((value) => value + 1); }
+  function changePage(next: number) { setError(false); setPage(next); }
   function open(id: string) { setDetail(null); setDetailError(false); setSelectedId(id); }
   function close() { setSelectedId(null); setDetail(null); setDetailError(false); }
 
   return <section className={styles.section} aria-labelledby={`payment-orders-${group}-heading`}>
     <header className={styles.header}>
       <div><p className={styles.eyebrow}>{eyebrow}</p><h2 id={`payment-orders-${group}-heading`}>{title}</h2><p>{intro}</p></div>
-      <button type="button" className={styles.action} onClick={refresh}><RefreshCw aria-hidden="true" />{t.refresh}</button>
+      <button type="button" className={styles.action} disabled={listLoading} onClick={refresh}><RefreshCw aria-hidden="true" />{t.refresh}</button>
     </header>
     <p className={styles.notice}>{t.readOnly}</p>
-    {error && <p className={styles.error} role="alert">{errorText}</p>}
-    {!error && !list && <p className={styles.empty} role="status">{loading}</p>}
-    {!error && list && !list.available && <div className={styles.empty}><ShoppingBag aria-hidden="true" /><p>{t.unavailable}</p></div>}
-    {!error && list?.available && list.orders.length === 0 && <div className={styles.empty}><ShoppingBag aria-hidden="true" /><p>{empty}</p></div>}
-    {!error && list?.available && list.orders.length > 0 && <>
-      <div className={styles.rows}>{list.orders.map((order) => <button type="button" className={styles.row} key={order.id} onClick={() => open(order.id)}>
+    {listError && <p className={styles.error} role="alert">{errorText}</p>}
+    {listLoading && <LoadingScreen variant={list ? "compact" : "panel"} layout="content" locale={locale} label={loading} />}
+    {!listError && list && !list.available && <div className={styles.empty}><ShoppingBag aria-hidden="true" /><p>{t.unavailable}</p></div>}
+    {!listError && list?.available && list.orders.length === 0 && <div className={styles.empty}><ShoppingBag aria-hidden="true" /><p>{empty}</p></div>}
+    {!listError && list?.available && list.orders.length > 0 && <>
+      <div className={styles.rows} aria-busy={listLoading}>{list.orders.map((order) => <button type="button" className={styles.row} key={order.id} onClick={() => open(order.id)}>
         <span className={styles.rowMain}><strong dir="ltr">{order.reference}</strong><span>{order.customerName}</span>{group === "review" && order.attempt && <span><bdi>{order.attempt.provider}</bdi>{order.attempt.providerPaymentId && <> · <bdi dir="ltr">{order.attempt.providerPaymentId}</bdi></>}</span>}</span>
         <span className={styles.rowMeta}><strong>{amount(order.totalMinor, locale)}</strong><span>{date(group === "paid" ? order.paidAt : order.createdAt, locale)}</span>{group === "review" && order.initiationWindowElapsed && <span className={styles.elapsed}>{t.windowElapsedShort}</span>}</span>
         <span className={group === "review" || order.requiresPaymentReview ? styles.review : styles.paid}>{group === "review" || order.requiresPaymentReview ? <AlertTriangle aria-hidden="true" /> : null}{group === "review" ? t.attemptStates[order.attempt?.status ?? "none"] : order.requiresPaymentReview ? t.review : t.paid}</span>
         <ChevronRight className={styles.chevron} aria-hidden="true" />
       </button>)}</div>
       {(page > 1 || list.hasMore) && <nav className={styles.pagination} aria-label={title}>
-        <button type="button" className={styles.action} disabled={page <= 1} onClick={() => changePage(page - 1)}><ChevronLeft aria-hidden="true" />{t.previous}</button>
-        <span>{t.page} {page}</span>
-        <button type="button" className={styles.action} disabled={!list.hasMore} onClick={() => changePage(page + 1)}>{t.next}<ChevronRight aria-hidden="true" /></button>
+        <button type="button" className={styles.action} disabled={listLoading || page <= 1} onClick={() => changePage(page - 1)}><ChevronLeft aria-hidden="true" />{t.previous}</button>
+        <span>{t.page} {list.page}</span>
+        <button type="button" className={styles.action} disabled={listLoading || !list.hasMore} onClick={() => changePage(page + 1)}>{t.next}<ChevronRight aria-hidden="true" /></button>
       </nav>}
     </>}
     {selectedId && <CmsDialog label={detail?.reference ?? t.details} className={styles.dialog} onClose={close}>
       <div className={styles.detailHeader}><div><p className={styles.eyebrow}>{t.details}</p><h2 dir="ltr">{detail?.reference ?? t.details}</h2></div><button type="button" className={styles.close} aria-label={t.close} onClick={close}><X aria-hidden="true" /></button></div>
       {detailError && <p role="alert" className={styles.error}>{t.detailError}</p>}
-      {!detailError && !detail && <p role="status">{loading}</p>}
+      {!detailError && !detail && <LoadingScreen variant="panel" layout="form" locale={locale} label={loading} />}
       {detail && <div className={styles.detail}>
         {detail.status === "pending" && <p className={styles.reviewAlert}><AlertTriangle aria-hidden="true" />{t.pendingWarning}</p>}
         {detail.status === "pending" && detail.initiationWindowElapsed && <p className={styles.reviewAlert}><AlertTriangle aria-hidden="true" />{t.windowElapsed}</p>}

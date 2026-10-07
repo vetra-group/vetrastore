@@ -10,7 +10,7 @@ const port = Number(option("port") || 3310);
 assert.ok(Number.isInteger(port) && port >= 1024 && port <= 65535, "Use a local test port between 1024 and 65535.");
 const origin = `http://127.0.0.1:${port}`, release = process.argv.includes("--release");
 const mediaOnly = process.argv.includes("--media-only");
-assert.ok(!mediaOnly || !["--release", "--storefront-only", "--forms-only", "--ui-only", "--backup-only"].some((flag) => process.argv.includes(flag)), "Choose --media-only separately from other test scopes.");
+assert.ok(!mediaOnly || !["--release", "--storefront-only", "--forms-only", "--ui-only", "--backup-only", "--loading-only", "--identity-only"].some((flag) => process.argv.includes(flag)), "Choose --media-only separately from other test scopes.");
 const expectedSiteUrl = option("expected-site-url") || process.env.NEXT_PUBLIC_SITE_URL || origin;
 const output = path.join(root, "output");
 await mkdir(output, { recursive: true });
@@ -69,7 +69,14 @@ async function run(script, args = []) {
 try {
   startServer();
   await checkServer();
-  if (process.argv.includes("--storefront-only")) {
+  if (process.argv.includes("--identity-only")) {
+    await run("smoke.mjs");
+    await run("check-seo.mjs");
+    await run("check-store-identity-browser.mjs");
+  } else if (process.argv.includes("--loading-only")) {
+    await run("smoke.mjs");
+    await run("check-loading-browser.mjs");
+  } else if (process.argv.includes("--storefront-only")) {
     await run("check-storefront-browser.mjs");
     await run("check-customer-forms-browser.mjs");
     await run("check-storefront-accessibility.mjs");
@@ -112,7 +119,7 @@ try {
     });
   }
 } finally {
-  const logDirectory = process.argv.includes("--storefront-only") || process.argv.includes("--forms-only") ? path.join(output, "qa", "storefront-polish") : process.argv.includes("--ui-only") ? path.join(output, "qa", "browser-regression") : path.join(output, "qa");
+  const logDirectory = process.argv.includes("--identity-only") ? path.join(output, "qa", "store-identity") : process.argv.includes("--loading-only") ? path.join(output, "qa", "loading") : process.argv.includes("--storefront-only") || process.argv.includes("--forms-only") ? path.join(output, "qa", "storefront-polish") : process.argv.includes("--ui-only") ? path.join(output, "qa", "browser-regression") : path.join(output, "qa");
   await mkdir(logDirectory, { recursive: true });
   await writeFile(path.join(logDirectory, process.argv.includes("--ui-only") ? "server.log" : process.argv.includes("--backup-only") ? "cms-backup-server.log" : mediaOnly ? "cms-media-server.log" : "cms-release-server.log"), previousServerOutput + serverOutput);
   await stopServer();

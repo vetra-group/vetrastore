@@ -1,5 +1,9 @@
 import type { NextConfig } from "next";
 import { locales } from "./src/lib/i18n";
+import { assertProductionSiteConfig } from "./src/lib/site-origin";
+
+assertProductionSiteConfig(process.env);
+
 const config: NextConfig = {
   poweredByHeader: false,
   agentRules: false,

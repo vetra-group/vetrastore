@@ -115,7 +115,7 @@ for (const locale of locales) {
         ([, attributes]) => attributes.match(/\bhref="([^"]+)"/)?.[1] === localizedPath(locale, "/blog"),
       );
       assert.ok(blogLink, `${url}: blog navigation destination`);
-      assert.match(blogLink[1], /\baria-current="page"/, `${url}: active blog navigation`);
+      assert.match(blogLink[1], new RegExp(`\\baria-current="${path === "/blog" ? "page" : "location"}"`), `${url}: active blog navigation`);
       assert.equal(blogLink[2], navigationLabels[locale].blog, `${url}: localized blog navigation label`);
       for (const language of [...locales, "x-default"]) {
         const alternate = html.match(
@@ -176,7 +176,8 @@ for (const locale of locales) {
         assert.match(html, /<meta property="og:type" content="article"/, `${url}: article Open Graph type`);
         const socialImage = html.match(/<meta property="og:image" content="([^"]+)"/);
         assert.ok(socialImage, `${url}: article Open Graph image`);
-        assert.equal(socialImage[1], article.image, `${url}: social image matches the article image`);
+        assert.equal(html.match(/<meta name="twitter:image" content="([^"]+)"/)?.[1], socialImage[1], `${url}: article OG and Twitter image parity`);
+        assert.ok(new URL(socialImage[1]).protocol.startsWith("http"), `${url}: absolute share image URL`);
         assert.equal(article.author["@type"], "Organization", `${url}: organization author`);
         assert.equal(article.publisher["@type"], "Organization", `${url}: organization publisher`);
         const breadcrumbs = schemas.find((schema) => schema["@type"] === "BreadcrumbList");

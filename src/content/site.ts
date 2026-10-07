@@ -50,8 +50,8 @@ type SiteCopy = {
 };
 export const siteCopy: Localized<SiteCopy> = {
   ar: {
-    homeTitle: "منتجات واستفسارات للجملة والتجزئة",
-    homeDescription: "استفسر عن الشراء بالتجزئة أو بالجملة. يؤكد فريقنا التوافر وترتيبات التوصيل.",
+    homeTitle: "منتجات وعلامات تجارية مختارة",
+    homeDescription: "اكتشف مختارات VETRA STORE واطّلع على تفاصيل المنتجات والعلامات التجارية. استفسر عن التجزئة والجملة والتوافر والتوصيل.",
     mainNav: "التنقل الرئيسي",
     mobileNav: "قائمة التنقل على الهاتف",
     heroSlideAlts: {
@@ -104,7 +104,7 @@ export const siteCopy: Localized<SiteCopy> = {
     bottom: "منتجات عالية الجودة. قيمة تستحقها.",
     heroEyebrow: "من اختيار VETRA",
     heroTitle: ["منتجات عالية الجودة", "وقيمة استثنائية."],
-    heroBody: "تجمع VETRA بين الخبرة والمعايير العالية في اختيار المنتجات، مع الاهتمام بالجودة والقيمة.",
+    heroBody: "تختار VETRA STORE المنتجات والعلامات التجارية مع الاهتمام بالجودة والقيمة.",
     shopNow: "منتجاتنا",
     heroSecondary: "من نحن",
     trust: {
@@ -141,8 +141,8 @@ export const siteCopy: Localized<SiteCopy> = {
     },
   },
   en: {
-    homeTitle: "Products & retail or wholesale enquiries",
-    homeDescription: "Retail and wholesale enquiries. Confirm availability and delivery with our team.",
+    homeTitle: "Selected Products & Brands",
+    homeDescription: "Discover VETRA STORE's selection. Browse product and brand details, and enquire about retail, wholesale, availability and delivery.",
     mainNav: "Main navigation",
     mobileNav: "Mobile navigation",
     heroSlideAlts: {
@@ -196,7 +196,7 @@ export const siteCopy: Localized<SiteCopy> = {
     heroEyebrow: "SELECTED BY VETRA",
     heroTitle: ["Quality Products", "Outstanding Value."],
     heroBody:
-      "VETRA brings expertise and high standards to product selection, with a focus on quality and value.",
+      "VETRA STORE selects products and brands with a focus on quality and value.",
     shopNow: "Our Products",
     heroSecondary: "About Us",
     trust: {
@@ -245,8 +245,8 @@ export const siteCopy: Localized<SiteCopy> = {
     },
   },
   th: {
-    homeTitle: "สินค้าและการสอบถามปลีกหรือขายส่ง",
-    homeDescription: "สอบถามสินค้าได้ทั้งปลีกและขายส่ง ทีมงานจะยืนยันสินค้าและรายละเอียดการจัดส่ง",
+    homeTitle: "สินค้าและแบรนด์ที่คัดสรร",
+    homeDescription: "เลือกชมสินค้าที่ VETRA STORE คัดสรร พร้อมรายละเอียดสินค้าและแบรนด์ สอบถามปลีก ขายส่ง ความพร้อมของสินค้า และการจัดส่ง",
     mainNav: "เมนูหลัก",
     mobileNav: "เมนูมือถือ",
     heroSlideAlts: {
@@ -305,7 +305,7 @@ export const siteCopy: Localized<SiteCopy> = {
     heroEyebrow: "VETRA คัดเลือก",
     heroTitle: ["สินค้าคุณภาพดี", "คุ้มค่ามากที่สุด"],
     heroBody:
-      "VETRA เชี่ยวชาญการคัดเลือกสินค้า มาตรฐานสูง ให้ความสำคัญกับคุณภาพ และความคุ้มค่า",
+      "VETRA STORE คัดเลือกสินค้าและแบรนด์ โดยให้ความสำคัญกับคุณภาพและความคุ้มค่า",
     shopNow: "สินค้าของเรา",
     heroSecondary: "เกี่ยวกับเรา",
     trust: {

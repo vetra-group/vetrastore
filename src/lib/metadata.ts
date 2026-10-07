@@ -1,7 +1,7 @@
 import type { Metadata } from "next";
 import { languageConfig, locales, localizedPath, type Locale } from "./i18n";
-import { honey } from "./catalog";
 import { preventIndexing } from "./site-origin";
+import { socialImagePath, socialImageSize } from "./social-image";
 export { siteUrl, preventIndexing } from "./site-origin";
 export function pageMetadata(
   locale: Locale,
@@ -10,10 +10,14 @@ export function pageMetadata(
   description: string,
   storeName = "VETRA STORE",
   availableLocales: readonly Locale[] = locales,
+  imageVersion = "",
 ): Metadata {
+  const image = socialImagePath(locale, path, title, description, imageVersion);
+  const fullTitle = !path || path === "/" ? `${storeName} | ${title}` : `${title} | ${storeName}`;
+  const imageAlt = fullTitle;
   return {
     ...(preventIndexing ? { robots: { index: false, follow: false } } : {}),
-    title: { absolute: `${title} | ${storeName}` },
+    title: { absolute: fullTitle },
     description,
     alternates: {
       canonical: localizedPath(locale, path),
@@ -23,18 +27,18 @@ export function pageMetadata(
       ]),
     },
     openGraph: {
-      title: `${title} | ${storeName}`,
+      title: fullTitle,
       description,
       siteName: storeName,
       url: localizedPath(locale, path),
       locale: languageConfig.locales.find((l) => l.code === locale)?.region,
       alternateLocale: availableLocales.filter((language) => language !== locale).map((language) => languageConfig.locales.find((entry) => entry.code === language)!.region),
       type: "website",
-      images: [{ url: honey.image, width: 1100, height: 1000, alt: honey.card[locale].imageAlt }],
+      images: [{ url: image, ...socialImageSize, type: "image/png", alt: imageAlt }],
     },
     twitter: {
-      card: "summary_large_image", title: `${title} | ${storeName}`, description,
-      images: [{ url: honey.image, alt: honey.card[locale].imageAlt }],
+      card: "summary_large_image", title: fullTitle, description,
+      images: [{ url: image, ...socialImageSize, alt: imageAlt }],
     },
   };
 }

@@ -1,5 +1,5 @@
 import type { Localized } from "@/lib/i18n";
-import { honeySellingSummary, storeDetails } from "@/content/store-details";
+import { storeDetails } from "@/content/store-details";
 
 export const editorialUi = {
   ar: {
@@ -420,15 +420,15 @@ export const helpCopy = {
     privacy: "معلومات الخصوصية",
     wholesale: "الجملة وقطاع الأعمال",
     wholesaleLink: "استفسر عن الجملة",
-    productLink: "عرض المنتج وملصقه",
+    productLink: "تصفّح جميع المنتجات",
     demoTitle: "جرّب الموقع",
     demoLink: "إدارة السجلات التجريبية",
     demoText: "في الوضع التجريبي، تُحفظ الرسائل وطلبات الشراء في هذا المتصفح فقط. لا تُرسل رسائل بريد إلكتروني ولا تُجرى عمليات دفع أو توصيل. ويمكن مسح السجلات التجريبية من صفحة الإدارة.",
     questions: [
-      ["ما المنتجات التي يمكنني الاطّلاع عليها حاليًا؟", "تتوفر حاليًا تفاصيل عسل أزهار القهوة من ESHAN وسعره. أما حبوب القهوة والقهوة سريعة التحضير فهما معاينة لمنتجات ستُطرح لاحقًا."],
-      ["ما مكوّنات العسل ومن أين يأتي؟", "يذكر ملصق ESHAN أنه عسل أزهار القهوة 100% من شمال تايلاند. يمكنك الاطّلاع على صور الملصق في صفحة المنتج لمعرفة التفاصيل."],
-      ["كيف أحفظ العسل؟", "يوصي الملصق بالحفظ في درجة حرارة الغرفة. تحقّق من التعليمات وتاريخ الصلاحية ورقم التشغيلة على العبوة التي تستلمها."],
-      ["كم يبلغ سعره؟", honeySellingSummary("ar")],
+      ["ما المنتجات التي يمكنني الاطّلاع عليها حاليًا؟", "تصفّح صفحة المنتجات للاطّلاع على المنتجات والعلامات التجارية المعروضة حاليًا وتفاصيل كل منتج."],
+      ["أين أجد معلومات مكوّنات المنتج ومواده ومنشئه؟", "راجع تفاصيل كل منتج وملصقه أو عبوته لمعرفة المكوّنات أو المواد والمنشأ المذكور. تختلف هذه المعلومات بحسب المنتج؛ تواصل مع فريقنا إذا لم تتضح معلومة أو لم تجدها."],
+      ["أين أجد تعليمات الحفظ والعناية بالمنتج؟", "راجع تعليمات الحفظ والعناية في تفاصيل كل منتج وعلى ملصقه أو عبوته. اتبع التعليمات الموجودة على المنتج الذي تستلمه، وتواصل معنا إذا لم تتضح معلومة."],
+      ["أين أجد أسعار المنتجات؟", "راجع صفحة كل منتج للاطّلاع على السعر المعروض والكمية والعملة. إذا كان السعر مرجعيًا، فتحقّق من شروط الدفع والعملة التي ستُحصّل بها الدفعة قبل الدفع. تواصل معنا للاستفسار عن كميات الجملة أو الحصول على عرض سعر للتوصيل."],
       ["هل تُعدّ إضافة المنتج إلى السلة طلب شراء؟", "لا. يجب أن يؤكد فريقنا توافر المنتج ورسوم التوصيل وتفاصيل الدفع قبل متابعة الطلب. وفي الوضع التجريبي، تبقى الطلبات في هذا المتصفح فقط."],
     ],
     shippingText: storeDetails.ar.shipping.description,
@@ -451,26 +451,26 @@ export const helpCopy = {
     privacy: "ข้อมูลความเป็นส่วนตัว",
     wholesale: "ขายส่งและธุรกิจ",
     wholesaleLink: "สอบถามขายส่ง",
-    productLink: "ดูสินค้าและฉลาก",
+    productLink: "ดูสินค้าทั้งหมด",
     demoTitle: "ทดลองใช้งานเว็บไซต์",
     demoLink: "จัดการข้อมูลทดลอง",
     demoText: "ในโหมดทดลอง ข้อความและรายการสั่งซื้อบันทึกไว้ในเบราว์เซอร์นี้เท่านั้น ไม่มีการส่งอีเมล รับชำระเงิน หรือจัดส่งสินค้า ข้อมูลทดลองสามารถล้างได้จากหน้าจัดการ",
     questions: [
       [
         "ขณะนี้มีสินค้าอะไรบ้าง?",
-        "สินค้าที่แสดงรายละเอียดและราคาแล้วคือน้ำผึ้งดอกกาแฟ ESHAN ส่วนเมล็ดกาแฟและกาแฟสำเร็จรูปยังเป็นรายการที่จะเปิดตัวภายหลัง",
+        "ดูรายการสินค้าและแบรนด์ที่แสดงอยู่ในหน้าสินค้า พร้อมรายละเอียดของสินค้าแต่ละรายการ",
       ],
       [
-        "น้ำผึ้งมีส่วนประกอบและแหล่งที่มาอย่างไร?",
-        "ฉลาก ESHAN ระบุส่วนประกอบเป็นน้ำผึ้งดอกกาแฟ 100% จากภาคเหนือของไทย ดูภาพฉลากในหน้าสินค้าเพื่ออ่านรายละเอียดเพิ่มเติม",
+        "ดูส่วนประกอบ วัสดุ และแหล่งที่มาของสินค้าได้ที่ไหน?",
+        "อ่านรายละเอียดสินค้าแต่ละรายการและฉลากหรือบรรจุภัณฑ์ เพื่อดูส่วนประกอบหรือวัสดุและแหล่งที่มาที่ระบุ ข้อมูลเหล่านี้แตกต่างกันตามสินค้า ติดต่อทีมงานหากข้อมูลไม่ชัดเจนหรือไม่พบรายละเอียดที่ต้องการ",
       ],
       [
-        "ควรเก็บรักษาอย่างไร?",
-        "ฉลากระบุให้เก็บรักษาที่อุณหภูมิห้อง โปรดตรวจสอบคำแนะนำ วันหมดอายุ และเลขล็อตบนกระปุกที่คุณได้รับ",
+        "ดูคำแนะนำการเก็บรักษาและดูแลสินค้าได้ที่ไหน?",
+        "อ่านคำแนะนำการเก็บรักษาและดูแลในรายละเอียดสินค้าแต่ละรายการ รวมถึงฉลากหรือบรรจุภัณฑ์ ปฏิบัติตามคำแนะนำบนสินค้าที่ได้รับ และติดต่อเราหากมีข้อมูลที่ไม่ชัดเจน",
       ],
       [
-        "สินค้าราคาเท่าไร?",
-        honeySellingSummary("th"),
+        "ดูราคาสินค้าได้ที่ไหน?",
+        "ดูราคา จำนวน และสกุลเงินที่แสดงในหน้าสินค้าแต่ละรายการ หากเป็นราคาอ้างอิง ให้ตรวจสอบเงื่อนไขการชำระและสกุลเงินที่เรียกเก็บก่อนชำระ สอบถามทีมงานเรื่องจำนวนขายส่งหรือค่าจัดส่งได้",
       ],
       [
         "เพิ่มสินค้าในตะกร้าแล้วถือว่าสั่งซื้อหรือยัง?",
@@ -501,26 +501,26 @@ export const helpCopy = {
     privacy: "Privacy information",
     wholesale: "Wholesale & business",
     wholesaleLink: "Ask about wholesale",
-    productLink: "View product & label",
+    productLink: "Browse all products",
     demoTitle: "Try the website",
     demoLink: "Manage demo records",
     demoText: "In demo mode, messages and order requests are saved in this browser only. No email, payment, or delivery takes place. Demo records can be cleared from the management page.",
     questions: [
       [
         "Which products are available to explore?",
-        "ESHAN Coffee Blossom Honey currently has product details and pricing. Coffee beans and instant coffee are previews for a future launch.",
+        "Browse the catalog for the products and brands currently shown, with details for each product.",
       ],
       [
-        "What is in the honey, and where is it from?",
-        "The ESHAN label lists 100% coffee blossom honey from northern Thailand. Label photos on the product page show the details.",
+        "Where can I find a product's ingredients, materials and origin?",
+        "Check each product's details and its label or packaging for the listed ingredients or materials and origin. These details vary by product; ask our team if anything is unclear or missing.",
       ],
       [
-        "How should I store it?",
-        "The label says to keep it at room temperature. Check the instructions, expiry date, and lot number on the jar you receive.",
+        "Where can I find storage and care instructions?",
+        "Read the storage and care instructions in each product's details and on its label or packaging. Follow the instructions on the product you receive, and contact us if anything is unclear.",
       ],
       [
-        "How much does it cost?",
-        honeySellingSummary("en"),
+        "Where can I find product prices?",
+        "Check each product page for the displayed price, quantity and currency. If a reference price is shown, check the charging currency and payment terms before paying. Ask our team about wholesale quantities or a delivery quote.",
       ],
       [
         "Does adding to the cart place an order?",

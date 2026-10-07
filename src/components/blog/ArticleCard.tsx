@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/loading/NavigationLink";
 import Icon from "@/components/Icon";
 import type { BlogCardData } from "@/lib/blog";
 import { localizedPath, type Locale } from "@/lib/i18n";

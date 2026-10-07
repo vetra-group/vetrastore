@@ -1,5 +1,5 @@
 "use client";
-import Link from "next/link";
+import Link from "@/components/loading/NavigationLink";
 import { useParams } from "next/navigation";
 import { isLocale, localizedPath, languageConfig } from "@/lib/i18n";
 import { errorCopy } from "@/content/errors";

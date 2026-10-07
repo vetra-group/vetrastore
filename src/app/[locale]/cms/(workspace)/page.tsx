@@ -8,5 +8,5 @@ export const metadata: Metadata = { title: "CMS", robots: { index: false, follow
 export default async function CmsPage({ params }: { params: Promise<{ locale: string }> }) {
   const { locale } = await params;
   if (!isLocale(locale)) notFound();
-  return <CmsApp locale={locale} />;
+  return <CmsApp key={locale} locale={locale} />;
 }

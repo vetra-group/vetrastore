@@ -1,6 +1,6 @@
 "use client";
 import { newsletterArabic } from "@/content/customer-ar";
-import Link from "next/link";
+import Link from "@/components/loading/NavigationLink";
 import { useId, useRef, useState, type FormEvent } from "react";
 import { useDemo } from "@/components/demo/DemoProvider";
 import Icon from "@/components/Icon";

@@ -145,6 +145,7 @@
 .mobileNav {
   display: none;
 }
+.mobileNav[hidden] { display: none; }
 .skip {
   position: fixed;
   top: -3.75rem;

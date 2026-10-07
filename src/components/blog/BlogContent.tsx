@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import Link from "@/components/loading/NavigationLink";
 import { redirect } from "next/navigation";
 import Icon from "@/components/Icon";
 import BlogLibrary from "./BlogLibrary";

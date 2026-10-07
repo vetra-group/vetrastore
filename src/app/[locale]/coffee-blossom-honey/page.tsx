@@ -6,7 +6,7 @@ import { getLocalizedPublishedContent } from "@/lib/localized-content";
 import { applyCopy } from "@/lib/cms/defaults";
 import { isLocale, locales } from "@/lib/i18n";
 import { productLocaleReady } from "@/lib/cms/localization";
-import { pageMetadata, withSocialImage } from "@/lib/metadata";
+import { pageMetadata } from "@/lib/metadata";
 import { checkoutPaymentOptions } from "@/lib/public-payment-availability";
 import { breadcrumbSchema, pageSchema, productSchema, serializeSchema } from "@/lib/structured-data";
 
@@ -20,14 +20,12 @@ export async function generateMetadata({ params }: Props) {
   const honey = content.products.find((product) => product.id === HONEY_ID && product.status === "published");
   if (!honey) return {};
   const t = applyCopy(commerce[locale], `commerce.${locale}`, content.copy);
-  const metadata = pageMetadata(
+  return pageMetadata(
     locale,
     path,
     `${honey.brand} ${honey.name[locale]} · ${honey.weight} ${t.gram}`,
-    honey.description[locale], content.settings.storeName, locales.filter((language) => productLocaleReady(honey, language)),
+    honey.description[locale], content.settings.storeName, locales.filter((language) => productLocaleReady(honey, language)), honey.image,
   );
-
-  return withSocialImage(metadata, honey.image, honey.card[locale].imageAlt);
 }
 
 export default async function CoffeeBlossomHoneyPage({ params }: Props) {

@@ -1,5 +1,0 @@
-.loading { padding-block: var(--section-space); min-height: 24rem; }
-.loading > p { text-align: center; color: var(--ink-soft); }
-.placeholders { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: var(--space-4); margin-top: var(--space-5); }
-.placeholders span { min-height: 12rem; background: linear-gradient(135deg, var(--surface), var(--paper)); border: 1px solid var(--line); border-radius: var(--radius); animation: soften 1.4s ease-in-out infinite alternate; }
-@keyframes soften { to { opacity: 0.5; } }
