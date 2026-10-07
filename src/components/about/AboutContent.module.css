@@ -1,0 +1,412 @@
+.page {
+  container: about-page / inline-size;
+  color: var(--ink-strong);
+  overflow-wrap: anywhere;
+}
+.hero > *, .process > *, .service > *, .steps li > *, .serviceItem > * {
+  min-width: 0;
+}
+.page h1,
+.page h2 {
+  white-space: pre-line;
+  text-wrap: balance;
+}
+.page p {
+  text-wrap: pretty;
+}
+.eyebrow {
+  color: var(--accent-ink);
+  margin-bottom: var(--space-4);
+}
+.hero {
+  position: relative;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-6);
+  padding-block: var(--section-space) var(--space-6);
+  background: linear-gradient(135deg, var(--paper), var(--background) 55%, var(--surface));
+  isolation: isolate;
+}
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: var(--space-4);
+  border: 1px solid var(--line);
+  pointer-events: none;
+  z-index: -1;
+}
+.heroCopy {
+  width: 100%;
+  max-width: var(--reading-measure);
+  justify-self: center;
+  text-align: center;
+}
+.heroCopy h1 {
+  margin-bottom: var(--space-5);
+  font-size: var(--type-display);
+}
+.heroCopy h1 span {
+  display: block;
+}
+.heroCopy h1 span + span {
+  color: var(--accent-ink);
+}
+.heroBody {
+  max-width: 48ch;
+  margin: 0 auto var(--space-5);
+  color: var(--text);
+  font-size: var(--type-lead);
+  line-height: 1.9;
+}
+.heroActions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-3) var(--space-5);
+}
+.quietLink {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  max-width: 100%;
+  gap: var(--space-2);
+  min-height: var(--control-size);
+  border-bottom: 1px solid var(--line);
+}
+.quietLink svg {
+  width: var(--icon-size);
+  height: var(--icon-size);
+  transform: rotate(90deg);
+}
+.heroNote {
+  margin: var(--space-5) 0 0;
+  color: var(--ink-soft);
+}
+.heroFigure,
+.processFigure {
+  width: 100%;
+  min-width: 0;
+  margin: 0;
+  justify-self: center;
+}
+.heroFigure {
+  max-width: 56rem;
+  padding: var(--space-2);
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+.heroImage {
+  position: relative;
+  aspect-ratio: 4 / 3;
+  overflow: hidden;
+  background: var(--media-surface);
+}
+.heroImage img {
+  object-fit: cover;
+  object-position: 55% center;
+}
+.heroFigure figcaption {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: var(--space-3);
+  padding: var(--space-4) var(--space-2) var(--space-2);
+  color: var(--ink-soft);
+  text-align: center;
+}
+.captionRule {
+  width: var(--space-5);
+  height: 1px;
+  background: var(--gold-deep);
+  flex: 0 0 auto;
+}
+.principles {
+  padding-block: var(--section-space);
+}
+.sectionHead {
+  text-align: center;
+  margin: 0 auto var(--space-6);
+}
+.sectionHead h2,
+.processCopy h2,
+.service h2,
+.closing h2 {
+  margin-bottom: var(--space-4);
+  font-size: var(--type-section-title);
+}
+.sectionHead > p:last-child {
+  max-width: var(--reading-measure);
+  margin: 0 auto;
+  color: var(--ink-soft);
+}
+.principleGrid {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-4);
+}
+.principle {
+  position: relative;
+  flex: 1 1 19rem;
+  min-width: 0;
+  padding: var(--space-5);
+  border: 1px solid var(--line);
+  background: var(--paper);
+  text-align: center;
+}
+.principle::before {
+  content: "";
+  position: absolute;
+  top: -1px;
+  inset-inline-start: var(--space-5);
+  inset-inline-end: var(--space-5);
+  height: 1px;
+  background: var(--gold-deep);
+}
+.principleIcon {
+  display: grid;
+  place-items: center;
+  width: calc(var(--control-size) + var(--space-2));
+  aspect-ratio: 1;
+  margin: 0 auto var(--space-4);
+  color: var(--accent-ink);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  background: var(--background);
+}
+.principleIcon svg {
+  width: calc(var(--icon-size) + var(--space-1));
+  height: auto;
+}
+.principle h3,
+.steps h3,
+.serviceItem h3 {
+  font-size: var(--type-card-title);
+  margin-bottom: var(--space-2);
+}
+.principle p {
+  color: var(--ink-soft);
+  max-width: 42ch;
+  margin: 0 auto;
+  line-height: 1.85;
+}
+.process {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-6);
+  align-items: center;
+  padding-block: var(--section-space);
+  background: var(--surface);
+  border-block: 1px solid var(--line);
+}
+.processFigure {
+  max-width: 48rem;
+}
+.processImage {
+  position: relative;
+  display: grid;
+  aspect-ratio: 5 / 4;
+  overflow: hidden;
+  background: var(--navy);
+}
+.processImage img {
+  object-fit: cover;
+}
+.imageStatement {
+  position: relative;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+  padding: var(--space-5);
+  color: var(--paper);
+  background: linear-gradient(180deg, transparent 25%, var(--overlay-navy-strong));
+}
+.imageStatement p:first-child {
+  color: var(--gold-light);
+  margin-bottom: var(--space-2);
+}
+.imageStatement p:last-child {
+  font-family: var(--font-heading);
+  font-size: var(--type-section-title);
+  white-space: pre-line;
+  line-height: 1.5;
+  margin: 0;
+}
+.processFigure figcaption {
+  color: var(--ink-soft);
+  margin-top: var(--space-2);
+}
+.processCopy {
+  max-width: var(--reading-measure);
+  justify-self: center;
+}
+.intro {
+  color: var(--ink-soft);
+  margin-bottom: var(--space-5);
+}
+.steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.steps li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-4);
+  padding-block: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+.stepMark {
+  display: grid;
+  place-items: center;
+  width: var(--space-5);
+  height: var(--space-5);
+  color: var(--accent-ink);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: 50%;
+}
+.steps p {
+  margin: 0;
+  color: var(--ink-soft);
+}
+.service {
+  position: relative;
+  isolation: isolate;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-6);
+  padding-block: var(--section-space);
+  color: var(--paper);
+  background: radial-gradient(ellipse at 0% 0%, #213b58, transparent 65%), var(--navy);
+}
+.service::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: url("/images/hero-contours.svg") center / cover no-repeat;
+  opacity: 0.28;
+  pointer-events: none;
+}
+.serviceLead {
+  max-width: var(--reading-measure);
+  justify-self: center;
+}
+.serviceLead > :global(.eyebrow) {
+  color: var(--gold-light);
+  margin-bottom: var(--space-4);
+}
+.serviceLead > p:not(:first-child) {
+  color: var(--cream);
+  max-width: 52ch;
+}
+.serviceLink {
+  color: var(--gold-light);
+  border-color: var(--gold-deep);
+  margin-top: var(--space-3);
+  min-height: var(--control-size);
+}
+.serviceLink:focus-visible {
+  outline-color: var(--gold-light);
+}
+.serviceDetails {
+  max-width: var(--reading-measure);
+  width: 100%;
+  justify-self: center;
+}
+.serviceItem {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: var(--space-4);
+  padding-block: var(--space-5);
+  border-top: 1px solid var(--gold-deep);
+}
+.serviceItem:last-child {
+  border-bottom: 1px solid var(--gold-deep);
+}
+.serviceItem > svg {
+  color: var(--gold-light);
+  width: var(--control-size);
+  height: var(--control-size);
+}
+.serviceItem p {
+  color: var(--cream);
+  margin: 0;
+}
+.closing {
+  text-align: center;
+  padding-block: var(--section-space);
+}
+.closing > p:not(:first-child) {
+  max-width: 52ch;
+  margin: 0 auto var(--space-5);
+  color: var(--ink-soft);
+}
+@container about-page (min-width: 52rem) {
+  .hero {
+    grid-template-columns: minmax(0, 0.95fr) minmax(0, 1.05fr);
+    padding-block: var(--space-6);
+  }
+  .heroCopy {
+    text-align: start;
+    padding-block: var(--space-5);
+  }
+  .heroBody {
+    margin-inline-start: 0;
+  }
+  .heroActions {
+    justify-content: flex-start;
+  }
+  .process,
+  .service {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+@container about-page (max-width: 30rem) {
+  .hero::before {
+    inset: var(--space-2);
+  }
+  .heroActions {
+    flex-direction: column;
+    gap: var(--space-2);
+  }
+  .heroFigure figcaption {
+    gap: var(--space-2);
+  }
+  .captionRule {
+    width: var(--space-4);
+  }
+  .principle,
+  .imageStatement {
+    padding: var(--space-4) min(var(--space-4), 10%);
+  }
+  .processCopy > .eyebrow,
+  .processCopy > h2,
+  .processCopy > .intro,
+  .serviceLead {
+    text-align: center;
+  }
+  .steps li {
+    gap: var(--space-3);
+  }
+  .serviceItem > svg {
+    width: calc(var(--icon-size) + var(--space-1));
+    height: auto;
+    margin-top: var(--space-1);
+  }
+}
+@media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
+  .quietLink:hover {
+    color: var(--accent-ink);
+    border-color: currentColor;
+  }
+  .serviceLink:hover {
+    color: var(--gold-highlight);
+  }
+}

@@ -1,0 +1,18 @@
+.card { min-width: 0; width: 100%; max-width: var(--card-max); justify-self: center; }
+.link { display: flex; flex-direction: column; height: 100%; border-bottom: 1px solid var(--line); }
+.image { position: relative; aspect-ratio: 3 / 2; overflow: hidden; background: var(--media-surface); border-radius: var(--radius); }
+.image img { object-fit: cover; transition: transform 400ms ease; }
+.image[data-contained] img { padding: var(--space-4); }
+.category { position: absolute; bottom: var(--space-3); inset-inline-start: var(--space-3); inset-inline-end: var(--space-3); width: fit-content; max-width: calc(100% - var(--space-3) * 2); padding: var(--space-1) var(--space-2); background: var(--paper); color: var(--accent-ink); font-size: var(--font-size-1); overflow-wrap: anywhere; }
+.copy { display: flex; flex-direction: column; flex: 1; padding-block: var(--space-4); }
+.time { color: var(--ink-soft); margin-bottom: var(--space-2); }
+.copy h3 { color: var(--ink-strong); font-size: var(--type-card-title); line-height: 1.5; text-wrap: pretty; margin-bottom: var(--space-3); overflow-wrap: anywhere; }
+.excerpt { color: var(--ink-soft); line-height: 1.85; margin-bottom: var(--space-4); overflow-wrap: anywhere; }
+.action { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); margin-top: auto; color: var(--ink-strong); }
+.action svg { color: var(--accent-ink); transition: transform 200ms ease; }
+.link:focus-visible { outline-offset: var(--space-1); }
+@media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
+  .link:hover .image img { transform: scale(1.035); }
+  .link:hover .action svg { transform: translateX(0.25rem); }
+  .link:hover h3 { color: var(--accent-ink); }
+}

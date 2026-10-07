@@ -1,0 +1,52 @@
+.control {
+  display: inline-flex;
+  align-items: center;
+  justify-content: space-between;
+  height: var(--control-size);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+  background: var(--paper);
+  color: var(--navy);
+  min-width: 7.5rem;
+}
+.control button {
+  display: grid;
+  place-items: center;
+  width: calc(var(--control-size) - 0.25rem);
+  height: calc(100% - 0.125rem);
+  padding: 0;
+  border: 0;
+  background: none;
+  transition: background 0.2s;
+}
+.control button svg {
+  width: 1.2em;
+  height: 1.2em;
+}
+@media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
+  .control button:not(:disabled):hover {
+    background: var(--surface);
+  }
+}
+.control button:disabled {
+  opacity: 0.3;
+}
+.control span {
+  font-size: var(--font-size-1);
+  min-width: 1.5rem;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+}
+@media (max-width: 1100px) {
+  .control {
+    min-width: 6.75rem;
+  }
+}
+@media (max-width: 800px) {
+  .control {
+    min-width: 6.375rem;
+  }
+  .control button {
+    width: 2.375rem;
+  }
+}

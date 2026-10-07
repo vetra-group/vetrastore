@@ -1,0 +1,56 @@
+{
+  "name": "vetra-store",
+  "version": "0.1.0",
+  "private": true,
+  "scripts": {
+    "dev": "next dev",
+    "build": "next build",
+    "start": "next start",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint .",
+    "test": "node scripts/check-commerce.mjs",
+    "test:demo": "node scripts/check-demo.mjs",
+    "test:cms": "node scripts/check-cms.mjs",
+    "test:cms:images": "node scripts/check-cms-image-preparation.mjs",
+    "test:cms:http": "node scripts/check-cms-http.mjs",
+    "test:cms:media": "node scripts/check-cms-media-http.mjs",
+    "test:cms:live": "node scripts/check-cms-live.mjs",
+    "test:publishing": "node scripts/check-cms-publishing.mjs",
+    "test:platform": "node scripts/check-platform.mjs",
+    "test:search": "node scripts/check-search.mjs",
+    "test:gallery": "node scripts/check-gallery.mjs",
+    "test:languages": "node scripts/check-languages.mjs",
+    "test:cms:languages": "node scripts/check-cms-localization.mjs",
+    "test:saved-products": "node scripts/check-saved-product.mjs",
+    "test:cms:recovery": "node scripts/check-cms-recovery.mjs",
+    "test:published": "node scripts/check-published-read-model.mjs",
+    "test:operations": "node scripts/check-operations.mjs",
+    "test:backups": "node scripts/check-backup-transfers.mjs && node scripts/check-backup-folder.mjs",
+    "test:browser": "node scripts/check-cms-live.mjs --ui-only",
+    "test:release": "node scripts/check-cms-live.mjs --release",
+    "audit:serve": "node scripts/serve-audit.mjs",
+    "check:launch": "node scripts/check-launch.mjs",
+    "test:smoke": "node scripts/smoke.mjs",
+    "media:check": "node scripts/cloudinary-media.mjs",
+    "test:forms": "node scripts/check-customer-forms.mjs",
+    "test:storefront": "node scripts/check-cms-live.mjs --storefront-only"
+  },
+  "dependencies": {
+    "lucide-react": "^1.49.0",
+    "mongodb": "^6.20.0",
+    "next": "16.3.7",
+    "react": "19.2.3",
+    "react-dom": "19.2.3"
+  },
+  "devDependencies": {
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "eslint": "^9.39.0",
+    "eslint-config-next": "16.3.7",
+    "typescript": "^5.9.3"
+  },
+  "engines": {
+    "node": ">=22.18.0"
+  }
+}

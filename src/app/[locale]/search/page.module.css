@@ -1,0 +1,39 @@
+.page { padding-block: var(--section-space); container: store-search / inline-size; overflow-wrap: anywhere; }
+.heading { text-align: center; margin-bottom: var(--space-5); }
+.heading p { color: var(--ink-soft); }
+.search { display: flex; flex-wrap: wrap; gap: var(--space-3); align-items: end; padding: min(var(--space-4), 4%); background: var(--surface); }
+.search label { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); min-width: 0; }
+.search button { min-width: 0; max-width: 100%; padding-inline: var(--space-2); gap: var(--space-1); }
+.query { flex: 1 1 22rem; }
+.search input, .search select { min-height: var(--field-min-height); padding: var(--space-2); border: 1px solid var(--field-border); color: var(--ink-strong); background: var(--paper); width: 100%; }
+.search input:focus-visible, .search select:focus-visible { border-color: var(--field-border-focus); box-shadow: var(--field-focus-ring); }
+.count { margin-block: var(--space-4); overflow-wrap: anywhere; }
+.results { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 36rem), 1fr)); gap: var(--space-4); }
+.result { display: grid; grid-template-columns: minmax(8rem, 0.65fr) minmax(0, 1.35fr); gap: var(--space-4); border: 1px solid var(--line); padding: var(--space-4); background: var(--paper); }
+.result :is(h2, h3) { font-size: var(--type-card-title); margin-block: var(--space-2); overflow-wrap: anywhere; }
+.result p { color: var(--ink-soft); max-width: var(--reading-measure); }
+.image { position: relative; aspect-ratio: 1; background: var(--media-surface); align-self: start; }
+.image img { object-fit: contain; }
+.kind, .action { display: flex; align-items: center; gap: var(--space-1); }
+.kind svg, .action svg, .search svg { width: var(--icon-size); height: var(--icon-size); }
+.kind { color: var(--ink-soft); }
+.empty { padding-block: var(--space-5); text-align: center; }
+.empty > div { display: flex; flex-wrap: wrap; justify-content: center; gap: var(--space-3); }
+.guidance { padding-bottom: var(--space-4); }
+.empty h2 { font-size: var(--type-section-title); color: var(--ink-strong); text-wrap: balance; }
+.empty > p { max-width: var(--reading-measure); margin-inline: auto; color: var(--ink-soft); }
+.suggestions { display: flex; flex-wrap: wrap; gap: var(--space-2); justify-content: center; margin-top: var(--space-4); }
+.suggestions a { display: inline-flex; align-items: center; gap: var(--space-2); min-height: var(--control-size); min-width: 0; max-width: 100%; padding: var(--space-2) var(--space-3); border: 1px solid var(--line); background: var(--paper); color: var(--ink-strong); border-radius: var(--radius); text-align: start; overflow-wrap: anywhere; }
+.suggestions span { min-width: 0; }
+.suggestions svg, .broaden svg, .browse svg { width: var(--icon-size); height: var(--icon-size); }
+.broaden { display: grid; gap: var(--space-2); justify-items: center; padding: var(--space-3); border-block: 1px solid var(--line); }
+.broaden a { display: inline-flex; align-items: center; gap: var(--space-1); color: var(--accent-ink); min-height: var(--control-size); text-decoration: underline; text-underline-offset: .2em; }
+.nearby { padding-bottom: var(--space-5); }
+.nearbyHeading { margin-bottom: var(--space-4); }
+.nearbyHeading h2 { font-size: var(--font-size-5); color: var(--ink-strong); margin-bottom: var(--space-2); }
+.nearbyHeading p { color: var(--ink-soft); }
+.browse { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--space-3) var(--space-4); }
+@media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) { .result:hover, .suggestions a:hover { border-color: var(--gold); } }
+.suggestions a:active { background: var(--surface); }
+.result:active { border-color: var(--gold); }
+@container store-search (max-width: 40rem) { .result { grid-template-columns: minmax(0, 1fr); padding: min(var(--space-4), 4%); } .image { aspect-ratio: 16 / 9; } .search button, .search label { flex: 1 1 100%; } .browse a { max-width: 100%; min-width: 0; padding-inline: var(--space-2); } }

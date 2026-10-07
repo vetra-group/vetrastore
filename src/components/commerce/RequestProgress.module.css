@@ -1,0 +1,10 @@
+.section { margin-top: var(--space-6); padding-top: var(--space-5); border-top: 1px solid var(--line); }
+.section h2 { color: var(--ink-strong); font-size: var(--type-card-title); }
+.section p { max-width: var(--reading-measure); color: var(--ink-soft); line-height: 1.8; }
+.list { display: grid; gap: var(--space-3); }
+.request { border: 1px solid var(--line); background: var(--paper); border-radius: var(--radius); overflow-wrap: anywhere; }
+.request summary { min-height: var(--control-size); padding: var(--space-3); color: var(--ink-strong); cursor: pointer; }
+.request summary strong { margin-inline-end: var(--space-3); }
+.request summary span { color: var(--accent-ink); }
+.request > div { padding: 0 var(--space-4) var(--space-4); }
+.request summary:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }

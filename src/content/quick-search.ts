@@ -1,0 +1,6 @@
+import { quickSearchArabic } from "@/content/customer-ar";
+export const quickSearchCopy = {
+  ar: quickSearchArabic,
+  en: { title: "Find something good", hint: "Search products and useful guides", placeholder: "Try honey, coffee or product care", explore: "Explore VETRA", product: "Product", article: "Article", loading: "Finding matches…", empty: "No matches yet", emptyHint: "Try a product name or a shorter phrase.", failed: "Suggestions could not load. You can still open the full search.", retry: "Try again", all: "View all results", browse: "Browse products", close: "Close search", search: "Search", result: "results", clear: "Clear search", help: "Use the arrow keys to explore suggestions, Enter to open, or Escape to close." },
+  th: { title: "ค้นหาสิ่งที่ใช่", hint: "ค้นหาสินค้าและบทความที่ช่วยคุณเลือก", placeholder: "ลองค้นหา น้ำผึ้ง กาแฟ หรือวิธีเก็บรักษา", explore: "ค้นพบสินค้าจาก VETRA", product: "สินค้า", article: "บทความ", loading: "กำลังค้นหา…", empty: "ยังไม่พบรายการที่ตรงกัน", emptyHint: "ลองใช้ชื่อสินค้า หรือคำค้นหาที่สั้นลง", failed: "โหลดคำแนะนำไม่สำเร็จ คุณยังเปิดหน้าค้นหาทั้งหมดได้", retry: "ลองอีกครั้ง", all: "ดูผลการค้นหาทั้งหมด", browse: "ดูสินค้าทั้งหมด", close: "ปิดการค้นหา", search: "ค้นหา", result: "รายการ", clear: "ล้างคำค้นหา", help: "ใช้ปุ่มลูกศรเพื่อเลือกคำแนะนำ Enter เพื่อเปิด หรือ Escape เพื่อปิด" },
+} as const;

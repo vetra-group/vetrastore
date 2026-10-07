@@ -1,0 +1,16 @@
+.dialog { width: min(54rem, calc(100% - 2rem)); max-height: calc(100dvh - 2rem); padding: var(--space-4); color: var(--ink-strong); background: var(--paper); border: 1px solid var(--line); }
+.dialog::backdrop { background: var(--overlay-navy-soft); }
+.dialog header, .dialog footer { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-3); }
+.dialog h2 { font-size: var(--type-card-title); }
+.dialog p { margin-block: var(--space-3); color: var(--ink-soft); }
+.dialog button { min-height: var(--control-size); padding: var(--space-1) var(--space-3); border: 1px solid var(--line); }
+.fields { display: grid; gap: var(--space-4); margin-block: var(--space-4); }
+.fields fieldset { min-width: 0; padding: var(--space-3); border: 1px solid var(--line); }
+.fields legend { overflow-wrap: anywhere; padding-inline: var(--space-1); }
+.choices { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(16rem, 100%), 1fr)); gap: var(--space-3); }
+.choices label { min-width: 0; padding: var(--space-3); background: var(--background); border: 1px solid var(--line); }
+.choices label[data-selected="true"] { border-color: var(--gold); background: var(--surface); }
+.choices span { display: flex; align-items: center; gap: var(--space-2); min-height: var(--control-size); }
+.choices pre { font: inherit; white-space: pre-wrap; overflow-wrap: anywhere; max-height: 16rem; overflow: auto; }
+.dialog button:focus-visible, .choices input:focus-visible { outline: 2px solid var(--gold); outline-offset: 3px; }
+.dialog footer { position: sticky; bottom: 0; padding-block: var(--space-3); background: var(--paper); }

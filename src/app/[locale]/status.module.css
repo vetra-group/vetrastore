@@ -1,0 +1,38 @@
+.status {
+  padding-block: var(--space-6);
+  text-align: center;
+  min-height: 32rem;
+  color: var(--navy);
+}
+.status :global(.eyebrow) {
+  color: var(--muted);
+  margin-bottom: 25px;
+}
+.status :global(.eyebrow)::before {
+  content: "";
+  display: block;
+  width: 44px;
+  height: 1px;
+  margin: 0 auto 28px;
+  background: var(--gold);
+}
+.status h1 {
+  font-size: var(--font-size-9);
+  margin-bottom: 25px;
+}
+.status > p:not(:first-child) {
+  max-width: 35rem;
+  margin: 0 auto 30px;
+  color: var(--muted);
+}
+.status > div {
+  display: flex;
+  justify-content: center;
+  gap: var(--space-2);
+  flex-wrap: wrap;
+}
+@media (max-width: 767px) {
+  .status {
+    padding-block: 72px 84px;
+  }
+}

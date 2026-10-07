@@ -1,0 +1,49 @@
+name: Verify storefront
+on:
+  pull_request:
+  push:
+    branches: [main]
+permissions:
+  contents: read
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      NEXT_PUBLIC_DEMO_MODE: "true"
+      NEXT_PUBLIC_SITE_URL: http://127.0.0.1:3310
+      SITE_NOINDEX: "true"
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+          cache: npm
+      - run: npm ci
+      - run: npm run typecheck
+      - run: npm run lint
+      - run: npm test
+      - run: npm run test:demo
+      - run: npm run test:cms
+      - run: npm run test:cms:images
+      - run: npm run test:publishing
+      - run: npm run test:platform
+      - run: npm run test:search
+      - run: npm run test:gallery
+      - run: npm run test:languages
+      - run: npm run test:cms:languages
+      - run: npm run test:saved-products
+      - run: npm run test:forms
+      - run: npm run test:cms:recovery
+      - run: npm run test:published
+      - run: npm run test:operations
+      - run: npm run test:backups
+      - run: node scripts/check-blog-migration.mjs
+      - run: npm run build
+      - run: node scripts/check-cms-live.mjs --release --expected-site-url=http://127.0.0.1:3310
+      - run: npm run test:browser
+      - run: npm run test:storefront
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: browser-regression
+          path: output/qa

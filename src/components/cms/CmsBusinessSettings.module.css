@@ -1,0 +1,12 @@
+.panel { padding: var(--space-4); border: 1px solid var(--line); background: var(--paper); }
+.panel > p { max-width: var(--reading-measure); color: var(--ink-soft); }
+.item { border-top: 1px solid var(--line); padding-block: var(--space-3); }
+.item summary { display: flex; flex-wrap: wrap; justify-content: space-between; gap: var(--space-2); cursor: pointer; font-weight: 600; }
+.item summary span { font-weight: 400; color: var(--ink-soft); }
+.check { display: flex; align-items: center; gap: var(--space-2); margin-block: var(--space-4); }
+.check input { accent-color: var(--navy); min-width: 1.25rem; min-height: 1.25rem; }
+.languages { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 22rem), 1fr)); gap: var(--space-4); }
+.languages fieldset { min-width: 0; margin: 0; padding: var(--space-3); border: 1px solid var(--line); }
+.languages label { display: grid; gap: var(--space-1); margin-block: var(--space-3); }
+.languages textarea { width: 100%; padding: var(--space-2); border: 1px solid var(--field-border); border-radius: var(--radius); background: var(--paper); color: var(--ink-strong); resize: vertical; }
+.languages textarea:focus-visible { border-color: var(--field-border-focus); box-shadow: var(--field-focus-ring); }

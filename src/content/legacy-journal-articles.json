@@ -1,0 +1,141 @@
+[
+  {
+    "slug": "a-taste-of-coffee-blossom",
+    "image": "/images/nature-story.webp",
+    "content": {
+      "th": {
+        "category": "รู้จักน้ำผึ้ง",
+        "title": "รู้จักน้ำผึ้งดอกกาแฟ จากภาคเหนือของไทย",
+        "excerpt": "เรื่องราวของดอกกาแฟ และรายละเอียดเล็ก ๆ บนฉลากที่ช่วยให้รู้จักน้ำผึ้งในกระปุกมากขึ้น",
+        "intro": "บางครั้ง การรู้จักสิ่งที่อยู่บนโต๊ะอาหารเริ่มต้นง่าย ๆ จากการอ่านฉลาก สำหรับน้ำผึ้งดอกกาแฟ ESHAN ข้อมูลบนกระปุกบอกเล่าถึงวัตถุดิบและแหล่งที่มาไว้อย่างชัดเจน",
+        "sections": [
+          {
+            "title": "ดอกกาแฟ คือที่มาของชื่อ",
+            "text": "ฉลากของ ESHAN ระบุว่าน้ำผึ้งนี้เก็บเกี่ยวจากดอกกาแฟที่ปลูกในภาคเหนือของประเทศไทย ชื่อ “น้ำผึ้งดอกกาแฟ” จึงบอกถึงแหล่งดอกไม้ ไม่ได้หมายถึงน้ำผึ้งที่เติมกาแฟลงไป"
+          },
+          {
+            "title": "ส่วนประกอบเดียวที่ระบุบนฉลาก",
+            "text": "ส่วนประกอบที่ระบุคือ น้ำผึ้งดอกกาแฟ 100% ในกระปุกขนาดน้ำหนักสุทธิ 380 กรัม หากต้องการตรวจสอบข้อมูลผลิตภัณฑ์เพิ่มเติม สามารถดูภาพฉลากจริงได้ในหน้าสินค้า"
+          },
+          {
+            "title": "เริ่มจากการชิมในแบบของคุณ",
+            "text": "ลองใช้ปริมาณเล็กน้อยกับขนมปัง หรือเติมในเครื่องดื่มที่คุณคุ้นเคย แล้วค่อยปรับปริมาณตามความชอบ เป็นวิธีง่าย ๆ ที่จะเลือกความหวานให้เหมาะกับมื้อของคุณ"
+          }
+        ]
+      },
+      "en": {
+        "category": "Meet your honey",
+        "title": "Coffee blossom honey, rooted in northern Thailand",
+        "excerpt": "A closer look at the flower behind the name, and the small details on the jar.",
+        "intro": "Getting to know what is on your table can begin with a simple habit: reading the label. The ESHAN jar gives us a clear starting point for its ingredient and origin.",
+        "sections": [
+          {
+            "title": "The blossom behind the name",
+            "text": "The ESHAN label states that this honey is harvested from coffee blossoms grown in northern Thailand. “Coffee blossom” describes the floral source; it does not mean coffee has been added to the honey."
+          },
+          {
+            "title": "One ingredient on the label",
+            "text": "The listed ingredient is 100% coffee blossom honey, with a net weight of 380 g per jar. You can see photographs of the original packaging on the product page to explore the label for yourself."
+          },
+          {
+            "title": "Find your own way to enjoy it",
+            "text": "Begin with a small amount on toast or in a familiar drink, then adjust to your taste. It is a simple way to find the sweetness that suits your own everyday ritual."
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "simple-honey-pairings",
+    "image": "/images/hero-eshan-1.webp",
+    "imagePosition": "center",
+    "content": {
+      "th": {
+        "category": "บนโต๊ะอาหาร",
+        "title": "สามไอเดียง่าย ๆ เติมน้ำผึ้งให้มื้อธรรมดา",
+        "excerpt": "ขนมปัง โยเกิร์ต และเครื่องดื่มแก้วโปรด — ความอร่อยที่เริ่มจากสิ่งใกล้ตัว",
+        "intro": "ไม่จำเป็นต้องมีสูตรซับซ้อนเพื่อเพลิดเพลินกับน้ำผึ้ง เริ่มต้นจากอาหารที่คุณชอบอยู่แล้ว และใช้ความหวานเพียงเล็กน้อยตามที่ต้องการ",
+        "sections": [
+          {
+            "title": "01 — ขนมปังกับเช้าที่ไม่เร่งรีบ",
+            "text": "ปิ้งขนมปังตามชอบ ทาเนยบาง ๆ แล้วราดน้ำผึ้งเล็กน้อย ลองเพิ่มกล้วยหั่นชิ้น หรือเสิร์ฟกับผลไม้ที่มีอยู่ เริ่มจากน้ำผึ้งครึ่งช้อนชาแล้วชิมก่อนเติมเพิ่ม"
+          },
+          {
+            "title": "02 — โยเกิร์ตในแบบที่คุณเลือก",
+            "text": "ตักโยเกิร์ตรสธรรมชาติใส่ถ้วย เติมผลไม้หั่นชิ้นและน้ำผึ้งตามชอบ หากต้องการความกรุบกรอบ ลองเพิ่มกราโนลาหรือถั่วที่คุณรับประทานได้ เลือกวัตถุดิบให้เหมาะกับข้อจำกัดด้านอาหารของคุณ"
+          },
+          {
+            "title": "03 — เครื่องดื่มแก้วโปรด",
+            "text": "ลองใช้น้ำผึ้งในชาหรือกาแฟแก้วที่ชอบ คนให้เข้ากันแล้วชิมก่อนเติมเพิ่ม สำหรับเครื่องดื่มเย็น ละลายน้ำผึ้งกับน้ำอุ่นปริมาณเล็กน้อยก่อนนำไปผสม เพื่อให้คนเข้ากันได้ง่ายขึ้น"
+          }
+        ]
+      },
+      "en": {
+        "category": "At the table",
+        "title": "Three simple ways to bring honey to the table",
+        "excerpt": "Toast, a bowl of yogurt, and your favourite cup. Small ideas for everyday enjoyment.",
+        "intro": "You do not need an elaborate recipe to enjoy a jar of honey. Start with something you already like, and add a little sweetness to suit your taste.",
+        "sections": [
+          {
+            "title": "01 — A slower morning with toast",
+            "text": "Toast your favourite bread, spread a little butter, and finish with a light drizzle of honey. Add sliced banana or serve with fruit you have to hand. Start with half a teaspoon of honey and taste before adding more."
+          },
+          {
+            "title": "02 — A bowl made your way",
+            "text": "Spoon plain yogurt into a bowl, then add chopped fruit and honey to taste. For a little crunch, try granola or nuts that suit your diet. Choose every ingredient with your own dietary needs in mind."
+          },
+          {
+            "title": "03 — Your favourite cup",
+            "text": "Try a little honey in tea or coffee, stir well, and taste before adding more. For a cold drink, first mix the honey with a small amount of warm water to help it blend into the finished drink."
+          }
+        ]
+      }
+    }
+  },
+  {
+    "slug": "care-for-your-jar",
+    "image": "/images/coffee-ritual.webp",
+    "content": {
+      "th": {
+        "category": "ดูแลสิ่งที่เลือก",
+        "title": "อ่านฉลาก เก็บให้ถูก และเพลิดเพลินกับทุกกระปุก",
+        "excerpt": "สิ่งที่ควรรู้เกี่ยวกับวิธีเก็บรักษา และข้อมูลที่ควรตรวจสอบบนกระปุกที่คุณได้รับ",
+        "intro": "การดูแลน้ำผึ้งเริ่มต้นจากคำแนะนำของผู้ผลิต ฉลากบนกระปุกจริงเป็นข้อมูลอ้างอิงสำหรับสินค้าที่คุณได้รับเสมอ",
+        "sections": [
+          {
+            "title": "เก็บรักษาตามฉลาก",
+            "text": "ฉลาก ESHAN ระบุให้เก็บรักษาที่อุณหภูมิห้อง ตรวจสอบคำแนะนำบนกระปุกที่ได้รับอีกครั้งก่อนจัดเก็บ เพราะข้อมูลบนบรรจุภัณฑ์จริงเป็นข้อมูลของสินค้าล็อตนั้นโดยตรง"
+          },
+          {
+            "title": "ตรวจสอบวันที่บนกระปุก",
+            "text": "มองหาวันผลิต วันหมดอายุ และเลขล็อตที่พิมพ์อยู่บนบรรจุภัณฑ์ ภาพสินค้าบนเว็บไซต์ใช้ประกอบการแสดงสินค้า วันที่ในภาพจึงไม่ใช่การยืนยันวันที่ของกระปุกที่จะจัดส่ง"
+          },
+          {
+            "title": "หากมีข้อสงสัยเกี่ยวกับสินค้า",
+            "text": "เก็บบรรจุภัณฑ์และเลขล็อตไว้ พร้อมแจ้งรายละเอียดผ่านหน้าติดต่อเรา หากต้องการสอบถามข้อมูลของสินค้าก่อนสั่งซื้อ สามารถส่งคำถามโดยระบุชื่อสินค้าและจำนวนที่สนใจได้เช่นกัน"
+          }
+        ]
+      },
+      "en": {
+        "category": "Everyday care",
+        "title": "Read the label. Care for your jar.",
+        "excerpt": "A simple guide to the storage instructions and batch details on your honey.",
+        "intro": "Looking after your honey starts with the maker’s instructions. The label on the jar you receive is always the reference for that particular product.",
+        "sections": [
+          {
+            "title": "Follow the storage instructions",
+            "text": "The ESHAN label says to keep the honey at room temperature. Check the instructions on your own jar before storing it, as the packaging is the direct reference for your batch."
+          },
+          {
+            "title": "Check the dates on your jar",
+            "text": "Look for the manufacture date, expiry date, and lot number printed on the packaging. Website photographs illustrate the product; the dates in those photographs do not confirm the dates of a jar that will be dispatched."
+          },
+          {
+            "title": "If you have a product question",
+            "text": "Keep the packaging and lot number, and share the details through our contact page. You can also ask a question before ordering by including the product name and quantity you are interested in."
+          }
+        ]
+      }
+    }
+  }
+]

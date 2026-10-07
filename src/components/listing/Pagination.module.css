@@ -1,0 +1,10 @@
+.pagination { display: grid; justify-items: center; gap: var(--space-3); padding-block: var(--space-5); border-top: 1px solid var(--line); margin-top: var(--space-5); text-align: center; }
+.pagination p { margin: 0; color: var(--ink-soft); }
+.links { display: flex; flex-wrap: wrap; justify-content: center; align-items: center; gap: var(--space-1); margin: 0; padding: 0; list-style: none; max-width: 100%; }
+.links li { min-width: 0; max-width: 100%; }
+.links a { display: inline-flex; justify-content: center; align-items: center; min-width: var(--control-size); min-height: var(--control-size); max-width: 100%; padding: var(--space-1); color: var(--ink-strong); border: 1px solid var(--line); background: var(--paper); border-radius: var(--radius); }
+.links a[aria-current="page"] { background: var(--navy); color: var(--paper); border-color: var(--navy); }
+.links svg { width: var(--icon-size); height: var(--icon-size); }
+.gap { display: inline-block; padding: var(--space-1); color: var(--ink-soft); }
+.links a:active { border-color: var(--gold); }
+@media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) { .links a:not([aria-current="page"]):hover { background: var(--surface); border-color: var(--gold); } }

@@ -1,0 +1,373 @@
+:root {
+  --root-font-base: 100%;
+  /* Edit the complete text scale here: 1rem minimum, 2.6rem maximum. */
+  --font-size-1: 1rem;
+  --font-size-2: 1.125rem;
+  --font-size-3: 1.25rem;
+  --font-size-4: 1.375rem;
+  --font-size-5: 1.5rem;
+  --font-size-6: 1.75rem;
+  --font-size-7: 2rem;
+  --font-size-8: 2.25rem;
+  --font-size-9: 2.6rem;
+  --type-card-title: var(--font-size-3);
+  --type-section-title: var(--font-size-7);
+  --type-display: var(--font-size-9);
+  --type-navigation: var(--font-size-1);
+  --type-lead: var(--font-size-1);
+  /* Warm mineral surfaces, champagne details, and deep blue anchors. */
+  --background: #faf7f2;
+  --surface: #f0e8dc;
+  --paper: #fffdfa;
+  --navy: #07162f;
+  --navy-dark: #030c1f;
+  --text: #26364a;
+  --muted: #716356;
+  --line: #ded2c1;
+  --gold: #785422;
+  --gold-light: #e6c67f;
+  --gold-highlight: #f4e3b2;
+  --gold-deep: #bd9349;
+  --brown: #96745c;
+  --cream: #f1e4cb;
+  --ink-strong: var(--navy);
+  --ink-soft: var(--muted);
+  --accent-ink: var(--gold);
+  --overlay-navy-soft: #07162f99;
+  --overlay-navy-strong: #030c1fd9;
+  --font-body-ltr: var(--font-latin, "DM Sans"), var(--font-thai, "Noto Sans Thai"), var(--font-arabic), sans-serif;
+  --font-heading-ltr: Georgia, var(--font-thai-heading, "Noto Serif Thai"), var(--font-arabic-heading), serif;
+  --font-body: var(--font-body-ltr);
+  --font-heading: var(--font-heading-ltr);
+  /* Shared layout and component sizing; rem values follow the root scale. */
+  --page-gutter: clamp(1.25rem, 3.333vw, 6rem);
+  --header-height: clamp(5.625rem, 6vw, 7rem);
+  --reading-measure: 64ch;
+  --card-max: 34rem;
+  --space-1: 0.5rem;
+  --space-2: 0.75rem;
+  --space-3: 1rem;
+  --space-4: 1.5rem;
+  --space-5: 2.5rem;
+  --space-6: 3.5rem;
+  --section-space: clamp(4rem, 6vw, 8rem);
+  /* Shared form and product-media treatment. */
+  --control-size: 3rem;
+  --icon-size: 1.375rem;
+  --slider-control-size: 2.75rem;
+  --field-border: var(--line);
+  --field-border-focus: var(--gold);
+  --field-focus-ring: 0 0 0 0.1875rem #e6c67f33;
+  --field-min-height: var(--control-size);
+  --media-surface: var(--surface);
+  --media-border: var(--line);
+  --media-product-ratio: 1;
+  --radius: 0.125rem;
+  --shadow: 0 0.75rem 2.25rem #07162f0a;
+  --shadow-card: 0 0.5rem 2rem #07162f08;
+  --shadow-panel: 0 1.5rem 5rem #030c1f26;
+  --surface-raised: #fffcf7;
+  --status-success: #355c45;
+  --status-error: #963c32;
+  --status-success-surface: #eff5ef;
+  --status-error-surface: #fff0ec;
+  --line-height-body: 1.75;
+  --line-height-heading: 1.2;
+  --line-height-heading-th: 1.5;
+  --line-height-heading-ar: 1.5;
+  --line-height-body-ar: 1.9;
+  --motion-duration-fast: 160ms;
+  --motion-duration-image: 320ms;
+  --motion-ease-standard: cubic-bezier(0.2, 0.65, 0.3, 1);
+  --motion-duration-drawer: 280ms;
+  --motion-duration-exit: 200ms;
+  --motion-ease-drawer: cubic-bezier(0.22, 1, 0.36, 1);
+}
+* {
+  box-sizing: border-box;
+}
+[lang="ar"] {
+  --font-body: var(--font-arabic), var(--font-latin), sans-serif;
+  --font-heading: var(--font-arabic-heading), var(--font-arabic), serif;
+  --line-height-body: var(--line-height-body-ar);
+  --line-height-heading: var(--line-height-heading-ar);
+  direction: rtl;
+  font-family: var(--font-body);
+}
+[lang="en"], [lang="th"] {
+  direction: ltr;
+  --font-body: var(--font-body-ltr);
+  --font-heading: var(--font-heading-ltr);
+  --line-height-body: 1.75;
+  --line-height-heading: 1.2;
+  font-family: var(--font-body);
+}
+input[type="email"], input[type="url"], input[type="tel"] { direction: ltr; text-align: start; }
+:lang(ar):is(h1, h2, h3, h4, .eyebrow) { letter-spacing: 0; }
+:lang(ar).eyebrow { text-transform: none; }
+:is(.lucide-arrow-right, .lucide-arrow-left, .lucide-arrow-up-right, .lucide-chevron-right, .lucide-chevron-left):dir(rtl) { scale: -1 1; }
+a[href^="tel:"], a[href^="mailto:"] { direction: ltr; unicode-bidi: isolate; display: inline-block; }
+html {
+  /* Follow the browser's font preference at compact and ordinary widths. */
+  font-size: var(--root-font-base);
+  scroll-behavior: smooth;
+  scroll-padding-top: calc(var(--header-offset, var(--header-height)) + 1rem);
+}
+/* Interpolate the root scale between the requested CSS viewport widths.
+   Keeping 100% in each step preserves the browser's font-size preference. */
+@media (min-width: 1600px) {
+  html {
+    font-size: calc(var(--root-font-base) + 0.625vw - 10px);
+  }
+}
+@media (min-width: 1920px) {
+  html {
+    font-size: calc(var(--root-font-base) + 0.9375vw - 16px);
+  }
+}
+@media (min-width: 2560px) {
+  html {
+    font-size: calc(var(--root-font-base) + 0.625vw - 8px);
+  }
+}
+@media (min-width: 3200px) {
+  html {
+    font-size: calc(var(--root-font-base) + 0.9375vw - 18px);
+  }
+}
+@media (min-width: 3840px) {
+  html {
+    font-size: calc(var(--root-font-base) + 0.625vw - 6px);
+  }
+}
+@media (min-width: 4800px) {
+  html {
+    font-size: calc(var(--root-font-base) + 24px);
+  }
+}
+body {
+  margin: 0;
+  background: var(--background);
+  color: var(--text);
+  font-family: var(--font-body);
+  font-size: var(--font-size-1);
+  line-height: var(--line-height-body);
+  -webkit-font-smoothing: antialiased;
+  overflow-wrap: anywhere;
+}
+button,
+input,
+textarea,
+select {
+  font: inherit;
+}
+button,
+a,
+input,
+textarea,
+select {
+  -webkit-tap-highlight-color: transparent;
+}
+button,
+a {
+  touch-action: manipulation;
+}
+button {
+  cursor: pointer;
+}
+button:disabled {
+  cursor: not-allowed;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+img {
+  display: block;
+  max-width: 100%;
+}
+button {
+  color: inherit;
+}
+h1,
+h2,
+h3,
+h4,
+p {
+  margin-top: 0;
+}
+h1 {
+  font-size: var(--type-display);
+}
+h2 {
+  font-size: var(--type-section-title);
+}
+h3 {
+  font-size: var(--font-size-5);
+}
+h4 {
+  font-size: var(--font-size-3);
+}
+h5,
+h6,
+small,
+sub,
+sup {
+  font-size: var(--font-size-1);
+}
+h1,
+h2,
+h3 {
+  font-family: var(--font-heading);
+  font-weight: 400;
+  line-height: var(--line-height-heading);
+  text-wrap: balance;
+}
+:lang(th) h1,
+:lang(th) h2,
+:lang(th) h3 {
+  line-height: var(--line-height-heading-th);
+}
+::selection {
+  background: var(--cream);
+  color: var(--navy);
+}
+:focus-visible {
+  outline: 2px solid var(--gold);
+  outline-offset: 5px;
+}
+svg {
+  flex-shrink: 0;
+}
+input,
+textarea,
+select {
+  max-width: 100%;
+}
+main {
+  min-height: 55vh;
+}
+.container {
+  width: 100%;
+  padding-inline: var(--page-gutter);
+}
+.eyebrow {
+  text-transform: uppercase;
+  letter-spacing: 0.18em;
+  font-size: var(--font-size-1);
+  font-weight: 600;
+}
+.button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  max-width: 100%;
+  text-align: center;
+  overflow-wrap: anywhere;
+  gap: 1.25em;
+  min-height: var(--field-min-height);
+  padding: max(0.75rem, var(--space-1)) min(1.5625rem, 6%);
+  background: var(--navy);
+  color: var(--paper);
+  border: 1px solid var(--navy);
+  border-radius: var(--radius);
+  font-size: var(--type-navigation);
+  font-weight: 500;
+  transition:
+    background var(--motion-duration-fast),
+    border-color var(--motion-duration-fast),
+    transform var(--motion-duration-fast);
+}
+.button svg {
+  width: 1.25em;
+  height: 1.25em;
+}
+@media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
+  .button:hover {
+    background: var(--navy-dark);
+  }
+}
+.button:active {
+  transform: translateY(1px);
+}
+.buttonLight {
+  background: linear-gradient(120deg, var(--gold-highlight), var(--gold-light) 60%, #d4ad60);
+  border-color: var(--gold-deep);
+  color: var(--navy-dark);
+}
+@media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
+  .buttonLight:hover {
+    background: linear-gradient(120deg, #fbefcd, var(--gold-highlight) 60%, var(--gold-light));
+    border-color: var(--gold-light);
+  }
+}
+.buttonOutline {
+  background: transparent;
+  color: var(--navy);
+  border-color: var(--brown);
+}
+@media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
+  .buttonOutline:hover {
+    background: var(--surface);
+  }
+}
+.textLink {
+  display: inline-flex;
+  align-items: center;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+  gap: 1.5em;
+  font-size: var(--font-size-1);
+  padding-bottom: 0.375em;
+  border-bottom: 1px solid var(--text);
+}
+.srOnly {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+/* Touch-capable screens get feedback only while a control is pressed. */
+@media (hover: none), (any-pointer: coarse) {
+  a:active,
+  button:not(:disabled):active {
+    opacity: 0.78;
+  }
+}
+@media (max-width: 800px) {
+  :root {
+    --header-height: 4.5625rem;
+  }
+}
+@media (max-width: 767px) {
+  :root {
+    /* Keep large headings balanced on small screens. */
+    --font-size-7: 2rem;
+    --font-size-8: 2.125rem;
+    --font-size-9: 2.25rem;
+  }
+  .button {
+    min-height: 2.875rem;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+

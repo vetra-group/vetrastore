@@ -1,0 +1,38 @@
+.dialog { width: min(44rem, calc(100% - 2 * var(--space-3))); max-width: none; max-height: calc(100dvh - 2 * var(--space-3)); padding: 0; border: 1px solid var(--line); background: var(--paper); color: var(--ink-strong); box-shadow: var(--shadow-panel); overscroll-behavior: contain; }
+.dialog::backdrop { background: var(--overlay-navy-soft); backdrop-filter: blur(0.2rem); }
+.dialog[data-phase="open"] { animation: arrive var(--motion-duration-drawer) var(--motion-ease-drawer) both; }
+.dialog[data-phase="closing"] { animation: leave var(--motion-duration-exit) ease both; }
+.heading { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--space-3); padding: var(--space-4) var(--space-4) var(--space-3); }
+.heading p { margin-bottom: var(--space-1); color: var(--ink-soft); }
+.heading :global(.eyebrow) { color: var(--accent-ink); }
+.heading h2 { margin-bottom: var(--space-2); font-size: var(--type-section-title); }
+.icon { flex: none; display: grid; place-items: center; min-width: var(--control-size); height: var(--control-size); padding: var(--space-2); border: 0; background: transparent; color: var(--ink-strong); }
+.icon svg, .form > svg, .footer svg, .result > svg { width: var(--icon-size); height: var(--icon-size); }
+.form { display: flex; align-items: center; gap: var(--space-2); margin-inline: var(--space-4); padding-inline-start: var(--space-3); border: 1px solid var(--line); background: var(--background); }
+.form:focus-within { border-color: var(--field-border-focus); box-shadow: var(--field-focus-ring); }
+.form input { min-width: 0; width: 100%; min-height: var(--field-min-height); padding-block: var(--space-2); border: 0; outline: 0; background: transparent; color: inherit; }
+.meta { display: flex; align-items: center; gap: var(--space-2); margin: var(--space-3) var(--space-4); color: var(--ink-soft); min-height: 1.75em; }
+.spinner { width: var(--icon-size); height: var(--icon-size); animation: spin 0.9s linear infinite; }
+.results { max-height: min(26rem, 45dvh); overflow-y: auto; overscroll-behavior: contain; padding-inline: var(--space-4); }
+.result { display: flex; align-items: center; gap: var(--space-3); padding: var(--space-2) 0; border-top: 1px solid var(--line); transition: background var(--motion-duration-fast); }
+.result[aria-selected="true"] { background: var(--surface); outline: 1px solid var(--line); outline-offset: -1px; }
+.image { position: relative; flex: 0 0 4.5rem; aspect-ratio: 1; background: var(--media-surface); }
+.image img { object-fit: contain; padding: var(--space-1); }
+.result[data-kind="article"] .image img { object-fit: cover; padding: 0; }
+.text { min-width: 0; display: grid; gap: 0.125rem; flex: 1; }
+.text strong { font-weight: 500; line-height: 1.5; }
+.kind { color: var(--ink-soft); }
+.text mark { background: var(--cream); color: inherit; font-weight: 600; }
+.result > svg { margin-inline-end: var(--space-2); }
+.empty { padding: var(--space-4); text-align: center; }
+.empty > svg { color: var(--accent-ink); margin: 0 auto var(--space-2); }
+.empty h3 { font-size: var(--type-card-title); }
+.empty p { color: var(--ink-soft); }
+.footer { border-top: 1px solid var(--line); margin-top: var(--space-3); padding: var(--space-3) var(--space-4); }
+.footer a { display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); min-height: var(--control-size); font-weight: 600; }
+.retry { margin: 0 var(--space-4) var(--space-3); background: var(--background); border: 1px solid var(--line); min-height: var(--control-size); padding: var(--space-2) var(--space-3); }
+@media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) { .icon:hover, .retry:hover { background: var(--surface); } .footer a:hover { color: var(--accent-ink); } }
+@media (max-width: 26rem) { .heading { padding: var(--space-3); } .heading h2 { font-size: var(--font-size-6); } .form { margin-inline: var(--space-3); } .form > svg { display: none; } .results, .footer { padding-inline: var(--space-3); } .meta { margin-inline: var(--space-3); } .image { flex-basis: 3.25rem; } .result > svg { display: none; } }
+@keyframes arrive { from { opacity: 0; transform: translateY(0.75rem); } to { opacity: 1; transform: translateY(0); } }
+@keyframes leave { to { opacity: 0; transform: translateY(0.5rem); } }
+@keyframes spin { to { transform: rotate(360deg); } }

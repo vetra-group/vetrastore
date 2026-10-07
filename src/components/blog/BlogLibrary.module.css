@@ -1,0 +1,26 @@
+.library { container: blog-library / inline-size; }
+.tools { display: grid; gap: var(--space-4); align-items: end; padding-block: var(--space-4); border-block: 1px solid var(--line); }
+.categories { display: flex; align-items: center; flex-wrap: wrap; gap: var(--space-1); margin: 0; padding: 0; border: 0; min-width: 0; }
+.categories a { display: inline-flex; align-items: center; min-height: var(--control-size); min-width: 0; max-width: 100%; padding: var(--space-1) min(var(--space-3), 4%); border: 1px solid var(--line); border-radius: var(--radius); color: var(--ink-soft); background: transparent; overflow-wrap: anywhere; }
+.categories a[aria-current="true"] { background: var(--navy); color: var(--paper); border-color: var(--navy); }
+.search { min-width: 0; }
+.search label { display: block; color: var(--ink-strong); margin-bottom: var(--space-1); }
+.searchField { display: flex; align-items: center; min-height: var(--field-min-height); border: 1px solid var(--field-border); border-radius: var(--radius); padding-inline-start: min(var(--space-3), 4%); background: var(--paper); }
+.searchField:focus-within { border-color: var(--field-border-focus); box-shadow: var(--field-focus-ring); }
+.searchField > svg { color: var(--ink-soft); }
+.searchField input { min-width: 0; width: 100%; min-height: var(--field-min-height); padding: var(--space-1) var(--space-2) var(--space-1) 0; border: 0; outline: none; color: var(--ink-strong); background: transparent; }
+.searchField input::placeholder { color: var(--ink-soft); }
+.searchField button { flex: 0 0 var(--control-size); width: var(--control-size); height: var(--control-size); border: 0; background: transparent; display: grid; place-items: center; }
+.searchField button svg, .clear svg { width: var(--icon-size); height: var(--icon-size); }
+.clear { display: inline-flex; gap: var(--space-1); align-items: center; min-height: var(--control-size); color: var(--accent-ink); text-decoration: underline; text-underline-offset: .2em; }
+.results { margin-block: var(--space-3) var(--space-5); color: var(--ink-soft); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr)); gap: var(--space-6) var(--space-5); align-items: stretch; }
+.empty { text-align: center; padding-block: var(--space-6); }
+.empty > svg { color: var(--accent-ink); margin-bottom: var(--space-3); }
+.empty h3 { font-size: var(--type-card-title); }
+.empty p { color: var(--ink-soft); }
+@container blog-library (min-width: 68rem) { .tools { grid-template-columns: minmax(0, 1fr) minmax(18rem, 25rem); gap: var(--space-5); } }
+@media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
+  .categories a:not([aria-current="true"]):hover { background: var(--surface); color: var(--ink-strong); }
+  .searchField button:hover { color: var(--accent-ink); }
+}

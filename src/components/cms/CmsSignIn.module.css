@@ -1,0 +1,13 @@
+.panel { padding: var(--space-5); display: grid; gap: var(--space-3); align-content: center; min-width: 0; }
+.panel h1 { font-size: var(--type-section-title); max-width: 20ch; }
+.panel p { max-width: var(--reading-measure); color: var(--ink-soft); }
+.badge { display: flex; align-items: center; gap: var(--space-2); color: var(--accent-ink); }
+.badge svg, .form button svg { width: var(--icon-size); height: var(--icon-size); }
+.form { display: grid; gap: var(--space-4); }
+.form label { display: grid; gap: var(--space-1); }
+.form input { min-height: var(--field-min-height); width: 100%; padding: var(--space-2); background: var(--paper); color: var(--ink-strong); border: 1px solid var(--field-border); border-radius: var(--radius); }
+.form input:focus-visible { box-shadow: var(--field-focus-ring); border-color: var(--field-border-focus); }
+.panel .error { padding: var(--space-3); border: 1px solid var(--line); color: var(--navy); background: var(--surface); }
+.loading { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@media (prefers-reduced-motion: reduce) { .loading { animation: none; } }

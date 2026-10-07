@@ -1,0 +1,136 @@
+.footer {
+  position: relative;
+  overflow: hidden;
+  border-top: 1px solid var(--gold-deep);
+  background: var(--navy-dark);
+  color: var(--paper);
+}
+
+.footer::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto auto 50%;
+  width: min(100%, 70rem);
+  height: 100%;
+  transform: translateX(-50%);
+  background: radial-gradient(ellipse at 50% 0%, #18325399, transparent 72%);
+  pointer-events: none;
+}
+
+.inner {
+  position: relative;
+  max-width: 72rem;
+  margin-inline: auto;
+}
+
+.main {
+  display: flex;
+  justify-content: center;
+  padding-block: var(--space-5) var(--space-4);
+  text-align: center;
+}
+
+.identity {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  min-width: 0;
+}
+
+.brand {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  width: max-content;
+  max-width: 100%;
+  color: var(--paper);
+}
+
+.brand span {
+  font-family: var(--font-heading);
+  font-size: var(--font-size-9);
+  line-height: 1;
+  letter-spacing: 0.13em;
+}
+
+.brand small {
+  margin-top: var(--space-1);
+  padding-inline-start: 0.1em;
+  font-size: var(--font-size-1);
+  line-height: 1.2;
+  letter-spacing: 0.42em;
+}
+
+.identity p {
+  max-width: 32ch;
+  margin: var(--space-4) 0 0;
+  color: var(--cream);
+  font-size: var(--font-size-1);
+}
+
+.lower {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: var(--space-2);
+  padding-block: var(--space-3);
+  border-top: 1px solid color-mix(in srgb, var(--cream) 20%, transparent);
+}
+
+.nav {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: var(--space-1) var(--space-4);
+  min-width: 0;
+}
+
+.nav a {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--control-size);
+  color: var(--cream);
+  font-size: var(--font-size-1);
+  line-height: 1.45;
+  transition: color 0.2s ease;
+}
+
+@media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
+  .nav a:hover,
+  .brand:hover {
+    color: var(--gold-light);
+  }
+}
+
+.nav a:active,
+.brand:active {
+  color: var(--gold-light);
+}
+
+.lower p {
+  flex: none;
+  margin: 0;
+  color: var(--cream);
+  font-size: var(--font-size-1);
+  line-height: 1.45;
+  text-align: center;
+}
+
+@media (max-width: 35rem) {
+  .main {
+    padding-block: var(--space-5) var(--space-4);
+  }
+
+  .identity p {
+    margin-top: var(--space-3);
+  }
+
+  .nav {
+    width: 100%;
+    column-gap: var(--space-3);
+  }
+
+  .nav a {
+    min-width: 0;
+  }
+}

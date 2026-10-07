@@ -1,0 +1,6 @@
+.audit { position: fixed; z-index: 200; inset: auto var(--space-2) var(--space-2) auto; max-width: min(34rem, calc(100% - 1.5rem)); max-height: 70dvh; overflow: auto; padding: var(--space-2); background: var(--paper); color: var(--ink-strong); border: 1px solid var(--line); box-shadow: var(--shadow); font-size: var(--font-size-1); }
+.audit summary { cursor: pointer; font-weight: 600; }
+.audit p { margin-block: var(--space-2); }
+.audit label { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); }
+.audit select, .audit button { font: inherit; min-height: var(--field-min-height); max-width: 100%; padding: var(--space-1); border: 1px solid var(--line); background: var(--surface); color: var(--ink-strong); }
+.audit pre { font-size: var(--font-size-1); white-space: pre-wrap; overflow-wrap: anywhere; max-height: 20rem; overflow: auto; }

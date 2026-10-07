@@ -1,0 +1,269 @@
+.editorialPage {
+  container: editorial-page / inline-size;
+  overflow-wrap: anywhere;
+}
+.contactGrid > *, .contactAside > *, .newsletterPreview > *, .helpGrid > *, .helpContent > * {
+  min-width: 0;
+}
+.pageHead :global(.eyebrow) {
+  color: var(--accent-ink);
+}
+.contactIcon {
+  height: var(--control-size);
+  width: var(--control-size);
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--surface);
+  color: var(--ink-strong);
+  border: 1px solid var(--line);
+}
+.pageHead {
+  padding-block: var(--space-6) var(--space-5);
+  text-align: center;
+}
+.pageHead::after {
+  content: "";
+  display: block;
+  width: var(--space-5);
+  height: 1px;
+  background: var(--gold-deep);
+  margin: var(--space-5) auto 0;
+}
+.pageHead h1 {
+  max-width: 30ch;
+  color: var(--ink-strong);
+  font-size: var(--type-display);
+  margin: var(--space-3) auto var(--space-4);
+  text-wrap: balance;
+}
+.pageHead > p:last-child {
+  color: var(--ink-soft);
+  max-width: 58ch;
+  margin-inline: auto;
+}
+.contactGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  padding-bottom: var(--section-space);
+  align-items: start;
+}
+.contactGrid > form {
+  width: 100%;
+}
+.contactAside {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-3);
+}
+.contactAside section {
+  display: grid;
+  grid-template-columns: var(--control-size) minmax(0, 1fr);
+  column-gap: var(--space-3);
+  align-content: start;
+  padding: var(--space-4) min(var(--space-4), 10%);
+  border: 1px solid var(--line);
+  background: var(--paper);
+}
+.contactIcon {
+  grid-row: span 3;
+}
+.contactAside h2 {
+  color: var(--ink-strong);
+  font-size: var(--type-card-title);
+  margin-bottom: var(--space-2);
+}
+.contactAside p {
+  max-width: 48ch;
+  color: var(--ink-soft);
+  margin-bottom: var(--space-3);
+}
+.contactAside section > a {
+  justify-self: start;
+}
+.newsletterPreview {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: center;
+  gap: var(--space-4);
+  padding: var(--space-5) var(--space-4);
+  margin-bottom: var(--section-space);
+  border: 1px solid var(--gold-deep);
+  border-radius: var(--radius);
+  background: var(--navy);
+  color: var(--cream);
+}
+.contactGrid:has(+ .newsletterPreview) {
+  padding-bottom: var(--space-5);
+}
+.newsletterPreview :global(.eyebrow) {
+  color: var(--gold-light);
+  margin-bottom: var(--space-2);
+}
+.newsletterPreview h2 {
+  font-size: var(--type-section-title);
+  margin: 0;
+}
+.newsletterPreview > form {
+  min-width: 0;
+  width: 100%;
+  max-width: 42rem;
+}
+.helpGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-5);
+  padding-bottom: var(--section-space);
+}
+.helpNav {
+  align-self: start;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--space-1) var(--space-4);
+  padding: var(--space-3) var(--space-4);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  border-radius: var(--radius);
+}
+.helpNav a {
+  display: block;
+  padding-block: var(--space-2);
+  transition: color 0.2s;
+}
+.helpContent {
+  min-width: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--space-4);
+}
+.helpSection {
+  min-width: 0;
+  padding: var(--space-4) min(var(--space-4), 10%);
+  background: var(--paper);
+  border: 1px solid var(--line);
+  scroll-margin-top: calc(var(--header-offset, var(--header-height)) + var(--space-4));
+}
+.helpSection h2 {
+  color: var(--ink-strong);
+  font-size: var(--font-size-5);
+  margin-bottom: var(--space-4);
+}
+.helpSection > p {
+  color: var(--ink-soft);
+  line-height: 1.85;
+  max-width: var(--reading-measure);
+}
+.helpSection > p:last-child {
+  margin-bottom: 0;
+}
+.faq {
+  padding-block: var(--space-4);
+  border-top: 1px solid var(--line);
+}
+.faq:last-of-type {
+  border-bottom: 1px solid var(--line);
+}
+.faq summary {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: var(--space-3);
+  color: var(--ink-strong);
+  cursor: pointer;
+  font-weight: 500;
+  list-style: none;
+}
+.faq summary::-webkit-details-marker {
+  display: none;
+}
+.faq summary svg {
+  margin-top: 0.125rem;
+  color: var(--accent-ink);
+}
+.faqMinus,
+.faq[open] .faqPlus {
+  display: none;
+}
+.faq[open] .faqMinus {
+  display: block;
+}
+.faq p {
+  color: var(--ink-soft);
+  margin: var(--space-3) var(--space-4) 0 0;
+  line-height: 1.85;
+  max-width: var(--reading-measure);
+}
+.helpProductLink {
+  margin-top: var(--space-4);
+}
+.helpNote {
+  background: var(--navy);
+  color: var(--cream);
+  padding: var(--space-5) min(var(--space-5), 10%);
+}
+.helpNote p:last-child {
+  margin: 0;
+}
+.helpNote a {
+  color: var(--gold-light);
+  display: inline-flex;
+  align-items: center;
+  flex-wrap: wrap;
+  max-width: 100%;
+  gap: var(--space-3);
+  text-decoration: underline;
+  text-underline-offset: 0.25em;
+}
+.demoNote {
+  background: var(--surface);
+}
+@media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
+  .helpNav a:hover {
+  color: var(--accent-ink);
+}
+}
+@container editorial-page (min-width: 52rem) {
+  .newsletterPreview {
+    grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+    gap: var(--space-6);
+    padding: var(--space-5);
+  }
+  .contactGrid {
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  gap: var(--space-6);
+}
+  .helpGrid {
+  grid-template-columns: minmax(12rem, 16rem) minmax(0, 1fr);
+}
+  .helpNav {
+  position: sticky;
+  top: calc(var(--header-offset, var(--header-height)) + var(--space-3));
+  flex-direction: column;
+  gap: 0;
+}
+  .helpNav a + a {
+  border-top: 1px solid var(--line);
+}
+  .helpSection {
+  padding: var(--space-5);
+}
+}
+@container editorial-page (min-width: 78rem) {
+  .helpContent {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+  .helpSection:first-child,
+  .helpNote {
+  grid-column: 1 / -1;
+}
+}
+@container editorial-page (max-width: 25rem) {
+  .contactAside section {
+  grid-template-columns: minmax(0, 1fr);
+}
+  .contactIcon {
+  grid-row: auto;
+  margin-bottom: var(--space-3);
+}
+}

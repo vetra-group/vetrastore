@@ -1,0 +1,265 @@
+import assert from "node:assert/strict";
+import { mkdir, writeFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { switchStoreLanguage } from "./lib/store-language.mjs";
+import { launchBrowser } from "./lib/browser.mjs";
+
+const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const origin = process.argv[2];
+if (!origin || !process.argv.includes("--isolated") || !/^http:\/\/(?:127\.0\.0\.1|localhost):\d+$/.test(origin)) throw new Error("Run with an isolated loopback preview: check-browser.mjs <origin> --isolated");
+const output = path.join(root, "output", "qa", "browser-regression");
+await mkdir(output, { recursive: true });
+const browser = await launchBrowser(output);
+const checks = [], layouts = [], started = new Date().toISOString();
+let staffBrowser;
+const pass = (name) => { checks.push(name); console.log(`PASS: ${name}`); };
+const body = (text) => `document.body.textContent.includes(${JSON.stringify(text)})`;
+const saved = () => browser.wait(body("Your draft has been saved."));
+const api = async (url, method = "GET", data) => browser.evaluate(`(async () => { const r=await fetch(${JSON.stringify(url)}, {method:${JSON.stringify(method)},headers:{'Content-Type':'application/json'},${data ? `body:JSON.stringify(${JSON.stringify(data)}),` : ""}cache:'no-store'});return {status:r.status,body:await r.json()}; })()`);
+async function checkLayout(label, target = browser, announce = true) { const dimensions = await target.evaluate(`({width:innerWidth,scroll:document.documentElement.scrollWidth,rem:parseFloat(getComputedStyle(document.documentElement).fontSize)})`); layouts.push({label,...dimensions}); assert.ok(dimensions.scroll <= dimensions.width + 1, `${label} overflows: ${JSON.stringify(dimensions)}`); if (announce) pass(`${label} has no horizontal overflow`); }
+try {
+  await browser.viewport(390, 844);
+  await browser.goto(`${origin}/`);
+  await browser.click('button[aria-controls="mobile-navigation"]');
+  await browser.wait('document.querySelector("button[aria-controls=mobile-navigation]").getAttribute("aria-expanded") === "true"');
+  await browser.key("Escape");
+  await browser.wait('document.querySelector("button[aria-controls=mobile-navigation]").getAttribute("aria-expanded") === "false"');
+  assert.equal(await browser.evaluate('document.activeElement.getAttribute("aria-controls")'), "mobile-navigation");
+  pass("mobile navigation opens, closes with Escape and returns keyboard focus");
+  await checkLayout("English mobile home");
+  await browser.goto(`${origin}/th`); await checkLayout("Thai mobile home");
+  await browser.goto(`${origin}/ar`); await checkLayout("Arabic mobile home");
+  assert.equal(await browser.evaluate("document.documentElement.dir"), "rtl");
+  await browser.goto(`${origin}/blog`);
+  await browser.click('a[aria-label="Page 2"]');
+  await browser.wait(`new URL(location.href).searchParams.get("page") === "2" && Boolean(document.querySelector('a[aria-current="page"][aria-label="Page 2"]'))`);
+  await checkLayout("English mobile blog page two");
+  await browser.evaluate("history.back()");
+  await browser.wait('!new URL(location.href).searchParams.has("page") && Boolean(document.querySelector("#blog-search"))');
+  await browser.fill("#blog-search", "quality");
+  await browser.click('form[role="search"] button[type="submit"]');
+  await browser.wait('new URL(location.href).searchParams.get("q") === "quality"');
+  await browser.command("Page.reload");
+  await browser.wait('document.querySelector("#blog-search")?.value === "quality"');
+  await switchStoreLanguage(browser, "ar", "/ar/blog");
+  await browser.wait('new URL(location.href).searchParams.get("q") === "quality"');
+  await switchStoreLanguage(browser, "th", "/th/blog");
+  await browser.wait('document.documentElement.lang === "th" && new URL(location.href).searchParams.get("q") === "quality"');
+  await browser.screenshot(path.join(output, "blog-mobile-filter.png"));
+  pass("blog pages, search, browser Back, reload and language links preserve URL state");
+  await browser.goto(`${origin}/cms?view=settings`);
+  await browser.clickText("Enter local workspace");
+  await browser.wait('Boolean(document.querySelector("#cms-editor-form input"))');
+  await browser.click('button[aria-controls="cms-navigation"]');
+  await browser.wait('Boolean(document.querySelector("#cms-navigation[open]"))');
+  for (let i = 0; i < 20; i++) { await browser.key("Tab"); assert.equal(await browser.evaluate('Boolean(document.activeElement.closest("#cms-navigation"))'), true); }
+  await browser.key("Escape");
+  await browser.wait('!document.querySelector("#cms-navigation").open');
+  assert.equal(await browser.evaluate('document.activeElement.getAttribute("aria-controls")'), "cms-navigation");
+  pass("CMS drawer contains keyboard focus and restores it after Escape");
+
+  await browser.fill("#cms-editor-form input", "VETRA Browser Recovery");
+  await browser.wait(body("Recovery copy saved in this browser"));
+  await browser.command("Page.reload");
+  await browser.wait(body("Unfinished work from your previous session"));
+  await browser.clickText("Recover work");
+  await browser.wait('document.querySelector("#cms-editor-form input")?.value === "VETRA Browser Recovery"');
+  await browser.clickText("Save draft"); await saved();
+  let current = await api("/api/cms");
+  assert.equal(current.body.state.draft.settings.storeName, "VETRA Browser Recovery");
+  pass("CMS text survives a real browser reload and saves through the API");
+
+  await browser.fill("#cms-editor-form input", "VETRA My Version");
+  const remote = structuredClone(current.body.state.draft); remote.settings.storeName = "VETRA Latest Version";
+  const updated = await api("/api/cms", "PUT", { action: "save", revision: current.body.state.revision, content: remote }); assert.equal(updated.status, 200);
+  await browser.clickText("Save draft"); await browser.wait(body("A newer draft was saved"));
+  await browser.clickText("Merge with latest draft");
+  await browser.wait(`Boolean(document.querySelector('dialog[aria-label="Review conflicting edits"][open]'))`);
+  assert.equal(await browser.evaluate('Array.from(document.querySelectorAll("dialog[open] button")).find(e=>e.textContent.includes("Apply selected versions")).disabled'), true);
+  await browser.click('dialog[open] input[type="radio"]:not(:checked)');
+  await browser.clickText("Apply selected versions", 'document.querySelector("dialog[open]")');
+  await browser.wait(`!document.querySelector('dialog[aria-label="Review conflicting edits"]')`);
+  await browser.clickText("Save draft"); await saved();
+  current = await api("/api/cms"); assert.equal(current.body.state.draft.settings.storeName, "VETRA My Version");
+  pass("concurrent edits require a field choice before merging and saving");
+  await browser.screenshot(path.join(output, "cms-settings-mobile.png"));
+  await checkLayout("CMS mobile settings");
+
+  await browser.viewport(1440, 1000);
+  await browser.clickText("Publish");
+  await browser.wait(body("Publish reviewed changes"));
+  await browser.clickText("Publish reviewed changes", 'document.querySelector("dialog[open]")');
+  await browser.wait(body("Reviewed changes published."));
+  current = await api("/api/cms"); assert.equal(current.body.state.published.settings.storeName, "VETRA My Version");
+  pass("CMS review and publication work through browser interactions");
+
+  await browser.goto(`${origin}/cms?view=journal`);
+  await browser.wait(body("Add article"));
+  await browser.clickText("Edit");
+  await browser.wait('Boolean(document.querySelector("#cms-editor-form textarea[lang=en],#cms-editor-form textarea"))');
+  assert.equal(await browser.evaluate('Array.from(document.querySelectorAll("#cms-editor-form textarea")).some(e => e.value.length > 100)'), true);
+  assert.equal(await browser.evaluate('Array.from(document.querySelectorAll("header button")).find(e=>e.textContent.trim()==="Save draft")?.disabled'), true);
+  pass("opening a deferred article restores its body without marking unchanged content dirty");
+  assert.deepEqual(await browser.evaluate('Array.from(document.querySelectorAll("section[id^=article-]")).map(el => [el.lang, el.dir])'), [["en", "ltr"], ["ar", "rtl"], ["th", "ltr"]]);
+  const arabicTitle = "دليل اختيار العسل بعد المراجعة";
+  await browser.fill("#article-ar input", arabicTitle);
+  await browser.clickText("Save draft"); await saved();
+  const translatedState = (await api("/api/cms")).body.state;
+  const translatedArticle = translatedState.draft.articles.find(article => article.content.ar.title === arabicTitle);
+  assert.ok(translatedArticle);
+  const originalArticle = translatedState.published.articles.find(article => article.id === translatedArticle.id);
+  assert.notEqual(originalArticle.content.ar.title, arabicTitle);
+  assert.deepEqual(translatedArticle.content.en, originalArticle.content.en);
+  assert.deepEqual(translatedArticle.content.th, originalArticle.content.th);
+  await browser.goto(`${origin}/ar/cms/preview?type=article&key=${encodeURIComponent(translatedArticle.slug)}`);
+  await browser.wait(body(arabicTitle));
+  assert.equal(await browser.evaluate('document.documentElement.dir'), "rtl");
+  assert.equal(await browser.evaluate('document.querySelector("h1").textContent'), arabicTitle);
+  assert.ok(await browser.evaluate(body("معاينة المسودة")));
+  await checkLayout("Arabic article draft preview");
+  await browser.screenshot(path.join(output, "cms-arabic-article-preview.png"));
+  const translatedPublication = await api("/api/cms/publishing", "POST", { action: "publish", revision: translatedState.revision, selection: [{ kind: "article", key: translatedArticle.id }] });
+  assert.equal(translatedPublication.status, 200);
+  await browser.goto(`${origin}/ar/blog/${translatedArticle.slug}`);
+  await browser.wait(body(arabicTitle));
+  assert.equal(await browser.evaluate('document.querySelector("h1").textContent'), arabicTitle);
+  await browser.goto(`${origin}/ar/cms?view=journal`);
+  await browser.wait(body("إضافة مقال"));
+  await browser.clickText("تعديل");
+  await browser.wait('Boolean(document.querySelector("#article-ar"))');
+  assert.equal(await browser.evaluate('Array.from(document.querySelectorAll("#cms-editor-form input")).find(input => input.value.startsWith("/images/"))?.dir'), "ltr");
+  assert.equal(await browser.evaluate('document.querySelector("#cms-editor-form input[pattern]")?.dir'), "ltr");
+  await checkLayout("Arabic CMS article editor");
+  await browser.screenshot(path.join(output, "cms-arabic-editor.png"));
+  pass("Arabic CMS edit, save, RTL draft preview, selected publication and public article preserve English and Thai fields");
+  const copyState = (await api("/api/cms")).body.state;
+  const copyDraft = structuredClone(copyState.draft);
+  copyDraft.copy["site.en.announcement"] = "A reviewed announcement for the browser test";
+  delete copyDraft.copy["site.ar.announcement"];
+  const copySave = await api("/api/cms", "PUT", { revision: copyState.revision, content: copyDraft, action: "save" });
+  assert.equal(copySave.status, 200);
+  assert.equal(Object.hasOwn(copySave.body.state.draft.copy, "site.ar.announcement"), false);
+  const incompletePublication = await api("/api/cms/publishing", "POST", { revision: copySave.body.state.revision, action: "publish" });
+  assert.equal(incompletePublication.body.code, "TRANSLATION_REQUIRED");
+  await browser.goto(`${origin}/ar/cms?view=content`);
+  await browser.wait('Boolean(document.querySelector("#cms-translation-notice"))');
+  const translationField = 'textarea[lang="ar"][aria-describedby="cms-translation-notice"]';
+  await browser.wait(`Boolean(document.querySelector(${JSON.stringify(translationField)}))`);
+  assert.ok(await browser.evaluate(`document.querySelector(${JSON.stringify(translationField)}).value.length > 0`), "The original Arabic interface text remains visible during translation review");
+  await browser.fill(translationField, "إعلان راجعه الفريق لاختبار المتصفح");
+  await browser.clickText("حفظ المسودة");
+  await browser.wait(body("تم حفظ المسودة."));
+  const completedCopy = (await api("/api/cms")).body.state;
+  assert.equal(completedCopy.draft.copy["site.ar.announcement"], "إعلان راجعه الفريق لاختبار المتصفح");
+  await browser.wait('!document.querySelector("#cms-translation-notice")');
+  await browser.screenshot(path.join(output, "cms-arabic-copy-review.png"));
+  pass("Arabic copy review preserves original interface text, blocks incomplete publication and saves the approved translation; technical paths remain LTR");
+
+  // Use an actual browser file input. CDP supplies an existing fixture, then
+  // the app's normal preparation and IndexedDB paths do the work.
+  await browser.goto(`${origin}/cms?view=media`);
+  await browser.wait('Boolean(document.querySelector("input[type=file]"))');
+  const png = path.join(output, "recovery-fixture.png");
+  const bytes = await browser.evaluate(`new Promise(resolve => { const c=document.createElement('canvas');c.width=64;c.height=64;const x=c.getContext('2d');x.fillStyle='#b68a49';x.fillRect(0,0,64,64);resolve(c.toDataURL('image/png').split(',')[1]); })`);
+  await writeFile(png, Buffer.from(bytes, "base64"));
+  const { root: dom } = await browser.command("DOM.getDocument");
+  const { nodeId } = await browser.command("DOM.querySelector", { nodeId: dom.nodeId, selector: "input[type=file]" });
+  await browser.command("DOM.setFileInputFiles", { nodeId, files: [png] });
+  await browser.wait(body("Review your image and descriptions before saving."));
+  await browser.fill('textarea[lang="th"]', "ภาพทดสอบการกู้คืน");
+  await browser.fill('textarea[lang="en"]', "Recovery image fixture");
+  await browser.fill('textarea[lang="ar"]', "صورة لاختبار استعادة العمل");
+  await browser.wait(`(async()=>{const db=await new Promise(r=>{const q=indexedDB.open('vetra-cms-recovery');q.onsuccess=()=>r(q.result)});const values=await new Promise(r=>{const q=db.transaction('checkpoints').objectStore('checkpoints').getAll();q.onsuccess=()=>r(q.result)});db.close();return values.some(x=>x.key.endsWith(':media')&&x.value.alt.en==='Recovery image fixture'&&x.value.alt.ar==='صورة لاختبار استعادة العمل'&&x.value.file?.size>0)})()`);
+  const before = (await api("/api/cms")).body.state.draft.media.length;
+  await browser.command("Page.reload"); await browser.wait(body("A prepared image is available"));
+  await browser.clickText("Recover image");
+  await browser.wait('document.querySelector("textarea[lang=en]")?.value === "Recovery image fixture"');
+  assert.equal((await api("/api/cms")).body.state.draft.media.length, before);
+  await browser.clickText("Save image"); await browser.wait(body("Your image has been saved."));
+  assert.equal((await api("/api/cms")).body.state.draft.media.length, before + 1);
+  pass("prepared image and alt text survive reload; upload starts only after Submit");
+  await browser.screenshot(path.join(output, "cms-media-desktop.png"));
+  await checkLayout("CMS desktop media");
+
+  await browser.goto(`${origin}/contact`);
+  await browser.fill('input[name="name"]', "Browser Shared Enquiry");
+  await browser.fill('input[name="email"]', "browser-shared@example.test");
+  await browser.fill('textarea[name="message"]', "Please test this fictional enquiry in the shared inbox.");
+  await browser.click('input[name="consent"]');
+  await browser.wait(`!document.querySelector('form:has(input[name="name"]) button[type="submit"]').disabled`);
+  await browser.click('form:has(input[name="name"]) button[type="submit"]');
+  await browser.wait(body("Test enquiry saved in the shared staff inbox. Reference"));
+  staffBrowser = await launchBrowser(output);
+  await staffBrowser.viewport(390, 844);
+  await staffBrowser.goto(`${origin}/cms?view=messages`);
+  await staffBrowser.clickText("Enter local workspace");
+  await staffBrowser.clickExpression(`Array.from(document.querySelectorAll('button')).find(e=>e.querySelector('strong')?.textContent==='Browser Shared Enquiry')`);
+  await staffBrowser.fill('dialog[open] textarea', "Reviewed from a separate browser profile.");
+  await staffBrowser.clickText("Save changes", 'document.querySelector("dialog[open]")');
+  await staffBrowser.wait(body("Saved on the server"));
+  const shared = await api('/api/cms/operations?view=requests&q=browser-shared');
+  assert.equal(shared.body.records.length, 1);
+  const detail = await api(`/api/cms/operations?id=${encodeURIComponent(shared.body.records[0].id)}`);
+  assert.equal(detail.body.record.notes, "Reviewed from a separate browser profile.");
+  await checkLayout("Shared enquiry dialog on mobile", staffBrowser);
+  await staffBrowser.screenshot(path.join(output, "cms-shared-enquiry-mobile.png"));
+  await staffBrowser.key("Escape");
+  await staffBrowser.wait('!document.querySelector("dialog[open]")');
+  pass("public contact and a separate staff browser share the same enquiry and saved notes");
+  await staffBrowser.goto(`${origin}/cms?view=notifications`);
+  await staffBrowser.wait(body("Ready for simulation"));
+  await staffBrowser.click('main details summary');
+  await staffBrowser.clickText("Run simulated delivery");
+  await staffBrowser.wait(body("Simulated delivery confirmed"));
+  const notices = await api('/api/cms/operations?view=outbox');
+  assert.ok(notices.body.notices.some(notice=>notice.state === 'mock-delivered' && notice.receiptId));
+  await staffBrowser.viewport(1440, 1000);
+  await checkLayout("Shared notification simulation on desktop", staffBrowser);
+  await staffBrowser.screenshot(path.join(output, "cms-notifications-desktop.png"));
+  pass("staff delivery simulation persists a confirmed receipt without an external service");
+
+  await browser.goto(`${origin}/cms?view=settings`);
+  await browser.clickText("Manage transfers");
+  await browser.wait(body("Your transfers"));
+  await browser.clickExpression(`Array.from(document.querySelectorAll('h3')).find(e=>e.textContent==='Resumable folder backup').closest('section').querySelector('summary')`);
+  await browser.viewport(320, 850);
+  await browser.evaluate(`(() => { const section=Array.from(document.querySelectorAll('h3')).find(e=>e.textContent==='Resumable folder backup').closest('section'); scrollTo({top:scrollY+section.getBoundingClientRect().top-document.querySelector('main header').getBoundingClientRect().height-16,behavior:'instant'}); })()`);
+  await checkLayout("Expanded resumable backup controls on narrow screens");
+  await browser.screenshot(path.join(output, "cms-backup-mobile.png"));
+
+  const routes = ["/", "/ar", "/th", "/blog", "/ar/blog?page=2", "/th/blog?page=2", "/search?q=honey", "/ar/search?q=honey", "/th/search?q=honey", "/contact", "/ar/contact", "/th/contact"];
+  for (const width of [320, 768, 1440, 2560, 7680]) {
+    await browser.viewport(width, 1000);
+    for (const route of routes) {
+      await browser.goto(`${origin}${route}`);
+      await browser.wait('Boolean(document.querySelector("main h1"))');
+      await browser.evaluate("document.fonts.ready.then(()=>true)");
+      await checkLayout(`${route} at ${width}px`, browser, false);
+      assert.equal(await browser.evaluate("document.querySelectorAll('main').length"), 1);
+      assert.equal(await browser.evaluate("document.querySelectorAll('h1').length"), 1);
+      assert.equal(await browser.evaluate("document.documentElement.lang"), route.startsWith('/ar') ? 'ar' : route.startsWith('/th') ? 'th' : 'en');
+    }
+  }
+  for (const width of [320, 1440]) {
+    await browser.viewport(width, 1000);
+    for (const prefix of ["", "/ar", "/th"]) for (const view of ["settings", "orders", "notifications", "media"]) {
+      await browser.goto(`${origin}${prefix}/cms?view=${view}`);
+      await browser.wait('Boolean(document.querySelector("#cms-editor-form, main input, main details"))');
+      await browser.evaluate("document.fonts.ready.then(()=>true)");
+      await checkLayout(`${prefix}/cms ${view} at ${width}px`, browser, false);
+    }
+  }
+  pass("84 responsive public/CMS route views have no horizontal overflow, including a 7680 CSS px viewport");
+  assert.deepEqual(staffBrowser.errors, [], "No uncaught exceptions in separate staff browser");
+  assert.deepEqual(browser.errors, [], "No uncaught browser exceptions");
+  pass("no uncaught browser exceptions during the tested journeys");
+} catch (error) {
+  await browser.screenshot(path.join(output, "failure.png")).catch(() => undefined);
+  await writeFile(path.join(output, "failure.txt"), `${error.stack}\n\n${await browser.evaluate('document.body.innerText').catch(() => "Page unavailable")}`);
+  throw error;
+} finally {
+  await writeFile(path.join(output, "report.json"), JSON.stringify({ started, completed: new Date().toISOString(), checks, layouts, errors: [...browser.errors,...staffBrowser?.errors || []], limitation: "Headless Chromium at CSS viewport sizes; not physical-device or operating-system scaling verification. Native folder-picker permissions are not exercised; backup folder tests use in-memory handles and CLI tests use actual disposable files." }, null, 2));
+  await staffBrowser?.close();
+  await browser.close();
+}

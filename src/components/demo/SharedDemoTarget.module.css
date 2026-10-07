@@ -1,0 +1,5 @@
+.target { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-2); min-width: 0; padding: var(--space-3) min(var(--space-3), 5%); border: 1px solid var(--line); background: var(--surface); }
+.target label { display: grid; grid-template-columns: minmax(0, 1fr); gap: var(--space-1); min-width: 0; }
+.target select { width: 100%; min-width: 0; min-height: var(--field-min-height); padding: var(--space-2); color: var(--ink-strong); background: var(--paper); border: 1px solid var(--field-border); border-radius: var(--radius); font-size: var(--font-size-1); }
+.target p { margin: 0; overflow-wrap: anywhere; color: var(--ink-soft); font-size: var(--font-size-1); }
+.target select:focus-visible { outline: 2px solid var(--field-border-focus); outline-offset: 2px; }

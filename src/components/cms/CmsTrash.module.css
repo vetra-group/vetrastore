@@ -1,0 +1,42 @@
+.workspace { display: grid; gap: var(--space-4); min-width: 0; }
+.notice { display: flex; gap: var(--space-3); align-items: flex-start; border: 1px solid var(--line); background: var(--paper); padding: var(--space-4); }
+.notice > svg { width: var(--icon-size); height: var(--icon-size); color: var(--accent-ink); margin-top: .1875rem; }
+.notice p { margin: 0; max-width: var(--reading-measure); color: var(--ink-soft); }
+.filters { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 12rem) minmax(0, 12rem); gap: var(--space-3); }
+.field { display: grid; gap: var(--space-1); min-width: 0; }
+.field > span { color: var(--ink-soft); }
+.field input, .field select { width: 100%; min-width: 0; min-height: var(--field-min-height); padding: var(--space-2) var(--space-3); background: var(--paper); color: var(--ink-strong); border: 1px solid var(--field-border); border-radius: var(--radius); font-size: var(--font-size-1); }
+.field input:focus, .field select:focus { border-color: var(--field-border-focus); box-shadow: var(--field-focus-ring); }
+.summary { display: flex; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; color: var(--ink-soft); }
+.summary p { margin: 0; }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 24rem), 1fr)); gap: var(--space-3); }
+.card { padding: var(--space-4); background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); display: grid; gap: var(--space-3); align-content: start; min-width: 0; }
+.identity { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: var(--space-3); align-items: center; }
+.picture { width: 5rem; aspect-ratio: 1; background: var(--media-surface); border: 1px solid var(--media-border); position: relative; display: grid; place-items: center; }
+.picture img { object-fit: contain; }
+.picture svg { width: 1.75rem; height: 1.75rem; color: var(--accent-ink); }
+.identity h2 { font-family: var(--font-body); font-size: var(--type-card-title); font-weight: 500; overflow-wrap: anywhere; margin: 0 0 var(--space-1); }
+.identity p { font-size: var(--font-size-1); color: var(--ink-soft); overflow-wrap: anywhere; margin: 0; }
+.meta { display: flex; gap: var(--space-2); flex-wrap: wrap; align-items: center; }
+.badge { color: var(--accent-ink); background: var(--surface); border-radius: 2rem; padding: .1875rem var(--space-2); font-size: var(--font-size-1); }
+.source { color: var(--ink-soft); }
+.dates { display: grid; gap: var(--space-2); margin: 0; }
+.dates > div { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: var(--space-2); }
+.dates dt { color: var(--ink-soft); }
+.dates dd { margin: 0; overflow-wrap: anywhere; }
+.bottom { border-top: 1px solid var(--line); padding-top: var(--space-3); display: flex; align-items: center; justify-content: space-between; gap: var(--space-3); flex-wrap: wrap; margin-top: auto; }
+.remaining { display: flex; gap: var(--space-1); align-items: center; color: var(--ink-soft); font-size: var(--font-size-1); }
+.remaining svg { width: 1rem; height: 1rem; }
+.remaining[data-soon="true"] { color: #883727; }
+.restore { background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius); color: var(--ink-strong); min-height: var(--control-size); padding: var(--space-2) var(--space-3); display: inline-flex; gap: var(--space-2); align-items: center; justify-content: center; font-size: var(--font-size-1); }
+.restore svg { width: var(--icon-size); height: var(--icon-size); }
+.restore:disabled { opacity: .45; }
+.empty { border: 1px dashed var(--line); padding: var(--space-6) var(--space-4); text-align: center; }
+.empty svg { width: 2.5rem; height: 2.5rem; color: var(--accent-ink); margin-bottom: var(--space-3); }
+.empty h2 { font-family: var(--font-body); font-size: var(--font-size-4); font-weight: 500; }
+.empty p { color: var(--ink-soft); margin: 0; }
+.spinning { animation: spin 1s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+@container (max-width: 45rem) { .filters { grid-template-columns: minmax(0, 1fr); } .card { padding: var(--space-3); } .dates > div { grid-template-columns: 1fr; gap: .125rem; } }
+@media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) { .restore:hover { background: var(--surface); border-color: var(--gold); } }
+@media (prefers-reduced-motion: reduce) { .spinning { animation: none; } }

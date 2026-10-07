@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1600 520" preserveAspectRatio="none" aria-hidden="true">
+  <path d="M0 0h405L188 520H0Z" fill="#54759b" opacity=".075"/>
+  <path d="M1600 0h-362l174 520h188Z" fill="#54759b" opacity=".065"/>
+  <g fill="none" stroke="#e6c67f" stroke-width="1.25" stroke-linecap="round">
+    <path d="M-125-92C176-61 481 30 433 183c-34 109-258 155-195 341" opacity=".12"/>
+    <path d="M-111-56C190-20 445 64 394 193c-44 111-239 158-174 343" opacity=".21"/>
+    <path d="M-95-17C192 16 408 91 357 205c-48 108-214 161-144 344" opacity=".28"/>
+    <path d="M-78 26c266 28 444 100 394 193-55 104-190 156-122 341" opacity=".17"/>
+    <path d="M-66 70c245 19 404 83 345 161-63 84-157 157-101 328" opacity=".11"/>
+  </g>
+  <g transform="translate(1600 24) scale(-1 1)" fill="none" stroke="#e6c67f" stroke-width="1.25" stroke-linecap="round">
+    <path d="M-125-92C176-61 481 30 433 183c-34 109-258 155-195 341" opacity=".11"/>
+    <path d="M-111-56C190-20 445 64 394 193c-44 111-239 158-174 343" opacity=".2"/>
+    <path d="M-95-17C192 16 408 91 357 205c-48 108-214 161-144 344" opacity=".27"/>
+    <path d="M-78 26c266 28 444 100 394 193-55 104-190 156-122 341" opacity=".16"/>
+    <path d="M-66 70c245 19 404 83 345 161-63 84-157 157-101 328" opacity=".1"/>
+  </g>
+  <path d="M568-70 800 540 1032-70" fill="none" stroke="#e6c67f" stroke-width="1.25" opacity=".075"/>
+  <path d="M632-70 800 374 968-70" fill="none" stroke="#e6c67f" stroke-width="1" opacity=".055"/>
+</svg>

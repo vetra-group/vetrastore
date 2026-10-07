@@ -1,0 +1,25 @@
+.stack { display: grid; gap: var(--space-4); margin-top: var(--space-4); }
+.panel { min-width: 0; padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); overflow-wrap: anywhere; }
+.panel h3 { display: flex; align-items: center; gap: var(--space-2); margin: 0 0 var(--space-3); color: var(--ink-strong); font-size: var(--type-card-title); }
+.panel h3 svg, .button svg { width: var(--icon-size); height: var(--icon-size); flex-shrink: 0; }
+.panel p { margin-block: var(--space-2); line-height: 1.8; }
+.note { color: var(--ink-soft); }
+.stage { color: var(--accent-ink); font-weight: 600; }
+.form { display: grid; gap: var(--space-3); margin-top: var(--space-3); }
+.form label { display: grid; gap: var(--space-1); min-width: 0; color: var(--ink-strong); }
+.form input, .form select { width: 100%; min-width: 0; min-height: var(--field-min-height); border: 1px solid var(--field-border); border-radius: var(--radius); background: var(--background); color: var(--text); padding: var(--space-2); font-size: var(--font-size-1); }
+.form input:focus-visible, .form select:focus-visible, .button:focus-visible { outline: 2px solid var(--field-border-focus); outline-offset: 3px; box-shadow: var(--field-focus-ring); }
+.grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 14rem), 1fr)); gap: var(--space-3); }
+.form .checkbox { display: flex; align-items: center; gap: var(--space-2); min-height: var(--control-size); }
+.form .checkbox input { width: var(--icon-size); height: var(--icon-size); min-height: 0; padding: 0; flex-shrink: 0; }
+.button { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: var(--control-size); padding: var(--space-2) var(--space-3); background: var(--navy); color: var(--paper); border: 1px solid var(--navy); border-radius: var(--radius); font-size: var(--font-size-1); cursor: pointer; }
+.button:disabled { opacity: .55; cursor: default; }
+.button:active:not(:disabled) { background: var(--navy-dark); }
+.activity { display: grid; gap: var(--space-3); padding: 0; list-style: none; max-height: 24rem; overflow-y: auto; }
+.activity li { display: grid; gap: var(--space-1); padding-inline-start: var(--space-3); border-inline-start: 2px solid var(--line); }
+.activity li span { color: var(--ink-soft); }
+.facts { display: grid; gap: var(--space-3); margin: 0; }
+.facts dt { color: var(--ink-soft); }
+.facts dd { margin: var(--space-1) 0 0; }
+.error { color: #9c392b; }
+@media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) { .button:hover:not(:disabled) { background: var(--navy-dark); } }

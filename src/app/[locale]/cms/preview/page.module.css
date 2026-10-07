@@ -1,0 +1,4 @@
+.banner { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: var(--space-3); padding: var(--space-3) var(--page-gutter); color: var(--paper); background: var(--navy); border-bottom: 1px solid var(--gold-light); }
+.banner span, .banner a { display: inline-flex; align-items: center; flex-wrap: wrap; gap: var(--space-2); }
+.banner svg { width: var(--icon-size); height: var(--icon-size); }
+.banner a { min-height: var(--control-size); color: var(--gold-light); text-decoration: underline; text-underline-offset: 0.25em; }

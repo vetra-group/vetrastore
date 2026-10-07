@@ -1,0 +1,80 @@
+.shortcut {
+  position: fixed;
+  z-index: 30;
+  inset-inline: 0;
+  bottom: 0;
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--space-3);
+  padding: var(--space-2) var(--page-gutter);
+  padding-bottom: calc(var(--space-2) + env(safe-area-inset-bottom, 0px));
+  background: var(--paper);
+  color: var(--ink-strong);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -0.25rem 1.25rem #07162f0a;
+}
+
+.summary {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  line-height: 1.35;
+  min-width: 0;
+  max-width: 100%;
+  overflow-wrap: anywhere;
+}
+
+.summary strong {
+  font-size: var(--font-size-3);
+  font-weight: 600;
+  white-space: normal;
+}
+
+.summary span {
+  color: var(--ink-soft);
+  font-size: var(--font-size-1);
+}
+
+.choose {
+  display: inline-flex;
+  flex-wrap: wrap;
+  min-width: 0;
+  max-width: 100%;
+  align-items: center;
+  justify-content: center;
+  gap: var(--space-1);
+  min-height: var(--control-size);
+  padding: var(--space-1) var(--space-3);
+  border: 1px solid var(--navy);
+  border-radius: var(--radius);
+  background: var(--navy);
+  color: var(--paper);
+  font-size: var(--type-navigation);
+  font-weight: 500;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  transition: background 0.2s;
+}
+
+.choose svg {
+  width: var(--icon-size);
+  height: var(--icon-size);
+}
+
+:global(body:has(dialog[open])) .shortcut {
+  display: none;
+}
+
+@media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
+  .choose:hover {
+    background: var(--navy-dark);
+  }
+}
+
+@container honey-page (min-width: 60rem) {
+  .shortcut {
+    display: none;
+  }
+}
