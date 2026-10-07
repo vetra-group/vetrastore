@@ -68,8 +68,10 @@ test("Catalog owns prices and totals; inputs are preserved", () => {
   assert.equal(result.email, "buyer@example.test");
   assert.equal(result.phone, "0812345678");
   assert.equal(result.message, "Sample enquiry");
-  assert.equal(result.items[0].unitPrice, honey.price);
-  assert.equal(result.subtotal, 2 * honey.price);
+  assert.equal(result.currency, "USD");
+  assert.equal(result.items[0].unitPrice, 50);
+  assert.equal(result.items[0].lineTotal, 100);
+  assert.equal(result.subtotal, 100);
   assert.equal(result.payment, "enquiry");
   assert.deepEqual(order, original);
 });
@@ -93,7 +95,7 @@ test("Order quantity and product validation", () => {
     assert.throws(() => normalizeDemoInput({ ...order, items: [{ id: honey.id, quantity, unitPrice: 0 }] }));
   }
   for (const quantity of [1, MAX_QUANTITY]) {
-    assert.equal(normalizeDemoInput({ ...order, items: [{ id: honey.id, quantity, unitPrice: 0 }] }).subtotal, quantity * honey.price);
+    assert.equal(normalizeDemoInput({ ...order, items: [{ id: honey.id, quantity, unitPrice: 0 }] }).subtotal, load("src/lib/catalog.ts").quoteProduct(honey, quantity, "en").total);
   }
   for (const items of [[], null, [{ id: "unavailable", quantity: 1, unitPrice: 0 }], [{ ...order.items[0] }, { ...order.items[0] }]]) {
     assert.throws(() => normalizeDemoInput({ ...order, items }));
@@ -106,17 +108,18 @@ test("Order quantity and product validation", () => {
 
 test("CMS catalog changes update prices and stock without losing historical orders", () => {
   const original = createDemoSubmission(emptyDemoData(), order, "historic-order", date);
-  const published = [{ ...honey, price: 720, stock: 1 }];
+  const published = [{ ...honey, pricing: { ...honey.pricing, USD: honey.pricing.USD.map((tier) => tier.quantity === 1 ? { ...tier, total: 72 } : tier) }, stock: 1 }];
   const retry = createDemoSubmission(original.data, order, "historic-order", date, published);
-  assert.equal(retry.record.subtotal, 960);
-  assert.equal(retry.record.items[0].unitPrice, 480);
+  assert.equal(retry.record.subtotal, 100);
+  assert.equal(retry.record.items[0].unitPrice, 50);
+  assert.equal(retry.record.items[0].lineTotal, 100);
   assert.deepEqual(retry.data, original.data);
   assert.equal(createDemoSubmission(original.data, order, "historic-order", date, []).record.reference, original.record.reference);
   assert.throws(() => createDemoSubmission(original.data, { ...order, email: "changed@example.test" }, "historic-order", date, []), /details changed/i);
   assert.throws(() => createDemoSubmission(original.data, { ...order, items: [{ ...order.items[0], quantity: 1 }] }, "historic-order", date, []), /details changed/i);
   assert.throws(() => createDemoSubmission(original.data, order, "new-order", date, []));
   assert.throws(() => normalizeDemoInput(order, published));
-  assert.equal(normalizeDemoInput({ ...order, items: [{ ...order.items[0], quantity: 1 }] }, published).subtotal, 720);
+  assert.equal(normalizeDemoInput({ ...order, items: [{ ...order.items[0], quantity: 1 }] }, published).subtotal, 72);
   assert.throws(() => normalizeDemoInput({ ...order, items: [{ ...order.items[0], quantity: 1 }] }, [{ ...honey, stock: 0 }]));
   assert.deepEqual(parseDemoData(JSON.parse(JSON.stringify(original.data))), original.data);
 });
@@ -456,8 +459,6 @@ test("Manual mock delivery retries only its notification, retains success, and e
   assert.equal(data.outbox[0].attempts, 1);
   assert.deepEqual(parseDemoData(data).outbox, data.outbox);
 });
-await assert.rejects(workflow.disabledPaymentProvider.createPayment({ reference: "test", amount: 480, currency: "THB", idempotencyKey: "test" }), /not configured/);
-await assert.rejects(workflow.disabledPaymentProvider.refund({ reference: "test", idempotencyKey: "test" }), /not configured/);
 await assert.rejects(workflow.disabledShippingProvider.createShipment({ reference: "test", idempotencyKey: "test" }), /not configured/);
 const mock = load("src/lib/mock-checkout.ts");
 const shippingRules = [
@@ -476,15 +477,17 @@ test("Mock shipping validates rules and matches specific coverage without invent
   assert.equal(mock.quoteMockShipping(shippingRules, "50000", 999).fee, 80);
   assert.equal(mock.quoteMockShipping(shippingRules, "50000", 1000).fee, 0);
 });
-test("Shipping quotes persist independently of later rule changes and original-key retries", () => {
-  const input = { ...order, customer: { postcode: "10110" } };
+test("Thai free-delivery quotes persist independently of mock rules and original-key retries", () => {
+  const input = { ...order, locale: "th", customer: { postcode: "10110" } };
   const result = createDemoSubmission({ ...emptyDemoData(), mockShippingRules: shippingRules }, input, "quoted-order", date);
-  assert.equal(result.record.shippingQuote.total, 1005.5);
-  assert.ok(result.data.outbox.every((notice) => notice.body.includes("1005.5")));
+  assert.equal(result.record.shippingQuote.fee, 0);
+  assert.equal(result.record.shippingQuote.total, 700);
+  assert.ok(result.data.outbox.every((notice) => notice.body.includes("700")));
   const changed = { ...result.data, mockShippingRules: [] };
-  assert.equal(createDemoSubmission(changed, input, "quoted-order", date).record.shippingQuote.fee, 45.5);
+  assert.equal(createDemoSubmission(changed, input, "quoted-order", date).record.shippingQuote.fee, 0);
   assert.deepEqual(parseDemoData(changed), changed);
-  assert.equal(createDemoSubmission(changed, input, "new-unquoted", date).record.shippingQuote.state, "pending");
+  assert.equal(createDemoSubmission(changed, { ...input, customer: { postcode: "" } }, "new-unquoted", date).record.shippingQuote.state, "pending");
+  assert.equal(createDemoSubmission(changed, order, "usd-unquoted", date).record.shippingQuote, undefined);
   const tampered = structuredClone(result.data); tampered.records[0].shippingQuote.total = 1;
   assert.equal(parseDemoData(tampered).records[0].shippingQuote, undefined);
   assert.equal(parseDemoData(tampered).records.length, 1, "Invalid derived quotes must not discard the saved request");

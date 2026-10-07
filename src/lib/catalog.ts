@@ -1,15 +1,19 @@
 import type { Locale, Localized } from "./i18n";
 
 export const HONEY_ID = "coffee-blossom-honey";
-export const MAX_QUANTITY = 20;
+export const MAX_QUANTITY = 96;
 export type ProductCategory = "honey" | "coffee";
 export type ProductGalleryImage = { id: string; src: string; alt: Localized<string>; caption?: Localized<string> };
+export type Currency = "THB" | "USD";
+export type PriceTier = { quantity: number; total: number };
+export type ProductPricing = Record<Currency, PriceTier[]>;
 export type CatalogProduct = {
   id: string;
   slug: string;
   brand: string;
   category: ProductCategory;
   price: number;
+  pricing?: ProductPricing;
   weight: number;
   image: string;
   gallery?: readonly ProductGalleryImage[];
@@ -24,7 +28,29 @@ export const honey = {
   slug: HONEY_ID,
   brand: "ESHAN",
   category: "honey",
-  price: 480,
+  price: 380,
+  pricing: {
+    THB: [
+      { quantity: 1, total: 380 },
+      { quantity: 2, total: 700 },
+      { quantity: 6, total: 1980 },
+      { quantity: 12, total: 3800 },
+      { quantity: 24, total: 7200 },
+      { quantity: 48, total: 13000 },
+      { quantity: 96, total: 24000 },
+    ],
+    // Initial foreign schedule: five times each THB bundle, at a fixed
+    // pricing basis of THB 35 per USD. CMS editors can set each USD total.
+    USD: [
+      { quantity: 1, total: 54.29 },
+      { quantity: 2, total: 100 },
+      { quantity: 6, total: 282.86 },
+      { quantity: 12, total: 542.86 },
+      { quantity: 24, total: 1028.57 },
+      { quantity: 48, total: 1857.14 },
+      { quantity: 96, total: 3428.57 },
+    ],
+  },
   weight: 380,
   image: "/images/honey-product.png",
   searchTerms: ["ESHAN", "อิชาน", "إيشان", "عسل", "أزهار القهوة"],
@@ -81,11 +107,44 @@ export function formatProductCaption(
   return `${product.card[locale].captionPrefix} · ${product.weight} ${weightUnit}`;
 }
 
-export function formatPrice(value: number, locale: Locale) {
+export function currencyForLocale(locale: Locale): Currency {
+  return locale === "th" ? "THB" : "USD";
+}
+
+const toMinorUnits = (value: number) => Math.round(value * 100);
+
+/** Price an exact bottle count with the least expensive combination of packs.
+ * Both the browser and server use this function so cart totals cannot drift. */
+export function quoteProduct(product: CatalogProduct, quantity: number, locale: Locale) {
+  if (!Number.isInteger(quantity) || quantity < 1 || quantity > MAX_QUANTITY) {
+    throw new RangeError("Choose a valid product quantity.");
+  }
+  const currency = currencyForLocale(locale);
+  const tiers = product.pricing?.[currency];
+  if (!tiers?.length) {
+    if (currency !== "THB") throw new Error(`USD price unavailable for ${product.id}.`);
+    const total = Math.round(toMinorUnits(product.price) * quantity) / 100;
+    return { currency, total, unitPrice: product.price };
+  }
+  const totals = new Array<number>(quantity + 1).fill(Number.POSITIVE_INFINITY);
+  totals[0] = 0;
+  for (let count = 1; count <= quantity; count++) {
+    for (const tier of tiers) {
+      if (tier.quantity <= count) {
+        totals[count] = Math.min(totals[count], totals[count - tier.quantity] + toMinorUnits(tier.total));
+      }
+    }
+  }
+  if (!Number.isFinite(totals[quantity])) throw new Error(`No ${currency} price for ${quantity} bottles of ${product.id}.`);
+  const total = totals[quantity] / 100;
+  return { currency, total, unitPrice: total / quantity };
+}
+
+export function formatPrice(value: number, locale: Locale, currency: Currency = "THB") {
   return new Intl.NumberFormat(locale, {
     style: "currency",
-    currency: "THB",
-    currencyDisplay: "narrowSymbol",
+    currency,
+    currencyDisplay: locale === "ar" && currency === "USD" ? "code" : "narrowSymbol",
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(value);

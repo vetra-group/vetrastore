@@ -4,20 +4,25 @@ import { useState } from "react";
 import Link from "next/link";
 import { ArrowUpRight, Check, Heart, ShoppingBag } from "lucide-react";
 import Quantity from "@/components/commerce/Quantity";
+import PriceTiers from "@/components/commerce/PriceTiers";
 import { useStore } from "@/components/commerce/StoreProvider";
 import { commerce } from "@/content/commerce";
 import { honeyStory } from "@/content/honey";
+import { publicPricingCopy } from "@/content/public-pricing";
+import { publicPaymentCopy } from "@/content/payment-checkout";
 import { workflowCopy } from "@/content/workflow";
-import { HONEY_ID, MAX_QUANTITY } from "@/lib/catalog";
+import { currencyForLocale, formatPrice, HONEY_ID, MAX_QUANTITY } from "@/lib/catalog";
+import { publicQuote } from "@/lib/public-pricing";
 import { usePublished, usePublishedCopy } from "@/components/cms/PublishedProvider";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import styles from "./HoneyPurchase.module.css";
 
-export default function HoneyPurchase({ locale, preview = false }: { locale: Locale; preview?: boolean }) {
+export default function HoneyPurchase({ locale, preview = false, paymentsEnabled = false }: { locale: Locale; preview?: boolean; paymentsEnabled?: boolean }) {
   const { products } = usePublished();
   const honey = products.find((product) => product.id === HONEY_ID);
   const t = usePublishedCopy(commerce[locale], `commerce.${locale}`);
   const c = usePublishedCopy(honeyStory[locale], `honey.${locale}`);
+  const p = publicPricingCopy[locale];
   const { addItem, items, itemCount, wishlist, toggleWishlist } = useStore();
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
@@ -26,12 +31,24 @@ export default function HoneyPurchase({ locale, preview = false }: { locale: Loc
   const bagQuantity = items.find((item) => item.id === honey.id)?.quantity ?? 0;
   const showAdded = added && bagQuantity > 0;
   const remaining = Math.max(0, Math.min(MAX_QUANTITY, honey.stock ?? MAX_QUANTITY) - bagQuantity);
-  const selectedQuantity = Math.min(quantity, Math.max(1, remaining));
+  const tiers = honey.pricing?.[currencyForLocale(locale)];
+  const availableTiers = tiers?.filter((tier) => tier.quantity <= remaining) ?? [];
+  const selectedQuantity = tiers?.length
+    ? (availableTiers.some((tier) => tier.quantity === quantity) ? quantity : availableTiers.at(-1)?.quantity ?? 1)
+    : Math.min(quantity, Math.max(1, remaining));
+  const selectedQuote = publicQuote(honey, selectedQuantity, locale);
 
   return (
     <div className={styles.purchase}>
+      {!!tiers?.length && (
+        <PriceTiers product={honey} locale={locale} value={selectedQuantity} max={remaining} onChange={(value) => { setQuantity(value); setAdded(false); }} />
+      )}
+      <div className={styles.selectedTotal} aria-live="polite" aria-atomic="true">
+        <span>{p.selectedTotal}</span>
+        <strong>{selectedQuote ? <bdi>{formatPrice(selectedQuote.total, locale, selectedQuote.currency)}</bdi> : p.unavailable}</strong>
+      </div>
       <div className={styles.controls} id="honey-purchase-controls" tabIndex={-1}>
-        <Quantity
+        {!tiers?.length && <Quantity
           locale={locale}
           value={selectedQuantity}
           max={Math.max(1, remaining)}
@@ -39,13 +56,13 @@ export default function HoneyPurchase({ locale, preview = false }: { locale: Loc
             setQuantity(value);
             setAdded(false);
           }}
-        />
+        />}
         <button
           className={styles.add}
           type="button"
-          disabled={preview || remaining === 0}
+          disabled={preview || remaining === 0 || !selectedQuote}
           onClick={() => {
-            if (preview || remaining === 0) return;
+            if (preview || remaining === 0 || !selectedQuote) return;
             setAdded(addItem(honey.id, selectedQuantity));
           }}
         >
@@ -73,7 +90,7 @@ export default function HoneyPurchase({ locale, preview = false }: { locale: Loc
           </Link>
         )}
       </div>
-      <p className={styles.delivery}>{c.orderNote}</p>
+      <p className={styles.delivery}>{paymentsEnabled && !preview ? publicPaymentCopy[locale].deliveryNote : c.orderNote}</p>
       <Link className={styles.contact} href={localizedPath(locale, "/contact")}>
         {t.contact} <ArrowUpRight size="1.125rem" aria-hidden="true" />
       </Link>

@@ -220,8 +220,8 @@ for (const locale of locales) {
       assert.equal(product.brand.name, "ESHAN");
       assert.equal(product.weight.value, 380);
       assert.equal(product.weight.unitCode, "GRM");
-      assert.equal(product.offers.price, 480);
-      assert.equal(product.offers.priceCurrency, "THB");
+      assert.equal(product.offers.price, locale === "th" ? 380 : 54.29);
+      assert.equal(product.offers.priceCurrency, locale === "th" ? "THB" : "USD");
       assert.equal(new URL(product.offers.url).pathname, expectedPath);
       assert.ok(html.includes(product.name), `${url}: visible localized product name`);
     }

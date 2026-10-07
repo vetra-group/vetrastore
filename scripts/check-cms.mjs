@@ -32,6 +32,7 @@ const restore = (key, value) => { if (value === undefined) delete process.env[ke
 let checks = 0;
 function pass(name) { checks++; console.log(`PASS: ${name}`); }
 function clone(value) { return structuredClone(value); }
+function setBasePrice(product, amount) { product.price = amount; if (product.pricing) product.pricing.THB[0].total = amount; }
 function request(endpoint, method = "GET", body, cookie, headers = {}) {
   return new Request(`http://127.0.0.1:3100/api/cms${endpoint}`, { method, headers: { ...(body ? { "content-type": "application/json" } : {}), ...(method !== "GET" ? { origin: "http://127.0.0.1:3100" } : {}), ...(cookie ? { cookie } : {}), ...headers }, ...(body ? { body: typeof body === "string" ? body : JSON.stringify(body) } : {}) });
 }
@@ -61,6 +62,8 @@ async function main() {
   const legacy = defaults.defaultState(); delete legacy.trash; assert.deepEqual(validation.validateCmsState(legacy).trash, []);
   for (const mutate of [
     (c) => { c.products[0].price = Infinity; }, (c) => { c.products[0].price = -1; }, (c) => { c.products[0].price = 1.234; },
+    (c) => { c.products[0].pricing.USD = []; }, (c) => { c.products[0].pricing.THB[1].quantity = 1; },
+    (c) => { c.products[0].pricing.USD[0].total = 0; }, (c) => { c.products[0].pricing.THB[1].total = 1000; },
     (c) => { c.products[0].slug = "different-honey"; }, (c) => { c.products = []; }, (c) => { c.products[0].stock = 1.5; },
     (c) => { c.products[0].weight = 0; }, (c) => { c.products[0].name.th = ""; }, (c) => { c.products.push(clone(c.products[0])); },
     (c) => { c.products[0].image = "https://evil.example/file.png"; }, (c) => { c.products[0].image = "/images/../private.png"; },
@@ -68,6 +71,13 @@ async function main() {
     (c) => { c.slides[0].enabled = "true"; }, (c) => { c.copy = JSON.parse('{"__proto__":"oops"}'); }, (c) => { c.copy = { "site.en.notReal": "oops" }; },
     (c) => { c.settings.email = "invalid"; }, (c) => { c.articles[0].content.en.sections[0].text = "a".repeat(12001); }, (c) => { c.settings.currency = "USD"; },
   ]) { const changed = clone(content); mutate(changed); assert.throws(() => validation.validateCmsContent(changed), validation.CmsError); }
+  const legacyPrice = clone(defaults.defaultState());
+  for (const snapshot of [legacyPrice.draft, legacyPrice.published]) { snapshot.products[0].price = 480; delete snapshot.products[0].pricing; }
+  const originalLegacy = clone(legacyPrice);
+  const upgradedPrice = validation.validateCmsState(legacyPrice);
+  assert.equal(upgradedPrice.draft.products[0].price, 380); assert.equal(upgradedPrice.published.products[0].price, 380);
+  assert.deepEqual(upgradedPrice.draft.products[0].pricing, content.products[0].pricing);
+  assert.deepEqual(legacyPrice, originalLegacy, "Price migration must not mutate saved snapshots");
   assert.equal(validation.validLink("https://example.com/path"), "https://example.com/path");
   assert.equal(validation.validImageSource("https://res.cloudinary.com/example/image/upload/photo.webp"), "https://res.cloudinary.com/example/image/upload/photo.webp");
   pass("deep content validation, localized required fields, identity, uniqueness, prices, URLs and copy allowlist");
@@ -95,19 +105,19 @@ async function main() {
   assert.equal((await cms.PUT(request("", "PUT", "{broken", cookie))).status, 400);
   pass("signed expiring sessions, same-origin write authorization, tamper rejection and bounded JSON bodies");
 
-  const changed = clone(content); changed.products[0].price = 550;
+  const changed = clone(content); setBasePrice(changed.products[0], 550);
   let response = await cms.PUT(request("", "PUT", { revision: 0, content: changed, action: "save" }, cookie)); assert.equal(response.status, 200);
-  let state = (await response.json()).state; assert.equal(state.revision, 1); assert.equal(state.draft.products[0].price, 550); assert.equal(state.published.products[0].price, 480);
+  let state = (await response.json()).state; assert.equal(state.revision, 1); assert.equal(state.draft.products[0].price, 550); assert.equal(state.published.products[0].price, 380);
   response = await cms.PUT(request("", "PUT", { revision: 0, content: changed, action: "save" }, cookie)); assert.equal(response.status, 200); assert.equal((await response.json()).state.revision, 1);
   assert.equal((await cms.PUT(request("", "PUT", { revision: 0, content: changed, action: "publish" }, cookie))).status, 409);
-  const next = clone(changed); next.products[0].price = 600;
+  const next = clone(changed); setBasePrice(next.products[0], 600);
   const races = await Promise.all(Array.from({ length: 5 }, (_, index) => { const c = clone(next); c.settings.storeName = `Store ${index}`; return cms.PUT(request("", "PUT", { revision: 1, content: c, action: "publish" }, cookie)); }));
   assert.equal(races.filter((res) => res.status === 200).length, 1, JSON.stringify(await Promise.all(races.map((response) => response.clone().json())))); assert.equal(races.filter((res) => res.status === 409).length, 4);
   state = await server.getCmsState(); assert.equal(state.revision, 2); assert.equal(state.published.products[0].price, 600); assert.equal((await server.getPublishedContent()).products[0].price, 600);
   const committed = clone(state), invalid = clone(state.draft); invalid.products[0].image = "/images/does-not-exist.png";
   assert.equal((await cms.PUT(request("", "PUT", { revision: 2, content: invalid, action: "publish" }, cookie))).status, 400);
   assert.deepEqual(await server.getCmsState(), committed);
-  const draft = clone(state.draft); draft.products[0].price = 650;
+  const draft = clone(state.draft); setBasePrice(draft.products[0], 650);
   const originalStateRename = filePromises.rename;
   try {
     filePromises.rename = async (source, destination) => { await originalStateRename(source, destination); if (destination === path.join(directory, "state.json")) throw new Error("Simulated uncertain content commit"); };

@@ -1,0 +1,10 @@
+.page { container: payment-result / inline-size; padding-block: var(--section-space); min-height: 32rem; display: grid; place-items: center; }
+.card { width: min(100%, 45rem); padding: var(--space-5); text-align: center; border: 1px solid var(--line); border-top: 2px solid var(--gold); background: var(--paper); border-radius: var(--radius); }
+.icon { width: 4.5rem; height: 4.5rem; margin: 0 auto var(--space-4); display: grid; place-items: center; border-radius: 50%; color: var(--navy); background: var(--surface); border: 1px solid var(--gold-light); }
+.eyebrow { color: var(--accent-ink); margin-bottom: var(--space-3); }
+.card h1 { color: var(--ink-strong); font-size: var(--type-section-title); }
+.body { color: var(--ink-soft); line-height: 1.8; max-width: var(--reading-measure); margin: var(--space-4) auto 0; }
+.reference { color: var(--ink-soft); border-block: 1px solid var(--line); padding-block: var(--space-3); margin: var(--space-5) 0 0; overflow-wrap: anywhere; }
+.reference strong { display: block; color: var(--ink-strong); font-size: var(--font-size-2); font-weight: 600; margin-top: var(--space-1); }
+.actions { display: flex; justify-content: center; flex-wrap: wrap; gap: var(--space-3); margin-top: var(--space-5); }
+@container (min-width: 38rem) { .card { padding: var(--space-6); } }

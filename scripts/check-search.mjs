@@ -23,6 +23,7 @@ const { quickSearch } = load("src/lib/search-suggestions.ts");
 const { blogListing, blogListingPath, BLOG_PAGE_SIZE } = load("src/lib/blog.ts");
 const { listingQuery, requestedPage, paginate, pageLinks, pageNeedsRedirect } = load("src/lib/listing.ts");
 const { localizedPath } = load("src/lib/i18n.ts");
+const { quoteProduct, currencyForLocale } = load("src/lib/catalog.ts");
 const { createProductCaseStudy } = load("src/content/case-study-template.ts");
 const { validateCmsContent } = load("src/lib/cms/validation.ts");
 let checks = 0;
@@ -167,8 +168,10 @@ const blankQuick = quickSearch(quickPrivate, "en", "  ");
 assert.equal(blankQuick.query, "");
 assert.ok(!JSON.stringify(blankQuick).match(/PrivateNeedle|ArchivedNeedle|ArchivedArticleNeedle|DraftProductNeedle|InternalEvidenceNeedle/));
 for (const result of [...blankQuick.results, ...quickSearch(quickPrivate, "en", "honey").results]) {
-  assert.ok(Object.keys(result).every(key => ["key", "kind", "title", "image", "href", "price"].includes(key)), "Quick search serializes only its small public projection");
+  assert.ok(Object.keys(result).every(key => ["key", "kind", "title", "image", "href", "price", "currency"].includes(key)), "Quick search serializes only its small public projection");
+  assert.ok(Buffer.byteLength(JSON.stringify(result), "utf8") < 2048, "One suggestion stays compact even after adding currency");
   assert.equal(Object.hasOwn(result, "price"), result.kind === "product");
+  assert.equal(Object.hasOwn(result, "currency"), Object.hasOwn(result, "price"), "A visible amount always carries its actual currency");
 }
 pass("quick search excludes every non-public status and internal notes, and serializes only safe suggestion fields");
 
@@ -192,8 +195,10 @@ pass("quick suggestions cap visible results at six while retaining real totals a
 for (const locale of ["en", "ar", "th"]) {
   const result = quickSearch(content, locale, content.products[0].name[locale]);
   const honey = result.results.find(entry => entry.key === `product-${content.products[0].id}`);
+  const quote = quoteProduct(content.products[0], 1, locale);
   assert.equal(honey.href, localizedPath(locale, "/coffee-blossom-honey"));
-  assert.equal(honey.price, content.products[0].price);
+  assert.equal(honey.price, quote.total);
+  assert.equal(honey.currency, currencyForLocale(locale));
   assert.equal(honey.title, `${content.products[0].brand} ${content.products[0].name[locale]}`);
 }
 pass("quick product suggestions preserve trilingual names, current prices and the dedicated honey route");

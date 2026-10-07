@@ -5,8 +5,10 @@ import Link from "next/link";
 import Icon from "@/components/Icon";
 import { commerce } from "@/content/commerce";
 import { mockCheckoutCopy } from "@/content/mock-checkout";
+import { publicPaymentCopy } from "@/content/payment-checkout";
 import type { MockShippingQuote } from "@/lib/mock-checkout";
 import { formatPrice } from "@/lib/catalog";
+import { tryQuoteCart } from "@/lib/cart-pricing";
 import { savedProductDetails } from "@/lib/saved-product";
 import { usePublishedCopy } from "@/components/cms/PublishedProvider";
 import { localizedPath, type Locale } from "@/lib/i18n";
@@ -16,10 +18,12 @@ export default function OrderSummary({
   locale,
   checkoutLink = false,
   shippingQuote,
+  paymentsEnabled = false,
 }: {
   locale: Locale;
   checkoutLink?: boolean;
   shippingQuote?: MockShippingQuote;
+  paymentsEnabled?: boolean;
 }) {
   const t = usePublishedCopy(commerce[locale], `commerce.${locale}`);
   const m = mockCheckoutCopy[locale];
@@ -28,7 +32,9 @@ export default function OrderSummary({
     const product = products.find((product) => product.id === item.id);
     return product ? [{ ...item, product, details: savedProductDetails(product, locale) }] : [];
   });
-  const subtotal = lines.reduce((sum, line) => sum + line.product.price * line.quantity, 0);
+  const quote = tryQuoteCart(items, products, locale);
+  const currency = quote?.currency;
+  const domesticQuote = currency === "THB" ? shippingQuote : undefined;
   const summaryRef = useRef<HTMLElement>(null);
   const [stickyFits, setStickyFits] = useState(false);
 
@@ -71,19 +77,19 @@ export default function OrderSummary({
       <dl className={styles.totals}>
         <div className={styles.line}>
           <dt>{t.itemCount.replace("{count}", itemCount.toLocaleString(locale)).replace("{unit}", itemCount === 1 ? t.item : t.items)}</dt>
-          <dd>{formatPrice(subtotal, locale)}</dd>
+          <dd>{quote && currency ? formatPrice(quote.subtotal, locale, currency) : t.toConfirm}</dd>
         </div>
         <div className={styles.line}>
-          <dt>{shippingQuote ? m.shipping : t.delivery}</dt>
-          <dd>{shippingQuote?.state === "quoted" ? formatPrice(shippingQuote.fee, locale) : t.toConfirm}</dd>
+          <dt>{t.delivery}</dt>
+          <dd>{domesticQuote?.state === "quoted" ? formatPrice(domesticQuote.fee, locale, "THB") : locale === "th" ? "ฟรีในประเทศไทย" : t.toConfirm}</dd>
         </div>
         <div className={styles.total}>
-          <dt>{shippingQuote?.state === "quoted" ? m.total : t.estimated}</dt>
-          <dd><strong>{formatPrice(shippingQuote?.state === "quoted" ? shippingQuote.total : subtotal, locale)}</strong></dd>
+          <dt>{t.estimated}</dt>
+          <dd><strong>{quote && currency ? formatPrice(domesticQuote?.state === "quoted" ? domesticQuote.total : quote.subtotal, locale, currency) : t.toConfirm}</strong></dd>
         </div>
       </dl>
-      <p aria-live="polite">{shippingQuote?.state === "quoted" ? m.quoteNote : shippingQuote ? m.pending[shippingQuote.reason] : t.exclShipping}</p>
-      {checkoutLink && (
+      <p aria-live="polite">{paymentsEnabled ? publicPaymentCopy[locale].summaryNote : domesticQuote?.state === "quoted" ? t.exclShipping : domesticQuote ? m.pending[domesticQuote.reason] : t.exclShipping}</p>
+      {checkoutLink && quote && (
         <Link
           href={localizedPath(locale, "/checkout")}
           className={`button buttonLight ${styles.checkout}`}
@@ -94,7 +100,7 @@ export default function OrderSummary({
       )}
       <span className={styles.small}>
         <Icon name="box" size={19} />
-        {t.deliveryNote}
+        {paymentsEnabled ? publicPaymentCopy[locale].deliveryNote : t.deliveryNote}
       </span>
     </aside>
   );

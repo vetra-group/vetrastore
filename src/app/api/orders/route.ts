@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
-import { MAX_QUANTITY } from "@/lib/catalog";
+import { MAX_QUANTITY, type Currency } from "@/lib/catalog";
+import { quoteCart } from "@/lib/cart-pricing";
 import { getPublishedContent } from "@/lib/cms/server";
 import { isLocale } from "@/lib/i18n";
 import { isRateLimited, readFormJson } from "@/app/api/contact/validation";
@@ -15,8 +16,8 @@ type Enquiry = {
   status: "enquiry";
   locale: string;
   customer: Record<string, string>;
-  items: { id: string; quantity: number; unitPrice: number }[];
-  currency: "THB";
+  items: { id: string; quantity: number; unitPrice: number; lineTotal?: number }[];
+  currency: Currency;
   subtotal: number;
   createdAt: Date;
   consentAt: Date;
@@ -25,7 +26,7 @@ type Enquiry = {
   outbox: PendingRequestNotice[];
 };
 function enquiryFingerprint(customer: Record<string, string>, items: { id: string; quantity: number }[], locale: string) {
-  const fields = ["name", "email", "phone", "address", "district", "province", "postcode", "notes"];
+  const fields = ["name", "email", "phone", "address", "district", "province", "country", "postcode", "notes"];
   return createHash("sha256").update(JSON.stringify({ customer: Object.fromEntries(fields.map((field) => [field, customer[field]])), items: items.map((item) => ({ id: item.id, quantity: item.quantity })).sort((a, b) => a.id.localeCompare(b.id)), locale })).digest("hex");
 }
 export async function POST(request: NextRequest) {
@@ -81,8 +82,9 @@ export async function POST(request: NextRequest) {
     address: 500,
     district: 100,
     province: 100,
-    postcode: 5,
+    postcode: data.locale === "th" ? 5 : 20,
     notes: 1000,
+    ...(data.locale === "th" ? {} : { country: 100 }),
   };
   const customer: Record<string, string> = {};
   for (const [field, limit] of Object.entries(limits)) {
@@ -100,7 +102,7 @@ export async function POST(request: NextRequest) {
   if (
     !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email) ||
     !/^[+()\d\s.-]{7,30}$/.test(customer.phone) ||
-    !/^\d{5}$/.test(customer.postcode)
+    !(data.locale === "th" ? /^\d{5}$/.test(customer.postcode) : /^[\p{L}\p{N}][\p{L}\p{N} -]{1,18}[\p{L}\p{N}]$/u.test(customer.postcode))
   )
     return NextResponse.json(
       { error: "Please check your contact details." },
@@ -134,12 +136,13 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ reference: previous.reference, status: "enquiry" }, { status: 201, headers: { "Cache-Control": "no-store" } });
     }
     const products = (await getPublishedContent()).products.filter((product) => product.status === "published");
-    const items: Enquiry["items"] = [];
     for (const item of requested) {
       const product = products.find((product) => product.id === item.id);
       if (!product || item.quantity > Math.min(MAX_QUANTITY, product.stock ?? MAX_QUANTITY)) return NextResponse.json({ error: "Please check your bag." }, { status: 400 });
-      items.push({ ...item, unitPrice: product.price });
     }
+    let pricing: ReturnType<typeof quoteCart>;
+    try { pricing = quoteCart(requested, products, data.locale); }
+    catch { return NextResponse.json({ error: "A current price is unavailable. Please contact us." }, { status: 409 }); }
     const now = new Date();
     const document: Enquiry = {
       _id: key,
@@ -148,9 +151,9 @@ export async function POST(request: NextRequest) {
       status: "enquiry",
       locale: data.locale,
       customer,
-      items,
-      currency: "THB",
-      subtotal: items.reduce((sum, item) => sum + item.unitPrice * item.quantity, 0),
+      items: pricing.items,
+      currency: pricing.currency,
+      subtotal: pricing.subtotal,
       createdAt: now,
       consentAt: now,
       paymentStatus: "not-requested",

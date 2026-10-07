@@ -1,4 +1,5 @@
 import type { Locale } from "./i18n";
+import type { Currency } from "./catalog";
 import type { OrderWorkflow, RequestActivity, WholesaleRequest } from "./commerce-workflow";
 import type { MockInventoryHold, MockShippingQuote, MockShippingRule } from "./mock-checkout";
 
@@ -12,7 +13,7 @@ export type DemoChecklistStatus = "needs-confirmation" | "reviewed";
 export type DemoChecklist = Record<DemoChecklistKey, DemoChecklistStatus>;
 export type DemoPayment = "enquiry" | "demo-paid" | "demo-failed";
 export type DemoPaymentOutcome = DemoPayment | "demo-refunded";
-export type DemoItem = { id: string; quantity: number; unitPrice: number };
+export type DemoItem = { id: string; quantity: number; unitPrice: number; lineTotal?: number };
 
 export type DemoInput = {
   kind: DemoKind;
@@ -24,6 +25,8 @@ export type DemoInput = {
   customer?: Record<string, string>;
   items?: DemoItem[];
   subtotal?: number;
+  /** Absent on legacy THB records. */
+  currency?: Currency;
   payment?: DemoPayment;
   wholesale?: WholesaleRequest;
 };

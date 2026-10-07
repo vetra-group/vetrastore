@@ -37,6 +37,14 @@ check("Arabic validation preserves Thai delivery rules and accepts Arabic-Indic 
   assert.match(validate({}, rules, "ar").name, /[\u0600-\u06ff]/u);
   assert.equal(normalizeCustomerNumber("اسم@example.test"), "اسم@example.test", "Only digit characters change");
 });
+check("International postal codes and country are accepted without weakening Thai postcode validation", () => {
+  const foreign = { country: { label: "Country", required: true, max: 100 }, postcode: { label: "Postal code", required: true, max: 20, kind: "postal-code" } };
+  assert.deepEqual(validate({ country: "United Kingdom", postcode: "SW1A 1AA" }, foreign, "en"), {});
+  assert.deepEqual(validate({ country: "Canada", postcode: "H0H 0H0" }, foreign, "en"), {});
+  assert.deepEqual(validate({ country: "المملكة العربية السعودية", postcode: "١٢٣٤٥" }, foreign, "ar"), {});
+  assert.deepEqual(Object.keys(validate({ country: "", postcode: "--" }, foreign, "en")), ["country", "postcode"]);
+  assert.equal(validate({ phone: "+66 812345678", postcode: "SW1A 1AA" }, delivery, "th").postcode, customerFormCopy.th.postcode);
+});
 check("wholesale validates whole quantities, available products, and calendar dates", () => {
   const fields={quantity:{label:"Quantity",kind:"quantity",required:true},product:{label:"Product",required:true,options:["honey"]},date:{label:"Date",kind:"date"}};
   assert.deepEqual(validate({quantity:"1000000",product:"honey",date:"2028-02-29"},fields,"en"),{});

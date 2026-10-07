@@ -20,6 +20,7 @@ const output = path.join(root, "output"); fs.mkdirSync(output, { recursive: true
 const directory = fs.mkdtempSync(path.join(output, "published-read-check-"));
 const environment = { ...process.env }; let checks = 0;
 const pass = (message) => { checks++; console.log(`PASS: ${message}`); };
+const setThaiBase = (product, amount) => { product.price = amount; if (product.pricing) product.pricing.THB[0].total = amount; };
 try {
   process.env.NEXT_PUBLIC_DEMO_MODE = "true"; process.env.CMS_LOCAL_DATA_DIR = directory;
   delete process.env.VERCEL; delete process.env.CMS_STORAGE; delete process.env.CMS_AUTH_MODE;
@@ -32,6 +33,7 @@ try {
   storage.fileVersion = async (...args) => { metadataReads++; return realVersion(...args); };
 
   const legacy = defaults.defaultState();
+  legacy.published.products[0].price = 480; delete legacy.published.products[0].pricing;
   legacy.published.articles[0].editorialNotes = "PRIVATE EDITOR NOTE";
   legacy.published.articles.push({ ...structuredClone(legacy.published.articles[0]), slug: "hidden-article", id: "hidden-article", status: "draft" });
   legacy.published.slides[0].enabled = false;
@@ -42,7 +44,8 @@ try {
   const first = await server.getPublishedContent();
   assert.ok(first.articles.every((article) => article.status === "published" && !article.editorialNotes));
   assert.ok(first.slides.every((slide) => slide.enabled));
-  assert.equal(first.products[0].price, legacy.published.products[0].price);
+  assert.equal(first.products[0].price, 380, "The exact old honey price upgrades in memory without rewriting the legacy file");
+  assert.equal(first.products[0].pricing.THB[0].total, 380);
   assert.equal(fs.readFileSync(statePath, "utf8"), originalBytes); assert.equal(fs.existsSync(projectionPath), false);
   assert.equal(globalThis.__vetraCmsTrashTimer, undefined);
   assert.equal(stateReads, 1);
@@ -50,7 +53,7 @@ try {
   assert.equal(stateReads, 1); assert.ok(metadataReads > probes);
   pass("legacy public reads validate only published content, strip private/hidden records, never expire Trash or write, and cache behind metadata probes");
 
-  legacy.revision++; legacy.published.products[0].price = 777;
+  legacy.revision++; legacy.published.products[0] = structuredClone(defaults.defaultState().published.products[0]); setThaiBase(legacy.published.products[0], 777);
   await storage.atomicFile(statePath, JSON.stringify(legacy));
   assert.equal((await readModel.readPublishedContent()).products[0].price, 777);
   assert.equal(stateReads, 2);
@@ -58,10 +61,10 @@ try {
 
   await storage.atomicFile(statePath, JSON.stringify(defaults.defaultState())); readModel.invalidatePublishedReadModel();
   let state = await server.getCmsState();
-  let draft = structuredClone(state.draft); draft.products[0].price = 999;
+  let draft = structuredClone(state.draft); setThaiBase(draft.products[0], 999);
   state = await server.updateCmsContent(state.revision, draft, "save");
   stateReads = 0; projectionReads = 0;
-  assert.equal((await readModel.readPublishedContent()).products[0].price, 480);
+  assert.equal((await readModel.readPublishedContent()).products[0].price, 380);
   assert.equal(stateReads, 0); assert.equal(projectionReads, 1);
   const projection = JSON.parse(fs.readFileSync(projectionPath, "utf8"));
   assert.deepEqual(Object.keys(projection).sort(), ["content", "hash", "sourceVersion", "version"]);
@@ -98,22 +101,24 @@ try {
   const mongo = load("src/lib/db.ts"); mongo.getDb = async () => db;
   mongo.getMongoClient = async () => ({ startSession: () => ({ async withTransaction(task) { const before = structuredClone(collections); try { return await task(); } catch (error) { collections.clear(); for (const [key, entries] of before) collections.set(key, entries); throw error; } }, async endSession() {} }) });
   process.env.CMS_STORAGE = "mongodb";
-  const remoteState = defaults.defaultState(); remoteState.published.products[0].price = 543;
+  const remoteState = defaults.defaultState(); setThaiBase(remoteState.published.products[0], 543); remoteState.published.products[0].pricing.USD[0].total = 70;
   await storage.withRemoteCmsLock(() => storage.atomicStateAndPublished(statePath, JSON.stringify(remoteState), publishedContentProjection(remoteState.published)));
   stateReads = 0; projectionReads = 0; readModel.invalidatePublishedReadModel();
   assert.equal((await readModel.readPublishedContent()).products[0].price, 543);
+  assert.equal((await readModel.readPublishedContent()).products[0].pricing.USD[0].total, 70);
   assert.equal(stateReads, 0); assert.equal(projectionReads, 1);
   const stateProbes = probesSeen.filter((entry) => entry.filter._id === "state.json");
   assert.ok(stateProbes.length > 0 && stateProbes.every((entry) => entry.options?.projection?.hash === 1 && entry.options.projection.size === 1 && !entry.options.projection.text));
   pass("durable public reads fetch only small state metadata and the published projection, excluding full CMS state text");
 
-  failProjection = true; remoteState.revision++; remoteState.published.products[0].price = 876;
+  failProjection = true; remoteState.revision++; setThaiBase(remoteState.published.products[0], 876); remoteState.published.products[0].pricing.USD[0].total = 75;
   await assert.rejects(storage.withRemoteCmsLock(() => storage.atomicStateAndPublished(statePath, JSON.stringify(remoteState), publishedContentProjection(remoteState.published))), /projection transaction failure/);
   failProjection = false;
   assert.equal((await readModel.readPublishedContent()).products[0].price, 543);
   assert.equal(JSON.parse(collections.get("cms_files").get("state.json").text).published.products[0].price, 543);
   await storage.withRemoteCmsLock(() => storage.atomicStateAndPublished(statePath, JSON.stringify(remoteState), publishedContentProjection(remoteState.published)));
   assert.equal((await readModel.readPublishedContent()).products[0].price, 876);
+  assert.equal((await readModel.readPublishedContent()).products[0].pricing.USD[0].total, 75);
   pass("a failed Mongo projection write rolls back state and publication together; a successful retry updates both atomically");
 
   unavailable = true;

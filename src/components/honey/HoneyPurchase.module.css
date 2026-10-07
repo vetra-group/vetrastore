@@ -3,6 +3,24 @@
   color: var(--ink-strong);
 }
 
+.selectedTotal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--space-1) var(--space-3);
+  margin-bottom: var(--space-3);
+  padding-bottom: var(--space-3);
+  border-bottom: 1px solid var(--line);
+  font-size: var(--font-size-1);
+}
+
+.selectedTotal strong {
+  color: var(--navy);
+  font-size: var(--font-size-3);
+  font-variant-numeric: tabular-nums;
+}
+
 .controls {
   display: flex;
   align-items: stretch;
@@ -121,7 +139,7 @@
     grid-template-columns: minmax(0, 1fr) var(--control-size);
   }
 
-  .controls > :first-child {
+  .controls > :first-child:not(.add) {
     width: min(8rem, 100%);
     grid-column: 1;
   }
@@ -136,10 +154,16 @@
     grid-column: 2;
     grid-row: 1;
   }
+
+  .controls:has(.add:first-child) .add {
+    grid-column: 1;
+    grid-row: 1;
+  }
 }
 
 @container honey-purchase (max-width: 12rem) {
   .controls { grid-template-columns: minmax(0, 1fr); }
   .controls > :first-child { width: 100%; min-width: 0; }
   .save { grid-column: 1; grid-row: 3; justify-self: start; }
+  .controls:has(.add:first-child) .save { grid-row: 2; }
 }

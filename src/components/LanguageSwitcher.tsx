@@ -2,7 +2,7 @@
 
 import { Suspense, useEffect, useRef, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
-import { Check, Globe2 } from "lucide-react";
+import { Check } from "lucide-react";
 import { languageConfig, locales, localizedPath, type Locale } from "@/lib/i18n";
 import styles from "./LanguageSwitcher.module.css";
 
@@ -60,7 +60,9 @@ export default function LanguageSwitcher({ locale, path, availableLocales, onNav
   }, [open]);
   const close = () => { details.current?.removeAttribute("open"); onNavigate(); };
   return <details ref={details} className={styles.switcher} onToggle={event => setOpen(event.currentTarget.open)}>
-    <summary ref={trigger} aria-label={`${labels[locale]} · ${languageConfig.locales.find(language => language.code === locale)?.label}`} aria-expanded={open} aria-controls="store-languages"><Globe2 aria-hidden="true" /></summary>
+    <summary ref={trigger} aria-label={`${labels[locale]} · ${languageConfig.locales.find(language => language.code === locale)?.label}`} aria-expanded={open} aria-controls="store-languages">
+      <span className={styles.code} lang="en" aria-hidden="true">{locale.toUpperCase()}</span>
+    </summary>
     <nav id="store-languages" className={styles.options} aria-label={labels[locale]}>
       <Suspense fallback={<LanguageLinks locale={locale} path={path} availableLocales={availableLocales} close={close} />}><QueryLinks locale={locale} path={path} availableLocales={availableLocales} close={close} /></Suspense>
     </nav>

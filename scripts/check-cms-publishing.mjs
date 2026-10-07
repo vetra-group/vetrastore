@@ -40,7 +40,7 @@ try {
 
   let state = await server.getCmsState(); const original = clone(state), id = state.draft.articles[0].id, slug = state.draft.articles[0].slug;
   assert.ok(id); let draft = clone(state.draft);
-  draft.articles[0].slug = "selection-guide-revised"; draft.articles[0].content.en.title = "A reviewed selection guide"; draft.products[0].price = 520;
+  draft.articles[0].slug = "selection-guide-revised"; draft.articles[0].content.en.title = "A reviewed selection guide"; draft.products[0].price = 520; draft.products[0].pricing.THB[0].total = 520;
   state = await server.updateCmsContent(state.revision, draft, "save");
   assert.equal(state.draft.articles[0].id, id); assert.ok(state.draft.articles[0].previousSlugs.includes(slug)); assert.equal(state.trash.length, 0);
   assert.equal((await server.getCmsPreviewContent(request("/preview", "GET", undefined, cookie))).articles[0].slug, "selection-guide-revised");
@@ -49,7 +49,7 @@ try {
   assert.ok(review.changes.some((item) => item.kind === "product" && item.fields.includes("price")));
   const publicationRevision = state.revision;
   const response = await publishingRoute.POST(request("/publishing", "POST", { action: "publish", revision: publicationRevision, selection: [{ kind: "article", key: id }] }, cookie)); assert.equal(response.status, 200); state = (await response.json()).state;
-  assert.equal(state.published.products[0].price, 480); assert.equal(state.draft.products[0].price, 520);
+  assert.equal(state.published.products[0].price, 380); assert.equal(state.draft.products[0].price, 520);
   assert.equal(publishing.articleForRoute(state.published, slug).article.slug, "selection-guide-revised"); assert.equal(publishing.articleForRoute(state.published, slug).redirect, true);
   assert.equal((await server.publishCmsSelection(publicationRevision, [{ kind: "article", key: id }])).revision, state.revision);
   await assert.rejects(server.publishCmsSelection(publicationRevision, [{ kind: "product", key: state.draft.products[0].id }]), (error) => error.code === "REVISION_CONFLICT");

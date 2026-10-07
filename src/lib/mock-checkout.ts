@@ -1,4 +1,5 @@
-import type { CatalogProduct } from "./catalog";
+import { MAX_QUANTITY, type CatalogProduct } from "./catalog";
+import type { Locale } from "./i18n";
 
 // Local simulations only. These rules never become published shipping terms.
 export type MockShippingRule = { id: string; label: string; postcodePrefix: string; fee: number; freeOver: number | null };
@@ -32,6 +33,16 @@ export function quoteMockShipping(rules: readonly MockShippingRule[], postcode: 
   return { state: "quoted", ruleId: rule.id, label: rule.label, postcode: destination, subtotal: value, fee, total: cents(value + fee) };
 }
 
+/** The published free-delivery offer applies to Thai-price orders addressed in Thailand. */
+export function quoteStoreShipping(locale: Locale, postcode: string, subtotal: number): MockShippingQuote | undefined {
+  if (locale !== "th") return undefined;
+  if (!Number.isFinite(subtotal) || subtotal < 0 || typeof postcode !== "string" || postcode.length > 1000) throw new Error("Check delivery details");
+  const destination = postcode.trim();
+  const value = cents(subtotal);
+  if (!/^\d{5}$/.test(destination)) return { state: "pending", reason: "destination-missing", postcode: destination, subtotal: value, fee: null, total: null };
+  return { state: "quoted", ruleId: "thai-free-delivery", label: "จัดส่งฟรีในประเทศไทย", postcode: destination, subtotal: value, fee: 0, total: value };
+}
+
 export function parseMockShippingQuote(value: unknown, subtotal: number): MockShippingQuote | undefined {
   if (!value || typeof value !== "object") return undefined;
   const quote = value as MockShippingQuote;
@@ -45,7 +56,7 @@ export function parseMockInventory(value: unknown): MockInventoryHold[] {
   if (!Array.isArray(value)) return [];
   const ids = new Set<string>();
   return value.filter((hold): hold is MockInventoryHold => {
-    if (!hold || typeof hold !== "object" || typeof hold.orderId !== "string" || !/^[\w-]{1,100}$/.test(hold.orderId) || ids.has(hold.orderId) || !["reserved", "committed", "released"].includes(hold.state) || !Array.isArray(hold.items) || !hold.items.length || hold.items.length > 200 || hold.items.some((item: { id?: unknown; quantity?: unknown }) => !item || typeof item.id !== "string" || !/^[a-z0-9][a-z0-9-]{0,99}$/.test(item.id) || !Number.isSafeInteger(item.quantity) || Number(item.quantity) < 1 || Number(item.quantity) > 20) || new Set(hold.items.map((item: { id: string }) => item.id)).size !== hold.items.length || (hold.state === "reserved" && (typeof hold.expiresAt !== "string" || !Number.isFinite(Date.parse(hold.expiresAt))))) return false;
+    if (!hold || typeof hold !== "object" || typeof hold.orderId !== "string" || !/^[\w-]{1,100}$/.test(hold.orderId) || ids.has(hold.orderId) || !["reserved", "committed", "released"].includes(hold.state) || !Array.isArray(hold.items) || !hold.items.length || hold.items.length > 200 || hold.items.some((item: { id?: unknown; quantity?: unknown }) => !item || typeof item.id !== "string" || !/^[a-z0-9][a-z0-9-]{0,99}$/.test(item.id) || !Number.isSafeInteger(item.quantity) || Number(item.quantity) < 1 || Number(item.quantity) > MAX_QUANTITY) || new Set(hold.items.map((item: { id: string }) => item.id)).size !== hold.items.length || (hold.state === "reserved" && (typeof hold.expiresAt !== "string" || !Number.isFinite(Date.parse(hold.expiresAt))))) return false;
     ids.add(hold.orderId); return true;
   }).map((hold) => ({ orderId: hold.orderId, items: hold.items.map(({ id, quantity }) => ({ id, quantity })), state: hold.state, ...(hold.state === "reserved" ? { expiresAt: hold.expiresAt } : {}) }));
 }

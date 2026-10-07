@@ -10,6 +10,8 @@ export { contactCopy, helpCopy } from "@/content/pages";
 import { demoEnabled } from "@/lib/demo";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import { HONEY_ID, formatPrice } from "@/lib/catalog";
+import { publicQuote } from "@/lib/public-pricing";
+import { publicPricingCopy } from "@/content/public-pricing";
 import styles from "./Editorial.module.css";
 
 export async function ContactContent({
@@ -93,7 +95,12 @@ export async function HelpContent({ locale }: { locale: Locale }) {
   const honey = content.products.find((product) => product.id === HONEY_ID && product.status === "published");
   const questions = c.questions.map(([question, answer], index) => {
     if (index === 0 && !Object.hasOwn(content.copy, `pages.help.${locale}.questions.0.1`)) return [question, content.products.filter((product) => product.status === "published").map((product) => product.name[locale]).join(" · ") || (locale === "th" ? "กำลังปรับปรุงรายการสินค้า" : locale === "ar" ? "نعمل على تحديث قائمة المنتجات." : "Our catalog is being updated.")];
-    if (index === 3 && honey && !Object.hasOwn(content.copy, `pages.help.${locale}.questions.3.1`)) return [question, `${honey.brand} ${honey.name[locale]} · ${honey.weight} ${locale === "th" ? "กรัม" : locale === "ar" ? "غ" : "g"} · ${formatPrice(honey.price, locale)}`];
+    if (index === 3 && honey && !Object.hasOwn(content.copy, `pages.help.${locale}.questions.3.1`)) {
+      const quote = publicQuote(honey, 1, locale);
+      const price = quote ? formatPrice(quote.total, locale, quote.currency) : publicPricingCopy[locale].unavailable;
+      const displayPrice = locale === "ar" ? `\u2068${price}\u2069` : price;
+      return [question, `${honey.brand} ${honey.name[locale]} · ${honey.weight} ${locale === "th" ? "กรัม" : locale === "ar" ? "غ" : "g"} · ${displayPrice}`];
+    }
     return [question, answer];
   });
   return (

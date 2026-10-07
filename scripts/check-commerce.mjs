@@ -65,24 +65,33 @@ async function main() {
   assert.deepEqual(
     parseStoredCart({
       items: [
-        { id: "coffee-blossom-honey", quantity: 12 },
-        { id: "coffee-blossom-honey", quantity: 15 },
+        { id: "coffee-blossom-honey", quantity: 72 },
+        { id: "coffee-blossom-honey", quantity: 55 },
       ],
       wishlist: ["coffee-blossom-honey", "invalid"],
     }),
     {
-      items: [{ id: "coffee-blossom-honey", quantity: 20 }],
+      items: [{ id: "coffee-blossom-honey", quantity: 96 }],
       wishlist: ["coffee-blossom-honey"],
     },
   );
-  const { formatPrice } = load("src/lib/catalog.ts");
-  const { honey } = load("src/lib/catalog.ts");
+  const { formatPrice, quoteProduct, honey } = load("src/lib/catalog.ts");
+  for (const [quantity, thb, usd] of [[1, 380, 54.29], [2, 700, 100], [6, 1980, 282.86], [12, 3800, 542.86], [24, 7200, 1028.57], [48, 13000, 1857.14], [96, 24000, 3428.57]]) {
+    assert.equal(quoteProduct(honey, quantity, "th").total, thb, `THB total for ${quantity} jars`);
+    assert.equal(quoteProduct(honey, quantity, "en").total, usd, `USD total for ${quantity} jars`);
+  }
+  assert.equal(quoteProduct(honey, 3, "th").total, 1080, "Three jars combine one two-pack and one single");
+  assert.equal(quoteProduct(honey, 7, "th").total, 2360, "Seven jars combine one six-pack and one single");
+  assert.equal(quoteProduct(honey, 13, "th").total, 4180, "Thirteen jars combine one twelve-pack and one single");
+  assert.equal(quoteProduct(honey, 3, "ar").total, 154.29, "Arabic displays the same USD schedule");
+  const { quoteCart } = load("src/lib/cart-pricing.ts");
+  assert.equal(quoteCart([{ id: honey.id, quantity: 1 }, { id: "second-honey", quantity: 2 }], [honey, { ...honey, id: "second-honey", slug: "second-honey" }], "en").subtotal, 154.29, "USD bag subtotals add exact cents");
   const { addCartItem, cartQuantityLimit, restoreCartItem } = load("src/lib/cart-actions.ts");
   assert.equal(cartQuantityLimit(undefined), 0, "Removed products cannot be restored");
-  assert.equal(cartQuantityLimit(honey), 20);
+  assert.equal(cartQuantityLimit(honey), 96);
   assert.equal(cartQuantityLimit({ ...honey, stock: 3.8 }), 3);
   for (const stock of [-1, NaN, Infinity, 0]) assert.equal(cartQuantityLimit({ ...honey, stock }), 0);
-  assert.equal(cartQuantityLimit({ ...honey, stock: 100 }), 20);
+  assert.equal(cartQuantityLimit({ ...honey, stock: 100 }), 96);
   const bag = [{ id: "first", quantity: 2 }, { id: honey.id, quantity: 3 }, { id: "last", quantity: 1 }];
   assert.deepEqual(addCartItem(bag, honey.id, 2, 5), [bag[0], { id: honey.id, quantity: 5 }, bag[2]], "Changing quantity preserves stable row order");
   for (const quantity of [NaN, Infinity, -2, 0, 0.5]) assert.equal(addCartItem(bag, honey.id, quantity, 20), bag);
@@ -93,8 +102,8 @@ async function main() {
   assert.deepEqual(restoreCartItem([{ id: honey.id, quantity: 1 }], removed, 20), [{ id: honey.id, quantity: 4 }], "Undo preserves later additions without duplicate rows");
   assert.equal(restoreCartItem(bag, removed, 0), bag, "Unavailable stock cannot be restored");
   assert.deepEqual(bag, [{ id: "first", quantity: 2 }, { id: honey.id, quantity: 3 }, { id: "last", quantity: 1 }], "Mutations leave earlier snapshots unchanged");
-  assert.equal(formatPrice(480, "en"), "฿480");
-  assert.equal(formatPrice(480, "th"), "฿480");
+  assert.equal(formatPrice(380, "th"), "฿380");
+  assert.equal(formatPrice(54.29, "en", "USD"), "$54.29");
   const { localizedDestination } = load("src/lib/i18n.ts");
   assert.equal(localizedDestination("en", "/products"), "/products");
   assert.equal(localizedDestination("th", "/products"), "/th/products");
@@ -149,7 +158,8 @@ async function main() {
       address: "Test address",
       district: "Test district",
       province: "Test province",
-      postcode: "10110",
+      country: "United Kingdom",
+      postcode: "SW1A 1AA",
       notes: "",
     },
     items: [{ id: "coffee-blossom-honey", quantity: 2 }],
@@ -177,7 +187,7 @@ async function main() {
     assert.equal(calls, 0);
     process.env.ORDER_ENQUIRIES_ENABLED = "true";
     process.env.MONGODB_URI = "mongodb://not-used.invalid/test";
-    for (const quantity of [0, 21, 1.5, "2", -1, null]) {
+    for (const quantity of [0, 97, 1.5, "2", -1, null]) {
       const body = makeBody();
       body.items[0].quantity = quantity;
       assert.equal((await POST(request(body))).status, 400);
@@ -199,7 +209,10 @@ async function main() {
         body.customer.email = "invalid";
       },
       (body) => {
-        body.customer.postcode = "000000";
+        body.customer.postcode = "--";
+      },
+      (body) => {
+        body.customer.country = "";
       },
       (body) => {
         body.customer.notes = "x".repeat(1001);
@@ -242,8 +255,10 @@ async function main() {
     assert.equal(response.status, 201);
     const result = await response.json();
     assert.match(result.reference, /^VT-[0-9A-F]{12}$/);
-    assert.equal(documents.get(key).subtotal, 960);
-    assert.equal(documents.get(key).items[0].unitPrice, 480);
+    assert.equal(documents.get(key).subtotal, 100);
+    assert.equal(documents.get(key).items[0].lineTotal, 100);
+    assert.equal(documents.get(key).items[0].unitPrice, 50);
+    assert.equal(documents.get(key).currency, "USD");
     assert.equal(documents.get(key).status, "enquiry");
     assert.equal(documents.get(key).paymentStatus, "not-requested");
     assert.equal(documents.get(key).fulfilmentStatus, "not-started");
@@ -253,13 +268,13 @@ async function main() {
     assert.equal(response.status, 201);
     assert.equal((await response.json()).reference, result.reference);
     assert.equal(documents.size, 1);
-    publishedContent.products[0].price = 750;
+    publishedContent.products[0].pricing.USD[1].total = 150;
     publishedContent.products[0].stock = 0;
     publishedContent.products[0].status = "archived";
     response = await POST(request(makeBody(), key));
     assert.equal(response.status, 201, "An existing retry must survive price, stock and publication changes");
     assert.equal((await response.json()).reference, result.reference);
-    assert.equal(documents.get(key).subtotal, 960, "Historical order prices are preserved");
+    assert.equal(documents.get(key).subtotal, 100, "Historical order prices are preserved");
     assert.equal((await POST(request(makeBody(), randomUUID()))).status, 400, "Archived products cannot create new enquiries");
     const changedCustomer = makeBody(); changedCustomer.customer.email = "different@example.com";
     assert.equal((await POST(request(changedCustomer, key))).status, 409);
@@ -268,7 +283,7 @@ async function main() {
     publishedContent = defaultContent();
     body.items[0].quantity = 3;
     assert.equal((await POST(request(body, key))).status, 409);
-    assert.equal(documents.get(key).subtotal, 960);
+    assert.equal(documents.get(key).subtotal, 100);
     fail = true;
     const retryKey = randomUUID();
     assert.equal((await POST(request(makeBody(), retryKey))).status, 503);
@@ -281,20 +296,33 @@ async function main() {
     assert.equal((await POST(request(makeBody(), uncertainKey))).status, 503);
     assert.equal(documents.size, 3);
     failRead = false;
-    publishedContent.products[0].price = 900; publishedContent.products[0].status = "archived";
+    publishedContent.products[0].pricing.USD[1].total = 175; publishedContent.products[0].status = "archived";
     assert.equal((await POST(request(makeBody(), uncertainKey))).status, 201);
     assert.equal(
       documents.size,
       3,
       "Retry after an uncertain save must not duplicate the enquiry",
     );
-    assert.equal(documents.get(uncertainKey).subtotal, 960);
+    assert.equal(documents.get(uncertainKey).subtotal, 100);
     publishedContent = defaultContent();
     duplicateRace = true;
     const raceKey = randomUUID();
     assert.equal((await POST(request(makeBody(), raceKey))).status, 201);
     assert.equal(documents.size, 4);
     duplicateRace = false;
+    const thaiBody = makeBody();
+    thaiBody.locale = "th";
+    delete thaiBody.customer.country;
+    thaiBody.customer.postcode = "10110";
+    thaiBody.items[0].quantity = 12;
+    const thaiKey = randomUUID();
+    assert.equal((await POST(request(thaiBody, thaiKey))).status, 201);
+    assert.equal(documents.get(thaiKey).currency, "THB");
+    assert.equal(documents.get(thaiKey).items[0].lineTotal, 3800);
+    assert.equal(documents.get(thaiKey).subtotal, 3800, "A twelve-jar total stays exact despite a repeating average unit price");
+    const wrongThaiPostcode = structuredClone(thaiBody);
+    wrongThaiPostcode.customer.postcode = "SW1A 1AA";
+    assert.equal((await POST(request(wrongThaiPostcode, randomUUID()))).status, 400);
     const contact = load("src/app/api/contact/route.ts", { "@/lib/db": { getDb: async () => fakeDb }, "@/lib/cms/server": { getPublishedContent: async () => publishedContent } });
     const wholesale = { name: "Business buyer", email: "business@example.test", locale: "en", consent: true, subject: "wholesale", message: "Please confirm availability for our business.", submissionId: randomUUID(), wholesale: { productId: "coffee-blossom-honey", quantity: 150, business: "Cafe", destination: "Bangkok 10110", neededBy: "2026-12-12" } };
     for (const invalid of [{ quantity: 0 }, { productId: "unknown" }, { neededBy: "2026-02-30" }, { business: "" }]) assert.equal((await contact.POST(request({ ...wholesale, submissionId: randomUUID(), wholesale: { ...wholesale.wholesale, ...invalid } }))).status, 400);

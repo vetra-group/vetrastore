@@ -11,6 +11,8 @@ import {
 } from "react";
 import { usePathname } from "next/navigation";
 import { catalogProducts, type CatalogProduct } from "@/lib/catalog";
+import { tryQuoteCart } from "@/lib/cart-pricing";
+import { isLocale } from "@/lib/i18n";
 import { addCartItem, cartQuantityLimit, restoreCartItem, type RemovedCartItem } from "@/lib/cart-actions";
 import {
   parseStoredCart,
@@ -22,6 +24,7 @@ import {
 type Store = StoredCart & {
   products: readonly CatalogProduct[];
   subtotal: number;
+  pricingAvailable: boolean;
   hydrated: boolean;
   itemCount: number;
   addItem: (id: string, quantity?: number) => boolean;
@@ -175,12 +178,16 @@ export function StoreProvider({ children, products = catalogProducts }: { childr
     [update, products],
   );
   const items: CartItem[] = store.items;
+  const pathLocale = pathname?.split("/")[1] ?? "";
+  const locale = isLocale(pathLocale) ? pathLocale : "en";
+  const quote = tryQuoteCart(items, products, locale);
   return (
     <StoreContext.Provider
       value={{
         ...store,
         products,
-        subtotal: items.reduce((total, item) => total + (products.find((product) => product.id === item.id)?.price ?? 0) * item.quantity, 0),
+        subtotal: quote?.subtotal ?? 0,
+        pricingAvailable: quote !== null,
         items,
         hydrated,
         itemCount: items.reduce((sum, item) => sum + item.quantity, 0),

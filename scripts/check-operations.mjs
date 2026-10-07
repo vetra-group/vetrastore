@@ -34,7 +34,7 @@ try {
   const list = (query = "") => repository.list(normalizeOperationsQuery(new URLSearchParams(query)));
   const table = (name) => JSON.parse(fs.readFileSync(path.join(directory, "operations.json"), "utf8")).tables[name];
   const input = { kind: "contact", locale: "en", name: "Synthetic customer", email: "customer@example.invalid", message: "A synthetic enquiry for regression checks." };
-  const orderInput = { ...input, kind: "order", payment: "enquiry", items: [{ id: products[0].id, quantity: 2, unitPrice: 0 }], customer: { postcode: "10110" } };
+  const orderInput = { ...input, locale: "th", kind: "order", payment: "enquiry", items: [{ id: products[0].id, quantity: 2, unitPrice: 0 }], customer: { postcode: "10110" } };
   const createCommand = { action: "create", key: key(), input };
   const one = (await service.executeOperations(createCommand, deps)).record;
   assert.deepEqual((await service.executeOperations(createCommand, deps)).record, one);
@@ -70,9 +70,9 @@ try {
   let first = (await service.executeOperations({ action: "create", key: key(), input: orderInput }, deps)).record;
   let second = (await service.executeOperations({ action: "create", key: key(), input: orderInput }, deps)).record;
   const orderIds = [first.id, second.id];
-  assert.equal(first.items[0].unitPrice, products[0].price); assert.equal(first.shippingQuote.fee, 30);
+  assert.equal(first.items[0].lineTotal, 700); assert.equal(first.currency, "THB"); assert.equal(first.shippingQuote.fee, 0);
   await service.executeOperations({ action: "shipping", key: key(), revision: 1, rules: [] }, deps);
-  assert.equal((await service.operationsDetail(first.id, repository)).shippingQuote.fee, 30);
+  assert.equal((await service.operationsDetail(first.id, repository)).shippingQuote.fee, 0);
   const reservations = await Promise.allSettled([first, second].map((record) => service.executeOperations({ action: "transition", key: key(), id: record.id, revision: 0, stage: "awaiting-payment" }, deps)));
   assert.equal(reservations.filter((result) => result.status === "fulfilled").length, 1);
   assert.equal(reservations.find((result) => result.status === "rejected").reason.code, "OPERATIONS_STOCK");
@@ -80,7 +80,7 @@ try {
   second = await service.operationsDetail(orderIds.find((id) => id !== first.id), repository);
   assert.equal(second.order.stage, "enquiry"); assert.equal(second.revision, 0);
   assert.equal(table("inventory")[products[0].id].reservations.length, 1);
-  pass("simultaneous orders cannot oversell finite stock; price and shipping snapshots stay authoritative");
+  pass("simultaneous orders cannot oversell finite stock; Thai bundle and free-delivery snapshots stay authoritative");
 
   const awaiting = { action: "transition", key: key(), id: second.id, revision: 0, stage: "awaiting-payment" };
   const later = { ...deps, now: "2026-10-05T01:16:00.000Z" };
@@ -94,7 +94,7 @@ try {
   await assert.rejects(service.executeOperations({ action: "transition", key: key(), id: second.id, revision: second.revision, stage: "shipped" }, later), (error) => error.status === 400);
   second = (await service.executeOperations({ action: "transition", key: key(), id: second.id, revision: second.revision, stage: "shipped", carrier: "Mock carrier", tracking: "SYNTHETIC-ONLY" }, later)).record;
   assert.match(table("outbox")[`${second.id}-shipped-customer`].body, /SYNTHETIC-ONLY/);
-  assert.match(table("outbox")[`${second.id}-shipped-customer`].body, /THB 30/);
+  assert.match(table("outbox")[`${second.id}-shipped-customer`].body, /฿0/);
   second = (await service.executeOperations({ action: "transition", key: key(), id: second.id, revision: second.revision, stage: "refunded", restock: false }, later)).record;
   assert.equal(second.payment, "demo-refunded"); assert.equal(table("inventory")[products[0].id].committed, 2);
   pass("expired reservations revalidate, payment commits once, shipment needs tracking and refunds do not silently restock shipped goods");
@@ -127,6 +127,10 @@ try {
   const historicalOrder = { _id: key(), locale: "en", reference: "VT-ORIGINAL", customer: { name: "Original", email: "original@example.invalid" }, items: [{ id: "retired-product", quantity: 1, unitPrice: 123 }], createdAt: new Date() };
   await service.ingestOperationsRequest("order", historicalOrder, repository);
   assert.equal((await service.operationsDetail(`order-${historicalOrder._id}`, repository)).items[0].unitPrice, 123);
+  const foreignHistory = { ...historicalOrder, _id: key(), currency: "USD", items: [{ id: "retired-product", quantity: 2, unitPrice: 50, lineTotal: 100 }] };
+  await service.ingestOperationsRequest("order", foreignHistory, repository);
+  const importedForeign = await service.operationsDetail(`order-${foreignHistory._id}`, repository);
+  assert.equal(importedForeign.currency, "USD"); assert.equal(importedForeign.subtotal, 100);
   pass("source replay does not revive archived requests and preserves historical prices for retired products");
 
   const publicBody = { submissionId: key(), input, consent: true, website: "" };
@@ -138,8 +142,17 @@ try {
   const customer = { name: input.name, email: input.email, phone: "+66000000000", address: "Synthetic address", district: "Synthetic district", province: "Synthetic province", postcode: "10110", notes: "" };
   const publicOrder = { submissionId: key(), consent: true, input: { ...orderInput, phone: customer.phone, customer } };
   const savedOrder = await submitSharedDemo(publicOrder, deps);
-  assert.equal((await service.operationsDetail(savedOrder.id, repository)).items[0].unitPrice, products[0].price);
+  assert.equal((await service.operationsDetail(savedOrder.id, repository)).items[0].lineTotal, 700);
   assert.deepEqual(await submitSharedDemo(publicOrder, { ...deps, products: [] }), savedOrder);
+  const foreignCustomer = { ...customer, country: "United Kingdom", postcode: "SW1A 1AA" };
+  const foreignOrder = { submissionId: key(), consent: true, input: { ...orderInput, locale: "en", currency: "THB", phone: foreignCustomer.phone, customer: foreignCustomer } };
+  const foreignSaved = await submitSharedDemo(foreignOrder, deps);
+  const foreignRecord = await service.operationsDetail(foreignSaved.id, repository);
+  assert.equal(foreignRecord.currency, "USD", "The server ignores a client currency claim");
+  assert.equal(foreignRecord.items[0].lineTotal, 100);
+  assert.equal(foreignRecord.shippingQuote, undefined, "USD orders do not receive Thai delivery quotes");
+  assert.deepEqual(await submitSharedDemo(foreignOrder, { ...deps, products: [] }), foreignSaved);
+  await assert.rejects(submitSharedDemo({ ...foreignOrder, submissionId: key(), input: { ...foreignOrder.input, customer: { ...foreignCustomer, country: "" } } }, deps), (error) => error.status === 400);
   pass("public test submissions require consent and valid data, reject payment claims and retain server prices across retries");
 
   const auth = load("src/lib/cms/auth.ts"), cmsApi = load("src/app/api/cms/operations/route.ts"), publicApi = load("src/app/api/demo/requests/route.ts");

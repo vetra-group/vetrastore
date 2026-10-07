@@ -3,10 +3,10 @@ import { cmsActor, cmsRole } from "../cms/auth";
 import { CmsError } from "../cms/validation";
 import { getPublishedContent } from "../cms/server";
 import { getDb } from "../db";
-import { catalogProducts, type CatalogProduct } from "../catalog";
+import { catalogProducts, formatPrice, type CatalogProduct } from "../catalog";
 import { createDemoSubmission, emptyDemoData, normalizeDemoInput } from "../demo";
 import { initialOrderWorkflow, orderStages, orderTransitions, parseOrderWorkflow } from "../commerce-workflow";
-import { MOCK_RESERVATION_MS, normalizeMockShippingRules, quoteMockShipping } from "../mock-checkout";
+import { MOCK_RESERVATION_MS, normalizeMockShippingRules } from "../mock-checkout";
 import { workflowCopy } from "@/content/workflow";
 import { mockCheckoutCopy } from "@/content/mock-checkout";
 import { notificationCopy } from "@/content/notifications";
@@ -45,10 +45,10 @@ export function requestNotices(record: OperationsRequest, now: string, suffix: s
   const w = workflowCopy[record.locale], m = mockCheckoutCopy[record.locale];
   const kinds = notificationCopy[record.locale].sharedKinds;
   const subject = `${record.reference} · ${record.kind === "order" ? w.stages[record.order?.stage || "enquiry"] : kinds[record.kind]}`;
-  const body = [subject, record.name, record.message || "", ...(record.items || []).map((item) => `${item.id} × ${item.quantity} · THB ${item.unitPrice}`),
+  const body = [subject, record.name, record.message || "", ...(record.items || []).map((item) => `${item.id} × ${item.quantity} · ${formatPrice(item.lineTotal ?? item.unitPrice * item.quantity, record.locale, record.currency ?? "THB")}`),
     ...(record.wholesale ? [`${w.product}: ${record.wholesale.productId}`, `${w.quantity}: ${record.wholesale.quantity}`, `${w.business}: ${record.wholesale.business}`, `${w.destination}: ${record.wholesale.destination}`, record.wholesale.neededBy ? `${w.neededBy}: ${record.wholesale.neededBy}` : ""] : []),
     ...(record.order?.tracking ? [`${w.carrier}: ${record.order.carrier}`, `${w.tracking}: ${record.order.tracking}`] : []),
-    ...(record.shippingQuote?.state === "quoted" ? [`${m.shipping}: THB ${record.shippingQuote.fee}`, `${m.total}: THB ${record.shippingQuote.total}`, m.quoteNote] : record.kind === "order" ? [m.pendingNote] : []), w.mockNote,
+    ...(record.shippingQuote?.state === "quoted" ? [`${m.shipping}: ${formatPrice(record.shippingQuote.fee, record.locale, "THB")}`, `${m.total}: ${formatPrice(record.shippingQuote.total, record.locale, "THB")}`, m.quoteNote] : record.kind === "order" ? [m.pendingNote] : []), w.mockNote,
   ].filter(Boolean).join("\n");
   return (["staff", "customer"] as const).map((audience) => ({ id: `${record.id}-${suffix}-${audience}`, revision: 0, requestId: record.id, reference: record.reference, recipient: audience === "staff" ? w.mockStaff : record.email, audience, subject, body, createdAt: now, updatedAt: now, state: "ready", attempts: 0 }));
 }
@@ -122,8 +122,7 @@ export async function executeOperations(value: Record<string, unknown>, dependen
       // New shared test orders start as enquiries. Staff transitions are explicit,
       // authorized commands; client-provided payment outcomes are not trusted.
       if (created.kind === "order" && created.payment !== "enquiry") throw new CmsError("Create an enquiry before simulating payment.");
-      const settings = await tx.get("settings", "settings");
-      const record: OperationsRequest = { ...created, reference: `TEST-${command.key.slice(0, 8).toUpperCase()}`, revision: 0, source: "staff-test", archived: false, stockState: "none", ...(created.kind === "order" ? { shippingQuote: quoteMockShipping(settings?.shippingRules || [], created.customer?.postcode || "", created.subtotal || 0) } : {}) };
+      const record: OperationsRequest = { ...created, reference: `TEST-${command.key.slice(0, 8).toUpperCase()}`, revision: 0, source: "staff-test", archived: false, stockState: "none" };
       await tx.put("requests", record); for (const notice of requestNotices(record, now, "created")) await tx.put("outbox", notice);
       receipt.requestId = id;
     } else if (command.action === "shipping") {
@@ -184,7 +183,7 @@ export async function ingestOperationsRequest(source: "contact" | "order", raw: 
   const id = `${source}-${raw._id}`, now = raw.createdAt instanceof Date ? raw.createdAt.toISOString() : String(raw.createdAt);
   if (!Number.isFinite(Date.parse(now))) throw new CmsError("Invalid source enquiry date.");
   const customer = source === "order" ? raw.customer as Record<string, string> : undefined;
-  const input = normalizeDemoInput({ kind: source === "order" ? "order" : raw.subject === "wholesale" ? "wholesale" : "contact", locale: raw.locale, name: customer?.name || raw.name, email: customer?.email || raw.email, phone: customer?.phone || raw.phone, message: customer?.notes || raw.message, ...(source === "order" ? { customer, items: raw.items, payment: "enquiry" } : raw.wholesale ? { wholesale: raw.wholesale } : {}) } as DemoInput, catalogProducts, true);
+  const input = normalizeDemoInput({ kind: source === "order" ? "order" : raw.subject === "wholesale" ? "wholesale" : "contact", locale: raw.locale, name: customer?.name || raw.name, email: customer?.email || raw.email, phone: customer?.phone || raw.phone, message: customer?.notes || raw.message, ...(source === "order" ? { customer, items: raw.items, currency: raw.currency, payment: "enquiry" } : raw.wholesale ? { wholesale: raw.wholesale } : {}) } as DemoInput, catalogProducts, true);
   return repository.transaction(async (tx) => {
     const previous = await tx.get("requests", id); if (previous) return false;
     const record: OperationsRequest = { ...input, id, reference: source === "order" && typeof raw.reference === "string" ? raw.reference : `REQ-${String(raw._id).slice(0, 8).toUpperCase()}`, fingerprint: hash(input), status: "new", notes: "", assignedTo: "", createdAt: now, updatedAt: now, revision: 0, source, sourceId: String(raw._id), archived: false, stockState: "none", activity: [{ id: `${id}-0`, at: now, actor: "Customer", action: "request-created", detail: source }], ...(source === "order" ? { order: initialOrderWorkflow("enquiry") } : {}) };

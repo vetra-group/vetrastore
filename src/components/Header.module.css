@@ -46,31 +46,22 @@
 .logo {
   min-width: 0;
   overflow-wrap: anywhere;
-  display: flex;
-  flex-direction: column;
+  display: inline-flex;
   align-items: center;
-  line-height: 1;
   position: relative;
   color: var(--navy);
 }
-.logo > span {
+.logoImage {
+  display: block;
+  width: 9rem;
+  max-width: 100%;
+  height: auto;
+}
+.logoText {
   direction: ltr;
   font-family: Georgia, serif;
   letter-spacing: 0.15em;
   font-size: var(--font-size-6);
-}
-.logo .logoDot {
-  position: absolute;
-  top: -0.125rem;
-  inset-inline-end: -0.4375rem;
-  font: var(--font-size-1) var(--font-body);
-  letter-spacing: 0;
-}
-.logo small {
-  font-size: var(--font-size-1);
-  letter-spacing: 0.6em;
-  margin-top: 0.4375rem;
-  margin-inline-start: 0.25rem;
 }
 .navigation {
   display: flex;
@@ -202,12 +193,11 @@
     margin-inline-end: auto;
     margin-inline-start: 0.5rem;
   }
-  .logo > span {
-    font-size: var(--font-size-4);
+  .logoImage {
+    width: 6.5rem;
   }
-  .logo small {
-    font-size: var(--font-size-1);
-    margin-top: 0.3125rem;
+  .logoText {
+    font-size: var(--font-size-4);
   }
   .navigation,
   .account,
@@ -255,7 +245,10 @@
   .logo {
     margin-inline-start: 0;
   }
-  .logo > span {
+  .logoImage {
+    width: 5.75rem;
+  }
+  .logoText {
     font-size: var(--font-size-4);
   }
   .iconButton {
@@ -274,12 +267,8 @@
     margin: 0;
     justify-self: end;
   }
-  .logo > span {
+  .logoText {
     font-size: var(--font-size-1);
-  }
-  .logo small {
-    letter-spacing: 0.16em;
-    white-space: nowrap;
   }
   .actions {
     grid-column: 1 / -1;

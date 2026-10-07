@@ -130,14 +130,14 @@ function RecordDetails({ record, locale, close }: {
                   const product = catalogProducts.find((entry) => entry.id === item.id);
                   return <li key={`${item.id}-${index}`}>
                     {product?.name[locale] ?? item.id} × {item.quantity}
-                    <br />{formatPrice(item.unitPrice * item.quantity, locale)}
+                    <br />{formatPrice(item.lineTotal ?? item.unitPrice * item.quantity, locale, record.currency ?? "THB")}
                   </li>;
                 })}
               </ul>
             </dd>
           </div>
         ) : null}
-        {typeof record.subtotal === "number" && <div><dt>{c.total}</dt><dd>{formatPrice(record.subtotal, locale)}</dd></div>}
+        {typeof record.subtotal === "number" && <div><dt>{c.total}</dt><dd>{formatPrice(record.subtotal, locale, record.currency ?? "THB")}</dd></div>}
         {record.payment && <div>
           <dt>{c.payment}</dt>
           <dd>{c.paymentStates[record.payment]}</dd>

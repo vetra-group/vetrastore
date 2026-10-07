@@ -6,6 +6,15 @@
 .panel h2 { font-family: var(--font-body); font-size: var(--font-size-3); font-weight: 600; margin-bottom: var(--space-4); }
 .panel h3 { font-family: var(--font-body); font-size: var(--font-size-2); font-weight: 600; margin-bottom: var(--space-3); }
 .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: var(--space-3) var(--space-4); }
+.legacyPricing { display: grid; gap: var(--space-3); margin-bottom: var(--space-4); }
+.legacyPricing > button { justify-self: start; }
+.pricingGrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 24rem), 1fr)); gap: var(--space-3); margin-block: var(--space-3) var(--space-4); }
+.pricingCurrency { min-width: 0; border: 1px solid var(--line); background: var(--background); padding: var(--space-3); display: grid; align-content: start; gap: var(--space-3); }
+.pricingCurrency h3 { margin: 0; }
+.pricingCurrency > button { justify-self: start; }
+.pricingRows { display: grid; gap: var(--space-2); }
+.pricingRow { display: grid; grid-template-columns: minmax(0, .7fr) minmax(0, 1.3fr) var(--control-size); align-items: end; gap: var(--space-2); }
+.pricingRow .iconButton { margin-bottom: 0; }
 .field { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; color: var(--ink-strong); }
 .field > span:first-child { font-weight: 500; }
 .field input, .field textarea, .field select { width: 100%; min-height: var(--field-min-height); padding: var(--space-2) var(--space-3); background: var(--paper); color: var(--text); border: 1px solid var(--field-border); border-radius: var(--radius); font-size: var(--font-size-1); }
@@ -73,4 +82,5 @@
 @keyframes spin { to { transform: rotate(360deg); } }
 @media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) { .button:hover, .iconButton:hover { background: var(--surface); } .mediaChoice:hover { border-color: var(--gold); } }
 @media (max-width: 42rem) { .filters { grid-template-columns: 1fr; } .imageLayout { grid-template-columns: 1fr; } .imageFrame { max-height: 14rem; } .panel { padding: var(--space-3); } .mediaDialog { width: calc(100% - 1rem); padding: var(--space-3); } }
+@media (max-width: 26rem) { .pricingRow { grid-template-columns: repeat(2, minmax(0, 1fr)); } .pricingRow .iconButton { grid-column: 1 / -1; width: 100%; } }
 @media (prefers-reduced-motion: reduce) { .progress svg, svg.progress { animation: none; } }

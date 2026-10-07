@@ -9,6 +9,7 @@
     "typecheck": "tsc --noEmit",
     "lint": "eslint .",
     "test": "node scripts/check-commerce.mjs",
+    "test:payments": "node scripts/check-payments.mjs && node scripts/check-cms-payment-orders.mjs",
     "test:demo": "node scripts/check-demo.mjs",
     "test:cms": "node scripts/check-cms.mjs",
     "test:cms:images": "node scripts/check-cms-image-preparation.mjs",

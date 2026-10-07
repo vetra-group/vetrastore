@@ -7,6 +7,7 @@ import { useEffect, useRef, useState } from "react";
 import { ArrowRight, LoaderCircle, Search, X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
 import { formatPrice } from "@/lib/catalog";
+import { publicPricingCopy } from "@/content/public-pricing";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import type { QuickSearch } from "@/lib/search-suggestions";
 import { quickSearchCopy } from "@/content/quick-search";
@@ -243,7 +244,7 @@ export default function LiveSearch({
               <span className={styles.kind}>{t[result.kind]}</span>
               <strong><Match text={result.title} query={query} /></strong>
               {result.price !== undefined && (
-                <span>{formatPrice(result.price, locale)}</span>
+                <span>{result.currency === "USD" && <>{publicPricingCopy[locale].approximately} </>}<bdi>{formatPrice(result.price, locale, result.currency)}</bdi></span>
               )}
             </span>
             <ArrowRight aria-hidden="true" />

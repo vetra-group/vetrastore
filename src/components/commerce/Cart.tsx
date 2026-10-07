@@ -4,6 +4,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Icon from "@/components/Icon";
 import { formatPrice } from "@/lib/catalog";
+import { tryQuoteCart } from "@/lib/cart-pricing";
 import { savedProductDetails } from "@/lib/saved-product";
 import { cartQuantityLimit } from "@/lib/cart-actions";
 import { miniCartCopy } from "@/content/mini-cart";
@@ -11,12 +12,14 @@ import { Undo2 } from "lucide-react";
 import { usePublishedCopy } from "@/components/cms/PublishedProvider";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import { commerce } from "@/content/commerce";
+import { publicPricingCopy } from "@/content/public-pricing";
+import { publicPaymentCopy } from "@/content/payment-checkout";
 import { useStore } from "./StoreProvider";
 import Quantity from "./Quantity";
 import OrderSummary from "./OrderSummary";
 import styles from "./Cart.module.css";
 
-export default function Cart({ locale }: { locale: Locale }) {
+export default function Cart({ locale, paymentsEnabled = false }: { locale: Locale; paymentsEnabled?: boolean }) {
   const t = usePublishedCopy(commerce[locale], `commerce.${locale}`);
   const { products, items, itemCount, setQuantity, removeItem, hydrated, removedItem, undoRemoval } = useStore();
   const c = miniCartCopy[locale];
@@ -73,6 +76,9 @@ export default function Cart({ locale }: { locale: Locale }) {
               const product = products.find((product) => product.id === item.id);
               if (!product) return null;
               const details = savedProductDetails(product, locale);
+              const lineQuote = tryQuoteCart([item], products, locale);
+              const average = lineQuote?.items[0].unitPrice;
+              const approximate = average !== undefined && Math.abs(average * 100 - Math.round(average * 100)) > 0.000001;
               return (
               <article className={styles.item} key={item.id}>
                 <Link
@@ -103,7 +109,7 @@ export default function Cart({ locale }: { locale: Locale }) {
                     {product.weight} {t.gram}
                   </p>
                   <span className={styles.unitPrice}>
-                    {formatPrice(product.price, locale)}
+                    {lineQuote && average !== undefined ? <>{approximate ? "≈ " : ""}{formatPrice(average, locale, lineQuote.currency)} {publicPricingCopy[locale].perJar}</> : t.toConfirm}
                   </span>
                   <div className={styles.controls}>
                     <Quantity
@@ -112,7 +118,8 @@ export default function Cart({ locale }: { locale: Locale }) {
                       max={cartQuantityLimit(product)}
                       onChange={(value) => {
                         setQuantity(item.id, value);
-                        setFeedback(`${t.cartUpdated} ${formatPrice(product.price * value, locale)}`);
+                        const updated = tryQuoteCart([{ id: item.id, quantity: value }], products, locale);
+                        setFeedback(`${t.cartUpdated} ${updated ? formatPrice(updated.subtotal, locale, updated.currency) : t.toConfirm}`);
                       }}
                     />
                     <button
@@ -131,7 +138,7 @@ export default function Cart({ locale }: { locale: Locale }) {
                   </div>
                 </div>
                 <span className={styles.itemTotal}>
-                  {formatPrice(product.price * item.quantity, locale)}
+                  {lineQuote ? formatPrice(lineQuote.subtotal, locale, lineQuote.currency) : t.toConfirm}
                 </span>
               </article>
             ); })}
@@ -144,11 +151,11 @@ export default function Cart({ locale }: { locale: Locale }) {
             </Link>
             <div className={styles.note}>
               <Icon name="box" size={24} />
-              <p>{t.deliveryNote}</p>
+              <p>{paymentsEnabled ? publicPaymentCopy[locale].deliveryNote : t.deliveryNote}</p>
             </div>
             <p className={styles.local}>{t.cartLocal}</p>
           </div>
-          <OrderSummary locale={locale} checkoutLink />
+          <OrderSummary locale={locale} checkoutLink paymentsEnabled={paymentsEnabled} />
         </div>
       )}
     </section>

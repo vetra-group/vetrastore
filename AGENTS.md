@@ -11,5 +11,6 @@ documentation.
 - `docs/LANGUAGES_AND_SEO.md`
 - `docs/COMPLETION.md`
 - `docs/MEDIA.md`
+- `docs/PAYMENTS.md`
 
 All paths are relative to the repository root.

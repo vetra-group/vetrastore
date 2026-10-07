@@ -95,9 +95,7 @@ export function retryDemoNotification(data: DemoData, id: string, outcome: "succ
   return { ...data, outbox: data.outbox.map((entry) => entry.id === id ? next : entry) };
 }
 
-// These contracts intentionally stay disabled until server-side provider credentials
-// and verified callbacks are configured. Staff simulations never call providers.
-export interface PaymentProvider { readonly enabled: boolean; createPayment(input: { reference: string; amount: number; currency: "THB"; idempotencyKey: string }): Promise<{ paymentId: string; status: "pending" }>; refund(input: { reference: string; idempotencyKey: string }): Promise<{ refundId: string; status: "pending" }> }
+// Staff simulations never call live providers. Real payment adapters live in
+// lib/payments/providers.ts, outside the order and inventory workflows.
 export interface ShippingProvider { readonly enabled: boolean; createShipment(input: { reference: string; idempotencyKey: string }): Promise<{ shipmentId: string; status: "pending" }> }
-export const disabledPaymentProvider: PaymentProvider = { enabled: false, async createPayment() { throw new Error("Payment provider is not configured"); }, async refund() { throw new Error("Refund provider is not configured"); } };
 export const disabledShippingProvider: ShippingProvider = { enabled: false, async createShipment() { throw new Error("Shipping provider is not configured"); } };

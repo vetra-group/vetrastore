@@ -3,7 +3,7 @@
 import { cmsArabicUi } from "@/content/cms-ar-ui";
 
 import { useState } from "react";
-import { Undo2 } from "lucide-react";
+import { Plus, Trash2, Undo2 } from "lucide-react";
 import { cmsCopy } from "@/content/cms";
 import { HONEY_ID } from "@/lib/catalog";
 import { editableCopy as defaultCopy } from "@/lib/cms/defaults";
@@ -15,10 +15,30 @@ import { ProductGalleryEditor } from "./ProductGalleryEditor";
 export { Field } from "./CmsEditorFields";
 import styles from "./CmsEditor.module.css";
 
+type PriceCurrency = "THB" | "USD";
+type ProductPricing = NonNullable<CmsProduct["pricing"]>;
+const pricingLabels = {
+  en: { legacy: "This product still has one THB price. Add quantity prices to set separate THB and USD totals.", enable: "Add quantity prices", help: "Enter the total price for each quantity. The one-unit THB total is also the base price.", THB: "Thai price · THB", USD: "Foreign price · USD", quantity: "Units", total: "Total price", add: "Add quantity", remove: "Remove quantity" },
+  ar: { legacy: "لهذا المنتج سعر واحد بالبات التايلاندي. أضف أسعار الكميات لتحديد الإجمالي بالبات والدولار كلٍّ على حدة.", enable: "إضافة أسعار الكميات", help: "أدخل السعر الإجمالي لكل كمية. إجمالي الوحدة الواحدة بالبات هو السعر الأساسي أيضًا.", THB: "السعر بالبات التايلاندي · THB", USD: "السعر بالدولار الأمريكي · USD", quantity: "الكمية", total: "السعر الإجمالي", add: "إضافة كمية", remove: "حذف الكمية" },
+  th: { legacy: "สินค้านี้ยังมีราคาเดียวเป็นเงินบาท เพิ่มราคาตามจำนวนเพื่อกำหนดยอดรวมเป็นบาทและดอลลาร์แยกกัน", enable: "เพิ่มราคาตามจำนวน", help: "ระบุราคารวมสำหรับแต่ละจำนวน โดยราคารวม 1 ชิ้นในสกุลบาทจะเป็นราคาพื้นฐานด้วย", THB: "ราคาไทย · THB", USD: "ราคาต่างประเทศ · USD", quantity: "จำนวนชิ้น", total: "ราคารวม", add: "เพิ่มจำนวน", remove: "ลบจำนวน" },
+} satisfies Record<Locale, Record<string, string>>;
+
 export function ProductEditor({ locale, content, product, onChange }: { locale: Locale; content: CmsContent; product: CmsProduct; onChange: (product: CmsProduct) => void }) {
   const t = cmsCopy[locale];
+  const p = pricingLabels[locale];
   const [searchTerms, setSearchTerms] = useState(product.searchTerms.join(", "));
   const set = <K extends keyof CmsProduct>(key: K, value: CmsProduct[K]) => onChange({ ...product, [key]: value });
+  const updatePricing = (currency: PriceCurrency, rows: ProductPricing[PriceCurrency]) => {
+    if (!product.pricing) return;
+    const pricing = { ...product.pricing, [currency]: rows };
+    onChange({ ...product, pricing, price: pricing.THB[0]?.total ?? product.price });
+  };
+  const addTier = (currency: PriceCurrency) => {
+    const rows = product.pricing?.[currency];
+    if (!rows?.length || rows[rows.length - 1].quantity >= 96) return;
+    const next = [2, 6, 12, 24, 48, 96].find((quantity) => quantity > rows[rows.length - 1].quantity) ?? rows[rows.length - 1].quantity + 1;
+    updatePricing(currency, [...rows, { quantity: next, total: 0 }]);
+  };
   return <form className={styles.form} id="cms-editor-form" onSubmit={(event) => event.preventDefault()}>
     <section className={styles.panel}><h2>{t.identity}</h2><div className={styles.fields}>
       <Field label={t.fields.id}><input dir="ltr" value={product.id} disabled /></Field>
@@ -28,8 +48,13 @@ export function ProductEditor({ locale, content, product, onChange }: { locale: 
       <StatusField locale={locale} value={product.status} onChange={(value) => set("status", value)} />
       <label className={styles.check}><input type="checkbox" checked={product.featured} onChange={(event) => set("featured", event.target.checked)} />{t.featured}</label>
     </div></section>
-    <section className={styles.panel}><h2>{t.pricing}</h2><div className={styles.fields}>
-      <Field label={t.fields.price}><input type="number" value={product.price} min={0} max={10000000} step="0.01" required onChange={(event) => set("price", Number(event.target.value))} /></Field>
+    <section className={styles.panel}><h2>{t.pricing}</h2>
+      {product.pricing ? <><p className={styles.hint}>{p.help}</p><div className={styles.pricingGrid}>{(["THB", "USD"] as const).map((currency) => <div className={styles.pricingCurrency} key={currency}><h3>{p[currency]}</h3><div className={styles.pricingRows}>{product.pricing![currency].map((row, index) => <div className={styles.pricingRow} key={`${currency}-${index}`}>
+        <Field label={p.quantity}><input type="number" min={1} max={96} step={1} required readOnly={index === 0} value={row.quantity || ""} onChange={(event) => updatePricing(currency, product.pricing![currency].map((entry, rowIndex) => rowIndex === index ? { ...entry, quantity: Number(event.target.value) } : entry))} /></Field>
+        <Field label={`${p.total} (${currency})`}><input type="number" min={0.01} max={10000000} step="0.01" required value={row.total || ""} onChange={(event) => updatePricing(currency, product.pricing![currency].map((entry, rowIndex) => rowIndex === index ? { ...entry, total: Number(event.target.value) } : entry))} /></Field>
+        {index > 0 && <button className={styles.iconButton} type="button" aria-label={`${p.remove} ${row.quantity}`} onClick={() => updatePricing(currency, product.pricing![currency].filter((_, rowIndex) => rowIndex !== index))}><Trash2 aria-hidden="true" /></button>}
+      </div>)}</div><button className={styles.button} type="button" disabled={product.pricing![currency].length >= 96 || product.pricing![currency].at(-1)!.quantity >= 96} onClick={() => addTier(currency)}><Plus aria-hidden="true" />{p.add}</button></div>)}</div></> : <div className={styles.legacyPricing}><p className={styles.hint}>{p.legacy}</p><div className={styles.fields}><Field label={t.fields.price}><input type="number" value={product.price} min={0} max={10000000} step="0.01" required onChange={(event) => set("price", Number(event.target.value))} /></Field></div><button className={styles.button} type="button" onClick={() => onChange({ ...product, pricing: { THB: [{ quantity: 1, total: product.price }], USD: [{ quantity: 1, total: 0 }] } })}><Plus aria-hidden="true" />{p.enable}</button></div>}
+      <div className={styles.fields}>
       <Field label={t.fields.weight}><input type="number" value={product.weight} min={1} max={1000000} step={1} required onChange={(event) => set("weight", Number(event.target.value))} /></Field>
       <Field label={t.fields.stock} hint={t.stockHelp}><input type="number" value={product.stock ?? ""} min={0} max={1000000} step={1} onChange={(event) => set("stock", event.target.value === "" ? null : Number(event.target.value))} /></Field>
       <Field label={t.fields.searchTerms} hint={t.searchTermsHelp}><input value={searchTerms} maxLength={3000} onChange={(event) => { setSearchTerms(event.target.value); set("searchTerms", event.target.value.split(",").map((term) => term.trim()).filter(Boolean)); }} /></Field>

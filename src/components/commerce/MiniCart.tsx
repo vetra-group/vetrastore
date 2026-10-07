@@ -7,8 +7,10 @@ import { Check, ChevronRight, CircleAlert, ShoppingBag, Trash2, Undo2, X } from 
 import { Modal } from "@/components/ui/Modal";
 import { commerce } from "@/content/commerce";
 import { miniCartCopy } from "@/content/mini-cart";
+import { publicPaymentCopy } from "@/content/payment-checkout";
 import { usePublishedCopy } from "@/components/cms/PublishedProvider";
-import { formatPrice } from "@/lib/catalog";
+import { currencyForLocale, formatPrice } from "@/lib/catalog";
+import { tryQuoteCart } from "@/lib/cart-pricing";
 import { savedProductDetails } from "@/lib/saved-product";
 import { cartQuantityLimit } from "@/lib/cart-actions";
 import { localizedPath, type Locale } from "@/lib/i18n";
@@ -16,7 +18,7 @@ import { useStore } from "./StoreProvider";
 import Quantity from "./Quantity";
 import styles from "./MiniCart.module.css";
 
-export default function MiniCart({ locale }: { locale: Locale }) {
+export default function MiniCart({ locale, paymentsEnabled = false }: { locale: Locale; paymentsEnabled?: boolean }) {
   const t = usePublishedCopy(commerce[locale], `commerce.${locale}`);
   const c = miniCartCopy[locale];
   const store = useStore();
@@ -57,6 +59,7 @@ export default function MiniCart({ locale }: { locale: Locale }) {
                 const product = store.products.find((entry) => entry.id === item.id);
                 if (!product) return null;
                 const details = savedProductDetails(product, locale), href = details.href;
+                const lineQuote = tryQuoteCart([item], store.products, locale);
                 const limit = cartQuantityLimit(product);
                 return <li className={styles.item} key={item.id}>
                   <Link className={styles.image} href={href} onClick={store.closeCart} tabIndex={-1} aria-hidden="true">
@@ -67,7 +70,7 @@ export default function MiniCart({ locale }: { locale: Locale }) {
                     <h3><Link href={href} lang={details.locale} onClick={store.closeCart}>{details.name}</Link></h3>
                     {details.fallback && <p>{t.translatedDetailsNotice}</p>}
                     <p className={styles.weight}>{product.weight} {t.gram}</p>
-                    <strong className={styles.price}>{formatPrice(product.price * item.quantity, locale)}</strong>
+                    <strong className={styles.price}>{lineQuote ? formatPrice(lineQuote.subtotal, locale, lineQuote.currency) : t.toConfirm}</strong>
                   </div>
                   <div className={styles.actions}>
                     <Quantity locale={locale} value={item.quantity} max={limit} onChange={(quantity) => store.setQuantity(item.id, quantity)} />
@@ -90,10 +93,10 @@ export default function MiniCart({ locale }: { locale: Locale }) {
         </div>
         <div className={styles.footer}>
           {store.itemCount > 0 && <>
-            <dl className={styles.total}><div><dt>{t.subtotal}</dt><dd>{formatPrice(store.subtotal, locale)}</dd></div></dl>
-            <p className={styles.shipping}>{t.exclShipping}</p>
+            <dl className={styles.total}><div><dt>{t.subtotal}</dt><dd>{store.pricingAvailable ? formatPrice(store.subtotal, locale, currencyForLocale(locale)) : t.toConfirm}</dd></div></dl>
+            <p className={styles.shipping}>{paymentsEnabled ? publicPaymentCopy[locale].summaryNote : t.exclShipping}</p>
             <div className={styles.links}>
-              <Link className="button" href={localizedPath(locale, "/checkout")} onClick={store.closeCart}>{t.checkout}<ChevronRight aria-hidden="true" /></Link>
+              {store.pricingAvailable ? <Link className="button" href={localizedPath(locale, "/checkout")} onClick={store.closeCart}>{t.checkout}<ChevronRight aria-hidden="true" /></Link> : <span className="button" aria-disabled="true">{t.checkout}</span>}
               <Link className="button buttonOutline" href={localizedPath(locale, "/cart")} onClick={store.closeCart}>{t.viewBag}</Link>
             </div>
           </>}

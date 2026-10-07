@@ -2,11 +2,13 @@ import { notFound } from "next/navigation";
 import HoneyExperience from "@/components/honey/HoneyExperience";
 import { commerce } from "@/content/commerce";
 import { HONEY_ID } from "@/lib/catalog";
+import { publicQuote } from "@/lib/public-pricing";
 import { getLocalizedPublishedContent } from "@/lib/localized-content";
 import { applyCopy } from "@/lib/cms/defaults";
 import { isLocale, locales, localizedPath } from "@/lib/i18n";
 import { productLocaleReady } from "@/lib/cms/localization";
 import { pageMetadata, siteUrl } from "@/lib/metadata";
+import { checkoutPaymentOptions } from "@/lib/public-payment-availability";
 
 type Props = { params: Promise<{ locale: string }> };
 const path = "/coffee-blossom-honey";
@@ -40,6 +42,7 @@ export default async function CoffeeBlossomHoneyPage({ params }: Props) {
   const content = await getLocalizedPublishedContent(locale);
   const honey = content.products.find((product) => product.id === HONEY_ID && product.status === "published");
   if (!honey) notFound();
+  const baseQuote = publicQuote(honey, 1, locale);
   const product = {
     "@context": "https://schema.org",
     "@type": "Product",
@@ -52,13 +55,13 @@ export default async function CoffeeBlossomHoneyPage({ params }: Props) {
       value: honey.weight,
       unitCode: "GRM",
     },
-    offers: {
+    ...(baseQuote ? { offers: {
       "@type": "Offer",
-      price: honey.price,
-      priceCurrency: "THB",
+      price: baseQuote.total,
+      priceCurrency: baseQuote.currency,
       url: `${siteUrl}${localizedPath(locale, path)}`,
       ...(honey.stock !== null ? { availability: `https://schema.org/${honey.stock === 0 ? "OutOfStock" : "InStock"}` } : {}),
-    },
+    } } : {}),
   };
 
   return (
@@ -69,7 +72,7 @@ export default async function CoffeeBlossomHoneyPage({ params }: Props) {
           __html: JSON.stringify(product).replace(/</g, "\\u003c"),
         }}
       />
-      <HoneyExperience locale={locale} />
+      <HoneyExperience locale={locale} paymentsEnabled={checkoutPaymentOptions().providers.length > 0} />
     </>
   );
 }

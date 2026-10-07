@@ -39,16 +39,22 @@
 .method { display: flex; gap: var(--space-2); padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius); align-items: flex-start; cursor: pointer; background: var(--background); }
 .method:has(input:checked) { border-color: var(--gold); background: var(--surface); }
 .method:has(input:focus-visible) { outline: 2px solid var(--gold); outline-offset: 3px; }
+.method:has(input:disabled) { opacity: 0.65; cursor: not-allowed; }
 .method input, .consent input { accent-color: var(--navy); width: 1.25rem; height: 1.25rem; flex-shrink: 0; margin: 0.25rem 0 0; }
 .method strong { display: block; font-weight: 500; color: var(--ink-strong); margin-bottom: var(--space-1); }
 .method > span > span { display: block; color: var(--ink-soft); line-height: 1.7; }
 .outcome { margin-top: var(--space-4); }
 .previewNote { color: var(--ink-soft); margin: var(--space-3) 0 0; line-height: 1.8; max-width: var(--reading-measure); }
+.paymentAmount { display: grid; gap: var(--space-2); margin-top: var(--space-5); padding: var(--space-4); background: var(--surface); border: 1px solid var(--line); border-inline-start: 2px solid var(--gold); color: var(--ink-strong); }
+.paymentAmount strong { font-size: var(--font-size-4); font-weight: 600; width: fit-content; }
+.paymentAmount p { margin: 0; color: var(--ink-soft); line-height: 1.7; max-width: var(--reading-measure); }
 .consent { display: flex; gap: var(--space-2); align-items: flex-start; margin-block: var(--space-5); line-height: 1.8; color: var(--ink-soft); }
 .consent a { color: var(--ink-strong); text-decoration: underline; text-underline-offset: 0.2em; }
 .submit { width: 100%; justify-content: space-between; }
 .form fieldset:disabled { opacity: 0.65; }
 .error { color: var(--ink-strong); border-inline-start: 2px solid var(--gold); background: var(--surface); padding: var(--space-3); margin: var(--space-3) 0 0; }
+.error p { margin: 0; }
+.error a { display: inline-block; margin-top: var(--space-2); color: var(--ink-strong); text-decoration: underline; text-underline-offset: 0.2em; }
 .declined { background: var(--surface); border: 1px solid var(--line); padding: var(--space-4); margin-bottom: var(--space-4); }
 .declined h2 { font-family: var(--font-body); font-size: var(--font-size-1); font-weight: 600; color: var(--ink-strong); margin-bottom: var(--space-2); }
 .declined p { color: var(--ink-soft); max-width: var(--reading-measure); line-height: 1.8; margin-bottom: var(--space-3); }
@@ -67,5 +73,5 @@
 }
 @media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
   .steps a:hover, .back:hover { color: var(--accent-ink); }
-  .method:hover { border-color: var(--gold); }
+  .method:not(:has(input:disabled)):hover { border-color: var(--gold); }
 }

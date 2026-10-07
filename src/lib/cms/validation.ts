@@ -50,6 +50,38 @@ function status(value: unknown): CmsStatus {
   if (!statuses.includes(value as CmsStatus)) throw new CmsError("Check publication status.");
   return value as CmsStatus;
 }
+function price(value: unknown, label: string, allowZero = false): number {
+  if (typeof value !== "number" || !Number.isFinite(value) || value < (allowZero ? 0 : 0.01) || value > 10_000_000 || Math.abs(value * 100 - Math.round(value * 100)) > 0.000001) throw new CmsError(`Check ${label}.`);
+  return value;
+}
+function productPricing(value: unknown) {
+  const record = object(value, "product pricing", ["THB", "USD"]);
+  const tiers = (currency: "THB" | "USD") => {
+    const rows = list(record[currency], `${currency} price tiers`, 96);
+    if (!rows.length) throw new CmsError(`Add a ${currency} price for one bottle.`);
+    let previous = 0;
+    const parsed = rows.map((value) => {
+      const row = object(value, `${currency} price tier`, ["quantity", "total"]);
+      const quantity = integer(row.quantity, `${currency} bottle quantity`, 1, 96);
+      if (quantity <= previous) throw new CmsError(`${currency} bottle quantities must increase without duplicates.`);
+      previous = quantity;
+      return { quantity, total: price(row.total, `${currency} total price`) };
+    });
+    // Storefront quotes choose the cheapest combination. Reject a listed pack
+    // whose total would be undercut by smaller packs on the same product.
+    const cheapest = new Array<number>(97).fill(Number.POSITIVE_INFINITY);
+    cheapest[0] = 0;
+    for (const tier of parsed) {
+      const cents = Math.round(tier.total * 100);
+      if (cheapest[tier.quantity] < cents) throw new CmsError(`${currency} price for ${tier.quantity} units must not exceed a combination of smaller packs.`);
+      for (let quantity = tier.quantity; quantity <= 96; quantity++) cheapest[quantity] = Math.min(cheapest[quantity], cheapest[quantity - tier.quantity] + cents);
+    }
+    return parsed;
+  };
+  const THB = tiers("THB"), USD = tiers("USD");
+  if (THB[0].quantity !== 1 || USD[0].quantity !== 1) throw new CmsError("Add a one-bottle price in both THB and USD.");
+  return { THB, USD };
+}
 function unique(values: string[], label: string) {
   if (new Set(values).size !== values.length) throw new CmsError(`${label} must be unique.`);
 }
@@ -89,12 +121,22 @@ export function validLink(value: unknown): string {
   throw new CmsError("Use a site path or an http/https link.");
 }
 function product(value: unknown): CmsProduct {
-  value = upgradeLocalized(value, seedContent().products.find((entry) => entry.id === (value as CmsProduct)?.id));
-  const item = object(value, "product", ["id", "slug", "brand", "category", "price", "weight", "image", "searchTerms", "name", "description", "card", "status", "stock", "featured", "previousSlugs", "gallery"]);
+  const seed = seedContent().products.find((entry) => entry.id === (value as CmsProduct)?.id);
+  value = upgradeLocalized(value, seed);
+  // The saved honey seed was THB 480 before quantity pricing was introduced.
+  // Upgrade only that exact legacy price in memory; the original snapshot and
+  // its history file stay unchanged until an authorized CMS save.
+  if (value && typeof value === "object" && !Array.isArray(value)) {
+    const legacy = value as Record<string, unknown>;
+    if (legacy.id === HONEY_ID && legacy.price === 480 && legacy.pricing === undefined && seed?.pricing && seed.price === 380) value = { ...legacy, price: seed.price, pricing: structuredClone(seed.pricing) };
+  }
+  const item = object(value, "product", ["id", "slug", "brand", "category", "price", "pricing", "weight", "image", "searchTerms", "name", "description", "card", "status", "stock", "featured", "previousSlugs", "gallery"]);
   const id = key(item.id, "product ID", true), slug = key(item.slug, "product slug", true);
   if ((id === HONEY_ID || slug === HONEY_ID) && (id !== HONEY_ID || slug !== HONEY_ID)) throw new CmsError("The honey product ID and route must remain unchanged.");
   if (!["honey", "coffee"].includes(item.category as string)) throw new CmsError("Choose a product category.");
-  if (typeof item.price !== "number" || !Number.isFinite(item.price) || item.price < 0 || item.price > 10_000_000 || Math.abs(item.price * 100 - Math.round(item.price * 100)) > 0.000001) throw new CmsError("Check product price.");
+  const pricing = item.pricing === undefined ? undefined : productPricing(item.pricing);
+  const legacyPrice = price(item.price, "product price", true);
+  const basePrice = pricing?.THB[0].total ?? legacyPrice;
   const cards = object(item.card, "product card", ["en", "ar", "th"]);
   const card = (value: unknown, locale: string) => {
     const entry = object(value, `product card ${locale}`, ["captionPrefix", "imageAlt", "cta"]);
@@ -102,7 +144,7 @@ function product(value: unknown): CmsProduct {
   };
   const gallery = item.gallery === undefined ? undefined : list(item.gallery, "product gallery", 30).map((value) => { const image = object(value, "gallery image", ["id", "src", "alt", "caption"]); return { id: key(image.id, "gallery image ID"), src: validImageSource(image.src), alt: localized(image.alt, "gallery image description", 500), ...(image.caption === undefined ? {} : { caption: localized(image.caption, "gallery caption", 1000, true) }) }; });
   if (gallery) unique(gallery.map((item) => item.id), "Gallery image IDs");
-  return { id, slug, brand: text(item.brand, "brand", 100), category: item.category as CmsProduct["category"], price: item.price, weight: integer(item.weight, "weight", 1, 1_000_000), image: validImageSource(item.image), searchTerms: list(item.searchTerms, "search terms", 30).map((entry) => text(entry, "search term", 100)), name: localized(item.name, "product name", 200), description: localized(item.description, "product description", 6000), card: { en: card(cards.en, "English"), ar: card(cards.ar, "Arabic"), th: card(cards.th, "Thai") }, status: status(item.status), stock: item.stock === null ? null : integer(item.stock, "stock", 0, 1_000_000), featured: boolean(item.featured, "featured product"), ...previousSlugs(item.previousSlugs), ...(gallery ? { gallery } : {}) };
+  return { id, slug, brand: text(item.brand, "brand", 100), category: item.category as CmsProduct["category"], price: basePrice, ...(pricing ? { pricing } : {}), weight: integer(item.weight, "weight", 1, 1_000_000), image: validImageSource(item.image), searchTerms: list(item.searchTerms, "search terms", 30).map((entry) => text(entry, "search term", 100)), name: localized(item.name, "product name", 200), description: localized(item.description, "product description", 6000), card: { en: card(cards.en, "English"), ar: card(cards.ar, "Arabic"), th: card(cards.th, "Thai") }, status: status(item.status), stock: item.stock === null ? null : integer(item.stock, "stock", 0, 1_000_000), featured: boolean(item.featured, "featured product"), ...previousSlugs(item.previousSlugs), ...(gallery ? { gallery } : {}) };
 }
 function slide(value: unknown): CmsSlide {
   let seed = seedContent().slides.find((entry) => entry.key === (value as CmsSlide)?.key);

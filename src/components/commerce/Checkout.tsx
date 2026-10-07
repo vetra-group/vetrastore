@@ -6,9 +6,13 @@ import { useDemo } from "@/components/demo/DemoProvider";
 import { SharedDemoTarget, sharedDemoCopy, submitSharedDemoRequest, useSharedDemoTarget } from "@/components/demo/SharedDemoTarget";
 import type { DemoInput } from "@/lib/demo-types";
 import { commerce } from "@/content/commerce";
+import { paymentCheckoutCopy } from "@/content/payment-checkout";
 import { workflowCopy } from "@/content/workflow";
 import { mockCheckoutCopy } from "@/content/mock-checkout";
-import { MockStockError, quoteMockShipping } from "@/lib/mock-checkout";
+import { MockStockError, quoteStoreShipping } from "@/lib/mock-checkout";
+import { tryQuoteCart } from "@/lib/cart-pricing";
+import { formatPrice } from "@/lib/catalog";
+import type { PaymentProviderId } from "@/lib/payments/providers";
 import { resolveSellingDetails } from "@/lib/business-settings";
 import { usePublished, usePublishedCopy } from "@/components/cms/PublishedProvider";
 import { localizedPath, type Locale } from "@/lib/i18n";
@@ -18,15 +22,17 @@ import { customerFormCopy, customerRequestFingerprint, normalizeCustomerNumber, 
 import { useCustomerForm } from "@/components/customer/useCustomerForm";
 import { FieldError, FormErrorSummary, FormRecovery } from "@/components/customer/FormFeedback";
 import styles from "./Checkout.module.css";
-const recoverableFields = ["name", "email", "phone", "address", "district", "province", "postcode", "notes"] as const;
+const recoverableFields = ["name", "email", "phone", "address", "district", "province", "country", "postcode", "notes"] as const;
 
 type Status = "idle" | "pending" | "error" | "success" | "declined";
-type PreviewMethod = "enquiry" | "payment";
+type CheckoutMethod = "enquiry" | "payment" | "online";
+const providerNames: Record<PaymentProviderId, string> = { stripe: "Stripe", "merchant-ipay": "Bangkok Bank Merchant iPay" };
 
-export default function Checkout({ locale, enquiriesEnabled }: { locale: Locale; enquiriesEnabled: boolean }) {
+export default function Checkout({ locale, enquiriesEnabled, paymentsEnabled = false, paymentProviders = [], defaultPaymentProvider = null, resumeOrderId }: { locale: Locale; enquiriesEnabled: boolean; paymentsEnabled?: boolean; paymentProviders?: PaymentProviderId[]; defaultPaymentProvider?: PaymentProviderId | null; resumeOrderId?: string }) {
   const { content } = usePublished();
   const w = workflowCopy[locale], m = mockCheckoutCopy[locale], selling = resolveSellingDetails(content.settings, locale);
   const t = usePublishedCopy(commerce[locale], `commerce.${locale}`);
+  const paymentCopy = paymentCheckoutCopy[locale];
   const f = customerFormCopy[locale];
   const demo = useDemo();
   const sharedDemo = useSharedDemoTarget(demo.enabled), sharedCopy = sharedDemoCopy[locale];
@@ -34,21 +40,28 @@ export default function Checkout({ locale, enquiriesEnabled }: { locale: Locale;
   const { products, items, itemCount, hydrated } = useStore();
   const [status, setStatus] = useState<Status>("idle");
   const [reference, setReference] = useState("");
-  const [method, setMethod] = useState<PreviewMethod>("enquiry");
+  const [method, setMethod] = useState<CheckoutMethod>(resumeOrderId ? "online" : "enquiry");
+  const [selectedProvider, setSelectedProvider] = useState<PaymentProviderId | null>(defaultPaymentProvider ?? paymentProviders[0] ?? null);
   const [outcome, setOutcome] = useState<"approved" | "declined">("approved");
   const [successPayment, setSuccessPayment] = useState(false);
   const [postcode, setPostcode] = useState(""), [stockError, setStockError] = useState(false);
+  const [paymentError, setPaymentError] = useState<"general" | "price" | "provider" | "previous">("general");
   const submission = useRef<{ key: string; payload: string } | null>(null);
   const failedAttempt = useRef<{ id: string; details: string } | null>(null);
   const inFlight = useRef(false);
   const confirmationRef = useRef<HTMLHeadingElement>(null);
-  const canSubmit = demo.enabled || enquiriesEnabled;
-  const usesShared = demo.enabled && method === "enquiry" && sharedDemo.target === "shared";
-  const shippingQuote = demo.enabled && !usesShared ? quoteMockShipping(demo.mockShippingRules, postcode, items.reduce((sum, item) => sum + (products.find((product) => product.id === item.id)?.price || 0) * item.quantity, 0)) : undefined;
+  const priced = tryQuoteCart(items, products, locale);
+  const realPaymentAvailable = paymentsEnabled && paymentProviders.length > 0 && !demo.enabled && locale === "th";
+  const selectedMethod: CheckoutMethod = realPaymentAvailable && !enquiriesEnabled ? "online" : method === "online" && !realPaymentAvailable ? "enquiry" : method;
+  const canSubmit = (demo.enabled || enquiriesEnabled || realPaymentAvailable) && priced !== null;
+  const usesShared = demo.enabled && selectedMethod === "enquiry" && sharedDemo.target === "shared";
+  const shippingQuote = priced ? quoteStoreShipping(locale, postcode, priced.subtotal) : undefined;
+  const canStartPayment = realPaymentAvailable && selectedProvider !== null && paymentProviders.includes(selectedProvider) && priced?.currency === "THB" && shippingQuote?.state === "quoted" && shippingQuote.fee === 0;
   const rules: FieldRules = {
     name: { label: t.fullName, required: true, max: 100 }, email: { label: t.email, required: true, max: 254, kind: "email" }, phone: { label: t.phone, required: true, kind: "phone" },
     address: { label: t.address, required: true, max: 500 }, district: { label: t.district, required: true, max: 100 }, province: { label: t.province, required: true, max: 100 },
-    postcode: { label: t.postcode, required: true, kind: "postcode" }, notes: { label: t.notes, max: 1000 }, consent: { label: t.privacy, kind: "consent" },
+    ...(locale === "th" ? {} : { country: { label: t.country, required: true, max: 100 } }),
+    postcode: { label: t.postcode, required: true, max: locale === "th" ? 5 : 20, kind: locale === "th" ? "postcode" : "postal-code" }, notes: { label: t.notes, max: 1000 }, consent: { label: t.privacy, kind: "consent" },
   };
   const feedback = useCustomerForm({ locale, kind: "checkout", rules, allowed: recoverableFields, onRestore: (values) => { setPostcode(values.postcode || ""); setStatus("idle"); } });
 
@@ -59,31 +72,37 @@ export default function Checkout({ locale, enquiriesEnabled }: { locale: Locale;
   const { attachForm } = feedback;
   async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (inFlight.current || !canSubmit || !itemCount || usesShared && !sharedDemo.ready) return;
+    if (inFlight.current || !canSubmit || !priced || !itemCount || usesShared && !sharedDemo.ready) return;
+    if (selectedMethod === "online" && !canStartPayment) return;
+    if (!demo.enabled && selectedMethod === "enquiry" && !enquiriesEnabled) return;
     if (!feedback.validate()) return;
     const data = new FormData(event.currentTarget);
     const customer = Object.fromEntries(
-      ["name", "email", "phone", "address", "district", "province", "postcode", "notes"]
+      ["name", "email", "phone", "address", "district", "province", "postcode", "notes", ...(locale === "th" ? [] : ["country"])]
         .map((key) => { const value = String(data.get(key) || "").trim(); return [key, ["phone", "postcode"].includes(key) ? normalizeCustomerNumber(value) : value]; }),
     );
-    const payment = method === "enquiry" ? "enquiry" : outcome === "approved" ? "demo-paid" : "demo-failed";
+    const payment = selectedMethod === "enquiry" ? "enquiry" : outcome === "approved" ? "demo-paid" : "demo-failed";
     const orderDetails = JSON.stringify({ customer, items, locale });
     const payload = JSON.stringify({ customer, items, locale, consent: data.get("consent") === "on", ...(demo.enabled ? { payment, target: usesShared ? "shared" : "browser" } : {}) });
     if (data.get("consent") !== "on") return;
     inFlight.current = true;
     setStockError(false);
+    setPaymentError("general");
     setStatus("pending");
     let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
-      const fingerprint = await customerRequestFingerprint(payload), recovered = feedback.getSubmission();
-      if (!submission.current || submission.current.payload !== fingerprint) submission.current = { key: recovered?.fingerprint === fingerprint ? recovered.id : crypto.randomUUID(), payload: fingerprint };
+      const expectedTotalMinor = Math.round(priced.subtotal * 100);
+      const paymentPayload = JSON.stringify({ customer, items, locale, consent: true, provider: selectedProvider, expectedTotalMinor });
+      const paymentOrderDetails = JSON.stringify({ customer, items, locale, consent: true, expectedTotalMinor });
+      const fingerprint = await customerRequestFingerprint(`${selectedMethod}:${selectedMethod === "online" ? paymentOrderDetails : payload}`), recovered = feedback.getSubmission();
+      if (!submission.current || submission.current.payload !== fingerprint) submission.current = { key: selectedMethod === "online" && resumeOrderId ? resumeOrderId : recovered?.fingerprint === fingerprint ? recovered.id : crypto.randomUUID(), payload: fingerprint };
       feedback.saveSubmission({ id: submission.current.key, fingerprint });
       if (demo.enabled) {
         const input: DemoInput = {
           kind: "order", locale, name: customer.name, email: customer.email, phone: customer.phone,
           message: customer.notes, customer,
-          items: items.map((item) => ({ ...item, unitPrice: products.find((product) => product.id === item.id)?.price ?? 0 })),
-          subtotal: items.reduce((sum, item) => sum + (products.find((product) => product.id === item.id)?.price ?? 0) * item.quantity, 0), payment,
+          items: priced.items,
+          subtotal: priced.subtotal, currency: priced.currency, payment,
         };
         if (usesShared) {
           const result = await submitSharedDemoRequest(input, submission.current.key);
@@ -101,6 +120,33 @@ export default function Checkout({ locale, enquiriesEnabled }: { locale: Locale;
         setSharedSuccess(false);
         if (payment !== "demo-failed") { feedback.clearRecovery(); feedback.resetValidation(); }
         setStatus(payment === "demo-failed" ? "declined" : "success");
+      } else if (selectedMethod === "online") {
+        const controller = new AbortController();
+        timeout = setTimeout(() => controller.abort(), 15000);
+        const response = await fetch("/api/payment-orders", {
+          method: "POST", headers: { "Content-Type": "application/json", "Idempotency-Key": submission.current.key },
+          body: paymentPayload, signal: controller.signal,
+        });
+        const result = await response.json();
+        if (response.status === 409 && result?.code === "PRICE_CHANGED") {
+          setPaymentError("price");
+          throw new Error("The price changed");
+        }
+        if (!response.ok && (result?.code === "KEY_REUSED" || result?.code === "ORDER_EXPIRED")) setPaymentError("previous");
+        if (!response.ok && (result?.code === "PAYMENT_NOT_STARTED" || result?.code === "PROVIDER_UNAVAILABLE")) setPaymentError("provider");
+        if (!response.ok || typeof result?.orderId !== "string" || typeof result?.reference !== "string" || result?.currency !== "THB" || result?.amountMinor !== expectedTotalMinor || typeof result?.checkoutUrl !== "string") {
+          if (response.ok && result?.amountMinor !== expectedTotalMinor) setPaymentError("price");
+          throw new Error("Payment was not confirmed");
+        }
+        const checkoutUrl = new URL(result.checkoutUrl);
+        const providerCheckout = checkoutUrl.protocol === "https:" && !checkoutUrl.username && !checkoutUrl.password &&
+          (selectedProvider !== "stripe" || checkoutUrl.hostname === "checkout.stripe.com");
+        const verifiedResult = (checkoutUrl.protocol === "http:" || checkoutUrl.protocol === "https:") &&
+          checkoutUrl.pathname === localizedPath(locale, "/checkout/result") &&
+          checkoutUrl.searchParams.get("order") === result.orderId &&
+          [...checkoutUrl.searchParams.keys()].every((key) => key === "order") && !checkoutUrl.hash;
+        if (!providerCheckout && !verifiedResult) throw new Error("Invalid payment destination");
+        window.location.assign(verifiedResult ? `${checkoutUrl.pathname}${checkoutUrl.search}` : checkoutUrl.href);
       } else {
         const controller = new AbortController();
         timeout = setTimeout(() => controller.abort(), 15000);
@@ -167,8 +213,8 @@ export default function Checkout({ locale, enquiriesEnabled }: { locale: Locale;
             ) : (
               <>
                 <div className={styles.enquiryNote}>
-                  <Icon name={demo.enabled ? "shield" : "mail"} size={24} />
-                  <div><h2>{usesShared ? sharedCopy.enquiry : demo.enabled ? t.demoTitle : t.enquiryTitle}</h2><p>{usesShared ? sharedCopy.sharedNote : demo.enabled ? t.demoBody : t.enquiryBody}</p></div>
+                  <Icon name={selectedMethod === "online" || demo.enabled ? "shield" : "mail"} size={24} />
+                  <div><h2>{selectedMethod === "online" ? paymentCopy.online : usesShared ? sharedCopy.enquiry : demo.enabled ? t.demoTitle : t.enquiryTitle}</h2><p>{selectedMethod === "online" ? paymentCopy.onlineDescription : usesShared ? sharedCopy.sharedNote : demo.enabled ? t.demoBody : t.enquiryBody}</p></div>
                 </div>
                 <form ref={attachForm} onSubmit={submit} onChange={feedback.changed} onBlur={feedback.blurred} noValidate className={styles.form} aria-busy={status === "pending"}>
                   <p className={styles.requiredHint}>{f.requiredHint}</p>
@@ -187,7 +233,8 @@ export default function Checkout({ locale, enquiriesEnabled }: { locale: Locale;
                       <label className={styles.wide}>{t.address} *<textarea {...feedback.field("address")} name="address" autoComplete="street-address" required maxLength={500} rows={2} /><FieldError state={feedback} name="address" /></label>
                       <label>{t.district} *<input {...feedback.field("district")} name="district" autoComplete="address-level2" required maxLength={100} /><FieldError state={feedback} name="district" /></label>
                       <label>{t.province} *<input {...feedback.field("province")} name="province" autoComplete="address-level1" required maxLength={100} /><FieldError state={feedback} name="province" /></label>
-                      <label>{t.postcode} *<input {...feedback.field("postcode", `${feedback.field("postcode").id}-hint`)} name="postcode" inputMode="numeric" autoComplete="postal-code" required pattern="[0-9]{5}" maxLength={5} value={postcode} onChange={(event) => setPostcode(normalizeCustomerNumber(event.target.value))} /><span className={styles.hint} id={`${feedback.field("postcode").id}-hint`}>{f.postcodeHint}</span><FieldError state={feedback} name="postcode" /></label>
+                      {locale !== "th" && <label>{t.country} *<input {...feedback.field("country")} name="country" autoComplete="country-name" required maxLength={100} /><FieldError state={feedback} name="country" /></label>}
+                      <label>{t.postcode} *<input {...feedback.field("postcode", `${feedback.field("postcode").id}-hint`)} name="postcode" inputMode={locale === "th" ? "numeric" : "text"} autoComplete="postal-code" required pattern={locale === "th" ? "[0-9]{5}" : undefined} maxLength={locale === "th" ? 5 : 20} value={postcode} onChange={(event) => setPostcode(normalizeCustomerNumber(event.target.value))} /><span className={styles.hint} id={`${feedback.field("postcode").id}-hint`}>{locale === "th" ? f.postcodeHint : locale === "ar" ? "استخدم الرمز البريدي لعنوان التوصيل." : "Use the postal code for your delivery address."}</span><FieldError state={feedback} name="postcode" /></label>
                     </div></fieldset>
                     <fieldset className={styles.section}><legend>{f.optionalDetails}</legend><div className={styles.fields}>
                       <label className={styles.wide}>{t.notes}<textarea {...feedback.field("notes")} name="notes" maxLength={1000} rows={3} /><FieldError state={feedback} name="notes" /></label>
@@ -211,21 +258,55 @@ export default function Checkout({ locale, enquiriesEnabled }: { locale: Locale;
                         <p className={styles.previewNote}>{shippingQuote?.state === "quoted" ? m.quoteNote : m.pendingNote}</p>
                       </fieldset>
                     )}
+                    {realPaymentAvailable && enquiriesEnabled && (
+                      <fieldset className={styles.methods}>
+                        <legend>{paymentCopy.methodTitle}</legend>
+                        <div className={styles.methodGrid}>
+                          <label className={styles.method}>
+                            <input type="radio" name="checkout-method" value="enquiry" checked={selectedMethod === "enquiry"} onChange={() => { setMethod("enquiry"); setStatus("idle"); }} />
+                            <span><strong>{paymentCopy.enquiry}</strong><span>{paymentCopy.enquiryDescription}</span></span>
+                          </label>
+                          <label className={styles.method}>
+                            <input type="radio" name="checkout-method" value="online" checked={selectedMethod === "online"} disabled={!canStartPayment} onChange={() => { setMethod("online"); setStatus("idle"); }} />
+                            <span><strong>{paymentCopy.online}</strong><span>{canStartPayment ? paymentCopy.onlineDescription : paymentCopy.postcodeHint}</span></span>
+                          </label>
+                        </div>
+                      </fieldset>
+                    )}
+                    {selectedMethod === "online" && paymentProviders.length > 1 && (
+                      <fieldset className={styles.methods}>
+                        <legend>{paymentCopy.providerLabel}</legend>
+                        <div className={styles.methodGrid}>
+                          {paymentProviders.map((provider) => <label className={styles.method} key={provider}>
+                            <input type="radio" name="payment-provider" value={provider} checked={selectedProvider === provider} onChange={() => { setSelectedProvider(provider); setStatus("idle"); }} />
+                            <span><strong dir="ltr">{providerNames[provider]}</strong></span>
+                          </label>)}
+                        </div>
+                      </fieldset>
+                    )}
+                    {selectedMethod === "online" && priced && (
+                      <div className={styles.paymentAmount}>
+                        <span>{paymentCopy.amountLabel}</span>
+                        <strong dir="ltr">{formatPrice(priced.subtotal, "th", "THB")}</strong>
+                        {selectedProvider && <span>{paymentCopy.providerLabel}: <bdi>{providerNames[selectedProvider]}</bdi></span>}
+                        <p>{canStartPayment ? paymentCopy.amountNote : paymentCopy.postcodeHint}</p>
+                      </div>
+                    )}
                     <label className={styles.consent}>
                       <input {...feedback.field("consent")} type="checkbox" name="consent" required />
-                      <span>{usesShared ? sharedCopy.consent : demo.enabled ? t.demoConsent : t.consent}{" "}<Link href={localizedPath(locale, "/help#privacy")}>{t.privacy}</Link> *<FieldError state={feedback} name="consent" /></span>
+                      <span>{selectedMethod === "online" ? paymentCopy.paymentConsent : usesShared ? sharedCopy.consent : demo.enabled ? t.demoConsent : t.consent}{" "}<Link href={localizedPath(locale, "/help#privacy")}>{t.privacy}</Link> *<FieldError state={feedback} name="consent" /></span>
                     </label>
                     {!feedback.candidate && <FormRecovery state={feedback} locale={locale} disabled={status === "pending"} />}
                     {status === "declined" && <div className={styles.declined} role="alert"><h2>{t.demoFailureTitle}</h2><p>{t.demoFailureBody}</p><p className={styles.reference}>{t.demoReference}<strong>{reference}</strong></p></div>}
-                    <button className={`button ${styles.submit}`} type="submit" disabled={usesShared && !sharedDemo.ready}>{status === "pending" ? demo.enabled ? t.demoSaving : t.sending : demo.enabled ? method === "payment" ? t.demoPay : t.demoSend : t.send}<Icon name="chevron" size={19} /></button>
+                    <button className={`button ${styles.submit}`} type="submit" disabled={(usesShared && !sharedDemo.ready) || (selectedMethod === "online" && !canStartPayment)}>{status === "pending" ? selectedMethod === "online" ? paymentCopy.starting : demo.enabled ? t.demoSaving : t.sending : selectedMethod === "online" ? paymentCopy.pay : demo.enabled ? method === "payment" ? t.demoPay : t.demoSend : t.send}<Icon name="chevron" size={19} /></button>
                   </fieldset>
                   {status === "pending" && <p role="status" className={styles.hint}>{f.saving}</p>}
-                  {status === "error" && <p className={styles.error} role="alert">{stockError ? m.stockError : usesShared ? sharedCopy.error : demo.enabled ? t.demoStorageError : t.error}</p>}
+                  {status === "error" && <div className={styles.error} role="alert"><p>{selectedMethod === "online" ? paymentError === "price" ? paymentCopy.priceChanged : paymentError === "provider" ? paymentCopy.providerFailure : paymentError === "previous" ? paymentCopy.previousOrder : paymentCopy.startError : stockError ? m.stockError : usesShared ? sharedCopy.error : demo.enabled ? t.demoStorageError : t.error}</p>{selectedMethod === "online" && paymentError === "previous" && <Link href={localizedPath(locale, "/checkout")} onClick={() => { submission.current = null; feedback.clearRecovery(); }}>{paymentCopy.newCheckout}</Link>}</div>}
                 </form>
               </>
             )}
           </div>
-          <OrderSummary locale={locale} shippingQuote={shippingQuote} />
+          <OrderSummary locale={locale} shippingQuote={shippingQuote} paymentsEnabled={realPaymentAvailable} />
         </div>
       )}
     </section>

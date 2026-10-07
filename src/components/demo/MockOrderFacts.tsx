@@ -10,7 +10,7 @@ export default function MockOrderFacts({ record, locale }: { record: DemoRecord;
   const t = mockCheckoutCopy[locale], demo = useDemo(), quote = record.shippingQuote;
   const hold = demo.inventory.find((entry) => entry.orderId === record.id);
   return <dl className={styles.facts}>
-    {quote && <><div><dt>{t.shipping}</dt><dd>{quote.state === "quoted" ? `${quote.label} · ${formatPrice(quote.fee, locale)}` : `${t.pending[quote.reason]} · ${t.pendingNote}`}</dd></div>{quote.state === "quoted" && <div><dt>{t.total}</dt><dd>{formatPrice(quote.total, locale)}</dd></div>}</>}
+    {quote && <><div><dt>{t.shipping}</dt><dd>{quote.state === "quoted" ? `${quote.label} · ${formatPrice(quote.fee, locale, "THB")}` : `${t.pending[quote.reason]} · ${t.pendingNote}`}</dd></div>{quote.state === "quoted" && <div><dt>{t.total}</dt><dd>{formatPrice(quote.total, locale, "THB")}</dd></div>}</>}
     <div><dt>{t.inventory}</dt><dd>{t.inventoryStates[hold?.state || "untracked"]}</dd></div>
     {hold?.state === "reserved" && hold.expiresAt && <div><dt>{t.expires}</dt><dd><time dateTime={hold.expiresAt}>{new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(hold.expiresAt))}</time></dd></div>}
   </dl>;

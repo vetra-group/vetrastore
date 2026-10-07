@@ -39,26 +39,24 @@
 
 .brand {
   display: inline-flex;
-  flex-direction: column;
   align-items: center;
   width: max-content;
   max-width: 100%;
   color: var(--paper);
 }
 
-.brand span {
+.brandImage {
+  display: block;
+  width: min(14rem, 100%);
+  height: auto;
+  filter: brightness(0) invert(1);
+}
+
+.brandText {
   font-family: var(--font-heading);
   font-size: var(--font-size-9);
   line-height: 1;
   letter-spacing: 0.13em;
-}
-
-.brand small {
-  margin-top: var(--space-1);
-  padding-inline-start: 0.1em;
-  font-size: var(--font-size-1);
-  line-height: 1.2;
-  letter-spacing: 0.42em;
 }
 
 .identity p {

@@ -1,6 +1,6 @@
 import type { Locale } from "./i18n";
 
-export type FieldRule = { label: string; required?: boolean; min?: number; max?: number; kind?: "email" | "phone" | "postcode" | "quantity" | "date" | "consent"; options?: readonly string[] };
+export type FieldRule = { label: string; required?: boolean; min?: number; max?: number; kind?: "email" | "phone" | "postcode" | "postal-code" | "quantity" | "date" | "consent"; options?: readonly string[] };
 export type FieldRules = Record<string, FieldRule>;
 export type FieldErrors = Record<string, string>;
 export type FormValues = Record<string, string>;
@@ -29,7 +29,7 @@ export function validateCustomerFields(values: FormValues, rules: FieldRules, lo
   const c = customerFormCopy[locale], errors: FieldErrors = {};
   for (const [name, rule] of Object.entries(rules)) {
     const raw = (values[name] ?? "").trim();
-    const value = ["phone", "postcode", "quantity"].includes(rule.kind ?? "") ? normalizeCustomerNumber(raw) : raw;
+    const value = ["phone", "postcode", "postal-code", "quantity"].includes(rule.kind ?? "") ? normalizeCustomerNumber(raw) : raw;
     if (rule.kind === "consent") { if (value !== "on") errors[name] = c.consent; continue; }
     if (!value) { if (rule.required) errors[name] = c.required; continue; }
     if (rule.min && value.length < rule.min) errors[name] = c.min(rule.min);
@@ -37,6 +37,7 @@ export function validateCustomerFields(values: FormValues, rules: FieldRules, lo
     else if (rule.kind === "email" && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(value)) errors[name] = c.email;
     else if (rule.kind === "phone" && !/^[+()\d\s.-]{7,30}$/.test(value)) errors[name] = c.phone;
     else if (rule.kind === "postcode" && !/^\d{5}$/.test(value)) errors[name] = c.postcode;
+    else if (rule.kind === "postal-code" && !/^[\p{L}\p{N}][\p{L}\p{N} -]{1,18}[\p{L}\p{N}]$/u.test(value)) errors[name] = locale === "ar" ? "أدخل رمزًا بريديًا من 3 إلى 20 حرفًا أو رقمًا، ويمكن استخدام مسافة أو شرطة." : "Enter a postal code with 3–20 letters or numbers. Spaces and hyphens are allowed.";
     else if (rule.kind === "quantity" && (!/^\d+$/.test(value) || Number(value) < 1 || Number(value) > 1_000_000)) errors[name] = c.quantity;
     else if (rule.kind === "date" && (!/^\d{4}-\d{2}-\d{2}$/.test(value) || !Number.isFinite(Date.parse(value)) || new Date(value).toISOString().slice(0, 10) !== value)) errors[name] = c.date;
     else if (rule.options && !rule.options.includes(value)) errors[name] = c.choice;

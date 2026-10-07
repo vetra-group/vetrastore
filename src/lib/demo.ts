@@ -1,10 +1,10 @@
-import { catalogProducts, HONEY_ID, MAX_QUANTITY, type CatalogProduct } from "./catalog";
+import { catalogProducts, currencyForLocale, formatPrice, HONEY_ID, MAX_QUANTITY, quoteProduct, type CatalogProduct } from "./catalog";
 import { isLocale } from "./i18n";
 import { initialOrderWorkflow, normalizeWholesale, parseOrderWorkflow, parseRequestActivity } from "./commerce-workflow";
 import { workflowCopy } from "@/content/workflow";
 import { mockCheckoutCopy } from "@/content/mock-checkout";
 import { notificationCopy } from "@/content/notifications";
-import { allocateMockStock, expireMockInventory, normalizeMockShippingRules, parseMockInventory, parseMockShippingQuote, quoteMockShipping } from "./mock-checkout";
+import { allocateMockStock, expireMockInventory, normalizeMockShippingRules, parseMockInventory, parseMockShippingQuote, quoteStoreShipping } from "./mock-checkout";
 import {
   demoChecklistKeys, demoKinds, demoStatuses,
   type DemoData, type DemoInput, type DemoNotification, type DemoRecord, type DemoTrashEntry,
@@ -49,16 +49,25 @@ export function normalizeDemoInput(input: DemoInput, products: readonly CatalogP
   }
   if (input.kind === "order") {
     if (!Array.isArray(input.items) || !input.items.length || input.items.length > (historical ? 200 : products.length)) throw new Error("Check your bag");
+    if (historical && input.currency !== undefined && !["THB", "USD"].includes(input.currency)) throw new Error("Check order currency");
+    if (historical) {
+      if (input.currency !== undefined) result.currency = input.currency;
+    } else result.currency = currencyForLocale(input.locale);
     const ids = new Set<string>();
     result.items = input.items.map((item) => {
       const product = products.find((entry) => entry.id === item?.id);
       const stock = product && "stock" in product && typeof product.stock === "number" ? product.stock : MAX_QUANTITY;
       const limit = historical ? MAX_QUANTITY : Math.min(MAX_QUANTITY, stock);
-      if (!item || typeof item.id !== "string" || !/^[a-z0-9][a-z0-9-]{0,99}$/.test(item.id) || (!historical && !product) || ids.has(item.id) || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > limit || (historical && (!Number.isFinite(item.unitPrice) || item.unitPrice < 0 || item.unitPrice > 10000000))) throw new Error("Check your bag");
+      if (!item || typeof item.id !== "string" || !/^[a-z0-9][a-z0-9-]{0,99}$/.test(item.id) || (!historical && !product) || ids.has(item.id) || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > limit || (historical && (!Number.isFinite(item.unitPrice) || item.unitPrice < 0 || item.unitPrice > 10000000 || (item.lineTotal !== undefined && (!Number.isFinite(item.lineTotal) || item.lineTotal < 0 || item.lineTotal > 1_000_000_000 || Math.abs(item.lineTotal * 100 - Math.round(item.lineTotal * 100)) > 0.000001))))) throw new Error("Check your bag");
       ids.add(item.id);
-      return { id: item.id, quantity: item.quantity, unitPrice: historical ? item.unitPrice : product!.price };
+      if (historical) return { id: item.id, quantity: item.quantity, unitPrice: item.unitPrice, ...(item.lineTotal !== undefined ? { lineTotal: item.lineTotal } : {}) };
+      const quote = quoteProduct(product!, item.quantity, input.locale);
+      if (quote.currency !== result.currency) throw new Error("Check order currency");
+      return { id: item.id, quantity: item.quantity, unitPrice: quote.unitPrice, lineTotal: quote.total };
     });
-    result.subtotal = result.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0);
+    result.subtotal = historical && result.items.every((item) => item.lineTotal === undefined)
+      ? result.items.reduce((sum, item) => sum + item.quantity * item.unitPrice, 0)
+      : result.items.reduce((sum, item) => sum + Math.round((item.lineTotal ?? item.quantity * item.unitPrice) * 100), 0) / 100;
     result.payment = input.payment ?? "enquiry";
   }
   return result;
@@ -192,14 +201,14 @@ function notificationPreviews(record: DemoRecord, products: readonly CatalogProd
   const subject = `${copy.kinds[record.kind]} · ${record.reference}`;
   const paymentLabel = record.payment ? copy.payment[record.payment] : "";
   const itemLabels = record.items?.map((item) => `${products.find((product) => product.id === item.id)?.name[record.locale] ?? item.id} × ${item.quantity}`).join("\n") ?? "";
-  let body = `${copy.greeting} ${record.name}\n${copy.reference} ${record.reference}\n${record.message ?? ""}\n${itemLabels}\n${record.subtotal !== undefined ? `${copy.subtotal} ฿${record.subtotal} (${copy.excluded})` : ""}\n${paymentLabel}\n${copy.localNote}`;
+  let body = `${copy.greeting} ${record.name}\n${copy.reference} ${record.reference}\n${record.message ?? ""}\n${itemLabels}\n${record.subtotal !== undefined ? `${copy.subtotal} ${formatPrice(record.subtotal, record.locale, record.currency ?? "THB")} (${copy.excluded})` : ""}\n${paymentLabel}\n${copy.localNote}`;
   if (record.wholesale) {
     const w = workflowCopy[record.locale], value = record.wholesale;
     body += `\n\n${w.product}: ${products.find((product) => product.id === value.productId)?.name[record.locale] || value.productId}\n${w.quantity}: ${value.quantity}\n${w.business}: ${value.business}\n${w.destination}: ${value.destination}\n${w.neededBy}: ${value.neededBy || "—"}`;
   }
   if (record.shippingQuote) {
     const m = mockCheckoutCopy[record.locale], quote = record.shippingQuote;
-    body += quote.state === "quoted" ? `\n${m.shipping}: ฿${quote.fee}\n${m.total}: ฿${quote.total}\n${m.quoteNote}` : `\n${m.pending[quote.reason]}\n${m.pendingNote}`;
+    body += quote.state === "quoted" ? `\n${m.shipping}: ${formatPrice(quote.fee, record.locale, "THB")}\n${m.total}: ${formatPrice(quote.total, record.locale, "THB")}\n${m.quoteNote}` : `\n${m.pending[quote.reason]}\n${m.pendingNote}`;
   }
   return (["staff", "customer"] as const).map((to) => ({ id: `${record.id}-${to}`, recordId: record.id, reference: record.reference, to, recipient: to === "customer" ? record.email : copy.staff, subject, body, state: "preview", createdAt: record.createdAt }));
 }
@@ -210,7 +219,7 @@ export function createDemoSubmission(data: DemoData, input: DemoInput, key: stri
   if (data.trash.some((entry) => entry.record.id === key)) throw new Error("This submission is in Trash; restore it before retrying");
   const previous = data.records.find((record) => record.id === key);
   if (previous) {
-    const retryInput = input.kind === "order" && Array.isArray(input.items) ? { ...input, items: input.items.map((item) => ({ ...item, unitPrice: previous.items?.find((saved) => saved.id === item?.id)?.unitPrice ?? NaN })) } : input;
+    const retryInput = input.kind === "order" && Array.isArray(input.items) ? { ...input, currency: previous.currency, items: input.items.map((item) => { const saved = previous.items?.find((entry) => entry.id === item?.id); return { id: item.id, quantity: item.quantity, unitPrice: saved?.unitPrice ?? NaN, ...(saved?.lineTotal !== undefined ? { lineTotal: saved.lineTotal } : {}) }; }) } : input;
     const retry = normalizeDemoInput(retryInput, products, true);
     if (previous.fingerprint !== JSON.stringify(retry)) throw new Error("Submission details changed; use a new key");
     return { data, record: previous };
@@ -224,7 +233,8 @@ export function createDemoSubmission(data: DemoData, input: DemoInput, key: stri
     return { data, record: existing };
   }
   if (data.records.length >= 200) throw new Error("Demo inbox is full");
-  const record: DemoRecord = { ...normalized, id: key, reference: `DEMO-${key.replace(/-/g, "").slice(0, 10).toUpperCase()}`, fingerprint, status: "new", notes: "", createdAt: now, updatedAt: now, assignedTo: "", activity: [{ id: `${key}-0`, at: now, actor: "Mock customer", action: "request-created", detail: normalized.kind }], ...(normalized.kind === "order" ? { order: initialOrderWorkflow(normalized.payment), shippingQuote: quoteMockShipping(data.mockShippingRules, normalized.customer?.postcode || "", normalized.subtotal || 0) } : {}) };
+  const storeShipping = normalized.kind === "order" ? quoteStoreShipping(normalized.locale, normalized.customer?.postcode || "", normalized.subtotal || 0) : undefined;
+  const record: DemoRecord = { ...normalized, id: key, reference: `DEMO-${key.replace(/-/g, "").slice(0, 10).toUpperCase()}`, fingerprint, status: "new", notes: "", createdAt: now, updatedAt: now, assignedTo: "", activity: [{ id: `${key}-0`, at: now, actor: "Mock customer", action: "request-created", detail: normalized.kind }], ...(normalized.kind === "order" ? { order: initialOrderWorkflow(normalized.payment), ...(storeShipping ? { shippingQuote: storeShipping } : {}) } : {}) };
   const inventory = record.kind === "order" && record.payment !== "enquiry" ? allocateMockStock(data.inventory, key, record.items!, record.payment === "demo-paid" ? "committed" : "reserved", products, Date.parse(now)) : data.inventory;
   return { data: { ...data, inventory, records: [record, ...data.records], outbox: [...notificationPreviews(record, products), ...data.outbox] }, record };
 }
@@ -234,6 +244,6 @@ export function demoSamples(products: readonly CatalogProduct[] = catalogProduct
   return [
     { kind: "contact", locale: "en", name: "Sample customer", email: "customer@example.test", message: "Sample message: how can I use this honey with coffee?" },
     { kind: "wholesale", locale: "th", name: "ร้านค้าตัวอย่าง", email: "retailer@example.test", message: "ข้อความตัวอย่าง: ต้องการสอบถามรายละเอียดขายส่ง" },
-    ...(honey && (!("stock" in honey) || honey.stock === null || (typeof honey.stock === "number" && honey.stock > 0)) ? [{ kind: "order" as const, locale: "en" as const, name: "Sample buyer", email: "buyer@example.test", message: "Sample order, no payment taken.", items: [{ id: honey.id, quantity: "stock" in honey && typeof honey.stock === "number" ? Math.min(2, honey.stock) : 2, unitPrice: honey.price }], payment: "enquiry" as const }] : []),
+    ...(honey && (!("stock" in honey) || honey.stock === null || (typeof honey.stock === "number" && honey.stock > 0)) ? [{ kind: "order" as const, locale: "en" as const, name: "Sample buyer", email: "buyer@example.test", message: "Sample order, no payment taken.", items: [{ id: honey.id, quantity: "stock" in honey && typeof honey.stock === "number" ? Math.min(2, honey.stock) : 2, unitPrice: 0 }], payment: "enquiry" as const }] : []),
   ];
 }

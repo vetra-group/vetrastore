@@ -1,4 +1,5 @@
 "use client";
+import Image from "next/image";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useRef, useState } from "react";
@@ -93,11 +94,13 @@ export default function Header({ locale, availability = {} }: { locale: Locale; 
           <Link
             href={localizedPath(locale)}
             className={styles.logo}
-            
             aria-label={content.settings.storeName}
           >
-            <span>{content.settings.storeName === "VETRA STORE" ? "VETRA" : content.settings.storeName}</span>
-            {content.settings.storeName === "VETRA STORE" && <small dir="ltr">STORE</small>}
+            {content.settings.storeName === "VETRA STORE" ? (
+              <Image src="/vetra-store-logo.svg" alt="" width={1352} height={541} className={styles.logoImage} priority />
+            ) : (
+              <span className={styles.logoText}>{content.settings.storeName}</span>
+            )}
           </Link>
           <nav className={styles.navigation} aria-label={c.mainNav}>
             {mainNavigation.map(({ key, path }) => (

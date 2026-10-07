@@ -82,8 +82,10 @@
   font-weight: 600;
 }
 .row > span {
+  max-width: 50%;
   font-size: var(--font-size-1);
-  white-space: nowrap;
+  overflow-wrap: anywhere;
+  text-align: end;
   font-variant-numeric: tabular-nums;
 }
 .link {

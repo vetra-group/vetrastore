@@ -3,7 +3,10 @@ import Link from "next/link";
 import { ArrowDown, ArrowRight, ArrowUpRight, ChevronRight, Coffee, Flower2, Plus, Sandwich, Utensils } from "lucide-react";
 import { honeyStory } from "@/content/honey";
 import { commerce } from "@/content/commerce";
+import { publicPricingCopy } from "@/content/public-pricing";
+import { publicPaymentCopy } from "@/content/payment-checkout";
 import { HONEY_ID, formatPrice, honey as defaultHoney } from "@/lib/catalog";
+import { publicQuote } from "@/lib/public-pricing";
 import { getLocalizedPublishedContent } from "@/lib/localized-content";
 import type { CmsContent } from "@/lib/cms/types";
 import { applyCopy } from "@/lib/cms/defaults";
@@ -36,12 +39,15 @@ function BotanicalSprig({ className }: { className: string }) {
   );
 }
 
-export default async function HoneyExperience({ locale, overrideContent, preview = false }: { locale: Locale; overrideContent?: CmsContent; preview?: boolean }) {
+export default async function HoneyExperience({ locale, overrideContent, preview = false, paymentsEnabled = false }: { locale: Locale; overrideContent?: CmsContent; preview?: boolean; paymentsEnabled?: boolean }) {
   const content = overrideContent ?? await getLocalizedPublishedContent(locale);
   const honey = content.products.find((product) => product.id === HONEY_ID && product.status === "published");
   if (!honey) return null;
   const c = applyCopy(honeyStory[locale], `honey.${locale}`, content.copy);
   const t = applyCopy(commerce[locale], `commerce.${locale}`, content.copy);
+  const baseQuote = publicQuote(honey, 1, locale);
+  const priceLabel = baseQuote ? formatPrice(baseQuote.total, locale, baseQuote.currency) : publicPricingCopy[locale].unavailable;
+  const shippingNote = c.shippingNote;
   const href = (path: string) => localizedPath(locale, path);
   return (
     <div className={styles.experience} id="top">
@@ -52,8 +58,8 @@ export default async function HoneyExperience({ locale, overrideContent, preview
             <h1 id="honey-title"><span>{content.copy[`honey.${locale}.title.0`] ?? (honey.name[locale] === defaultHoney.name[locale] ? c.title[0] : honey.name[locale])}</span><em>{c.title[1]}</em></h1>
             <p className={styles.heroIntro}>{c.intro}</p>
             <div className={styles.heroOffer}>
-              <p>{honey.weight} {t.gram}<span aria-hidden="true">·</span><strong>{formatPrice(honey.price, locale)}</strong></p>
-              <span>{c.shippingNote}</span>
+              <p>{honey.weight} {t.gram}<span aria-hidden="true">·</span><strong><bdi>{priceLabel}</bdi></strong></p>
+              <span>{shippingNote}</span>
             </div>
             <div className={styles.heroActions}>
               <a href="#shop" className={styles.primaryLink}>{c.discover}<ChevronRight size="1.1875rem" aria-hidden="true" /></a>
@@ -114,14 +120,14 @@ export default async function HoneyExperience({ locale, overrideContent, preview
             <h2 id="shop-title">{content.copy[`honey.${locale}.shopTitle`] ?? (honey.name[locale] === defaultHoney.name[locale] && honey.brand === defaultHoney.brand ? c.shopTitle : `${honey.brand} ${honey.name[locale]}`)}</h2>
             <p>{honey.description[locale]}</p>
             <p className={styles.productMeta}>{honey.weight} {t.gram} · {t.oneJar}</p>
-            <p className={styles.price}>{formatPrice(honey.price, locale)}<span>{c.shippingNote}</span></p>
-            <HoneyPurchase locale={locale} preview={preview} />
+            <p className={styles.price}><bdi>{priceLabel}</bdi><span>{shippingNote}</span></p>
+            <HoneyPurchase locale={locale} preview={preview} paymentsEnabled={paymentsEnabled} />
           </div>
         </section>
 
         <section className={styles.faq} aria-labelledby="faq-title">
           <div><p className={styles.eyebrow}>{c.faqEyebrow}</p><h2 id="faq-title">{c.faqTitle}</h2><p>{c.faqIntro}</p><Link className={styles.textLink} href={href("/contact")}>{t.contact}<ArrowRight size="1.125rem" aria-hidden="true" /></Link></div>
-          <div className={styles.questions}>{Object.entries(c.faqs).map(([key, faq]) => <details key={key}><summary>{faq.question}<Plus size="1.25rem" aria-hidden="true" /></summary><p>{faq.answer}</p></details>)}</div>
+          <div className={styles.questions}>{Object.entries(c.faqs).map(([key, faq]) => <details key={key}><summary>{faq.question}<Plus size="1.25rem" aria-hidden="true" /></summary><p>{paymentsEnabled && !preview && key === "delivery" ? publicPaymentCopy[locale].honeyFaq : faq.answer}</p></details>)}</div>
         </section>
       </main>
       {!preview && <HoneyPurchaseShortcut locale={locale} label={c.chooseProduct} />}

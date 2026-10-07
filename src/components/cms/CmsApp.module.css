@@ -1,8 +1,7 @@
 .shell { min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1fr); background: var(--background); color: var(--text); overflow-wrap: anywhere; }
 .brand { display: flex; gap: var(--space-2); padding: var(--space-4); align-items: center; min-height: 5.5rem; border-bottom: 1px solid #fffdfa16; }
-.brandMark { width: 2.5rem; height: 2.5rem; border: 1px solid #e6c67f88; display: grid; place-items: center; font-family: var(--font-heading); color: var(--gold-light); font-size: var(--font-size-5); flex-shrink: 0; }
+.brandLogo { display: block; width: 7rem; max-width: 100%; height: auto; flex-shrink: 0; filter: brightness(0) invert(1); }
 .brandText { display: grid; line-height: 1.35; gap: .1875rem; min-width: 0; }
-.brandText strong { letter-spacing: .16em; font-weight: 500; }
 .brandText span { color: #fffdfaab; font-size: var(--font-size-1); }
 .navigation { min-height: 0; min-width: 0; overflow-y: auto; overflow-x: hidden; padding: var(--space-2); flex: 1 1 auto; overscroll-behavior: contain; touch-action: pan-y; scroll-behavior: auto; scrollbar-gutter: stable; scrollbar-width: thin; scrollbar-color: #fffdfa55 transparent; }
 .group { margin-bottom: var(--space-3); }
@@ -130,7 +129,7 @@
 .login { min-height: 100dvh; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); background: var(--background); }
 .loginBrand { background: var(--navy); color: var(--paper); display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: var(--space-5); padding: var(--space-6); position: relative; overflow: hidden; }
 .loginBrand::before { content: ""; position: absolute; width: 36rem; height: 36rem; border: 1px solid #e6c67f44; right: -22rem; bottom: -18rem; transform: rotate(45deg); box-shadow: 0 0 0 2rem #e6c67f0a, 0 0 0 4rem #e6c67f08; }
-.loginBrand .brandText strong { font-family: var(--font-heading); font-size: var(--font-size-8); }
+.loginBrand .brandLogo { width: min(14rem, 100%); }
 .loginBrand p { color: #fffdfabf; max-width: 32ch; font-size: var(--font-size-3); margin: 0; }
 .loginContent { padding: var(--space-5); display: flex; flex-direction: column; justify-content: center; gap: var(--space-4); align-items: flex-start; }
 .loginContent h1 { font-family: var(--font-body); font-weight: 500; font-size: var(--font-size-6); margin: 0; }

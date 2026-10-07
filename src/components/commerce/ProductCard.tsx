@@ -3,6 +3,7 @@ import Image from "next/image";
 import Link from "next/link";
 import Icon from "@/components/Icon";
 import { siteCopy } from "@/content/site";
+import { publicPricingCopy } from "@/content/public-pricing";
 import {
   HONEY_ID,
   honey as defaultHoney,
@@ -10,6 +11,7 @@ import {
   formatProductCaption,
   type CatalogProduct,
 } from "@/lib/catalog";
+import { publicQuote } from "@/lib/public-pricing";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import { commerce } from "@/content/commerce";
 import { useStore } from "./StoreProvider";
@@ -29,6 +31,8 @@ export default function ProductCard({
   const c = usePublishedCopy(siteCopy[locale], `site.${locale}`);
   const { wishlist, toggleWishlist } = useStore();
   const saved = wishlist.includes(product.id);
+  const baseQuote = publicQuote(product, 1, locale);
+  const priceLabel = baseQuote ? formatPrice(baseQuote.total, locale, baseQuote.currency) : publicPricingCopy[locale].unavailable;
   const collectionCopy = product.id === HONEY_ID ? c.categories.honey : null;
   const href = localizedPath(
     locale,
@@ -80,7 +84,7 @@ export default function ProductCard({
             )}
             <p className={styles.collectionPrice}>
               <span>{product.weight} {t.gram}</span>
-              <strong>{formatPrice(product.price, locale)}</strong>
+              <strong><bdi>{priceLabel}</bdi></strong>
             </p>
             <span className={styles.collectionDivider} aria-hidden="true" />
             <Link href={href} className={styles.collectionAction}>
@@ -97,7 +101,7 @@ export default function ProductCard({
               <h3>
                 <Link href={href}>{product.name[locale]}</Link>
               </h3>
-              <span>{formatPrice(product.price, locale)}</span>
+              <span><bdi>{priceLabel}</bdi></span>
             </div>
             <Link href={href} className={styles.link}>
               {product.card[locale].cta}

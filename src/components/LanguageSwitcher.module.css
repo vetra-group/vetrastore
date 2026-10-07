@@ -1,8 +1,9 @@
 .switcher { position: relative; flex: none; }
-.switcher summary { display: grid; place-items: center; width: var(--control-size); height: var(--control-size); padding: var(--space-2); list-style: none; cursor: pointer; border: 1px solid var(--line); border-radius: 50%; color: var(--ink-strong); }
+.switcher summary { display: grid; place-items: center; width: var(--control-size); height: var(--control-size); padding: 0.25rem; list-style: none; cursor: pointer; border: 1px solid var(--line); border-radius: 50%; direction: ltr; }
 .switcher summary::-webkit-details-marker { display: none; }
-.switcher summary > svg { width: var(--icon-size); height: var(--icon-size); stroke-width: 1.5; }
+.code { color: var(--ink-strong); font-size: var(--type-navigation); font-weight: 700; line-height: 1; letter-spacing: 0.02em; }
 .options { position: absolute; z-index: 50; inset-block-start: calc(100% + var(--space-2)); inset-inline-end: 0; width: 11rem; max-width: calc(100vw - var(--space-4)); padding: var(--space-1); background: var(--paper); border: 1px solid var(--line); box-shadow: var(--shadow-panel); }
+.switcher:dir(rtl) .options { inset-inline-start: 0; inset-inline-end: auto; }
 .options a { display: flex; justify-content: space-between; align-items: center; gap: var(--space-2); min-height: var(--control-size); padding: var(--space-2) var(--space-3); letter-spacing: 0; }
 .unavailable { display: flex; flex-direction: column; gap: var(--space-1); min-height: var(--control-size); padding: var(--space-2) var(--space-3); color: var(--ink-soft); cursor: default; }
 .unavailable > span { align-self: start; }
@@ -17,4 +18,9 @@
 @media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
   .switcher summary:hover, .options a:hover { background: var(--surface); }
 }
-@media (max-width: 23rem) { .switcher summary { width: 2.5rem; height: 2.5rem; } }
+@container store-header (min-width: 19.0625rem) and (max-width: 23rem) {
+  .switcher:dir(rtl) .options { inset-inline-start: auto; inset-inline-end: 0; }
+}
+@container store-header (max-width: 19rem) {
+  .switcher:dir(ltr) .options { inset-inline-start: 0; inset-inline-end: auto; }
+}

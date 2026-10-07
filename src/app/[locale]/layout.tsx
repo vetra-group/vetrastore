@@ -15,6 +15,7 @@ import { getPublishedContent } from "@/lib/cms/server";
 import { publicContent } from "@/lib/cms/public-content";
 import { articleLocaleReady, productLocaleReady } from "@/lib/cms/localization";
 import { HONEY_ID } from "@/lib/catalog";
+import { checkoutPaymentOptions } from "@/lib/public-payment-availability";
 import { bodyLatin, bodyThai, headingThai, bodyArabic, headingArabic } from "../fonts";
 import "../globals.css";
 export const dynamic = "force-dynamic";
@@ -24,7 +25,6 @@ export async function generateMetadata(): Promise<Metadata> {
   metadataBase: new URL(siteUrl),
   title: { default: settings.storeName, template: `%s | ${settings.storeName}` },
   robots: { index: !preventIndexing, follow: !preventIndexing },
-  icons: { icon: "/icon.svg" },
   };
 }
 export function generateStaticParams() {
@@ -54,6 +54,7 @@ export default async function LocaleLayout({
             <StoreShell
               header={<Header locale={locale} availability={availability} />}
               footer={<Footer locale={locale} />}
+              paymentsEnabled={checkoutPaymentOptions().providers.length > 0}
             >
               {children}
             </StoreShell>

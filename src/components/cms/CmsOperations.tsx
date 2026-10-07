@@ -10,7 +10,6 @@ import { operationsCopy } from "@/content/cms-operations";
 import { workflowCopy } from "@/content/workflow";
 import { sharedOperationsCopy } from "@/content/shared-operations";
 import { NotificationDelivery, RequestWorkflow } from "@/components/demo/RequestWorkflow";
-import MockCheckoutSettings from "@/components/demo/MockCheckoutSettings";
 import { formatPrice, MAX_QUANTITY } from "@/lib/catalog";
 import { demoStatuses, type DemoInput, type DemoRecord, type DemoStatus } from "@/lib/demo-types";
 import type { Locale } from "@/lib/i18n";
@@ -20,6 +19,7 @@ import styles from "./CmsOperations.module.css";
 
 type View = "orders" | "messages" | "customers" | "notifications";
 const SharedOperations = dynamic(() => import("./SharedOperations"));
+const PaidOrders = dynamic(() => import("./PaidOrders").then((module) => module.PaidOrders));
 export function CmsOperations({ locale, view, onDirtyChange }: { locale: Locale; view: View; onDirtyChange?: (dirty: boolean) => void }) {
   const { enabled } = useDemo(), t = sharedOperationsCopy[locale], c = operationsCopy[locale];
   const [source, setSource] = useState<"shared" | "browser">("shared"), [dirty, setDirty] = useState(false);
@@ -29,7 +29,7 @@ export function CmsOperations({ locale, view, onDirtyChange }: { locale: Locale;
     if (next === source || dirty && !await confirm({ title: c.unsavedTitle, body: c.discardBody, label: c.discard, destructive: true })) return;
     setDirty(false); setSource(next);
   }
-  return <><div className={styles.actions} role="group" aria-label={t.source}>{(["shared", ...(enabled ? ["browser"] : [])] as const).map((value) => <button type="button" key={value} aria-pressed={source === value} className={source === value ? styles.primary : styles.quiet} onClick={() => void change(value as "shared" | "browser")}>{value === "shared" ? t.shared : t.browser}</button>)}</div>{source === "shared" ? <SharedOperations locale={locale} view={view} onDirtyChange={setDirty} /> : <BrowserOperations locale={locale} view={view} onDirtyChange={setDirty} />}{confirmation}</>;
+  return <><div className={styles.actions} role="group" aria-label={t.source}>{(["shared", ...(enabled ? ["browser"] : [])] as const).map((value) => <button type="button" key={value} aria-pressed={source === value} className={source === value ? styles.primary : styles.quiet} onClick={() => void change(value as "shared" | "browser")}>{value === "shared" ? t.shared : t.browser}</button>)}</div>{source === "shared" ? <>{view === "orders" && <PaidOrders locale={locale} />}<SharedOperations locale={locale} view={view} onDirtyChange={setDirty} /></> : <BrowserOperations locale={locale} view={view} onDirtyChange={setDirty} />}{confirmation}</>;
 }
 function date(value: string, locale: Locale) { return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)); }
 function downloadCsv(rows: string[][], filename: string) {
@@ -55,10 +55,10 @@ function Details({ record, locale, close, deleted, onDirtyChange }: { record: De
       <div><dt>{c.email}</dt><dd>{record.email}</dd></div>
       {record.phone && <div><dt>{c.phone}</dt><dd>{record.phone}</dd></div>}
       {record.customer?.company && <div><dt>{c.company}</dt><dd>{record.customer.company}</dd></div>}
-      {record.customer?.address && <div><dt>{c.address}</dt><dd>{["address", "district", "province", "postcode"].map((key) => record.customer?.[key]).filter(Boolean).join(", ")}</dd></div>}
+      {record.customer?.address && <div><dt>{c.address}</dt><dd>{["address", "district", "province", "postcode", "country"].map((key) => record.customer?.[key]).filter(Boolean).join(", ")}</dd></div>}
       {record.message && <div><dt>{c.message}</dt><dd>{record.message}</dd></div>}
     </dl>
-    {record.items?.length ? <div className={styles.orderItems}>{record.items.map((item) => <div key={item.id}><span>{products.find((product) => product.id === item.id)?.name[locale] ?? item.id} × {item.quantity}</span><strong>{formatPrice(item.unitPrice * item.quantity, locale)}</strong></div>)}<div className={styles.total}><span>{t.orderValue}</span><strong>{formatPrice(record.subtotal ?? 0, locale)}</strong></div><p>{t.totalNote}</p></div> : null}
+    {record.items?.length ? <div className={styles.orderItems}>{record.items.map((item) => <div key={item.id}><span>{products.find((product) => product.id === item.id)?.name[locale] ?? item.id} × {item.quantity}</span><strong>{formatPrice(item.lineTotal ?? item.unitPrice * item.quantity, locale, record.currency ?? "THB")}</strong></div>)}<div className={styles.total}><span>{t.orderValue}</span><strong>{formatPrice(record.subtotal ?? 0, locale, record.currency ?? "THB")}</strong></div><p>{t.totalNote}</p></div> : null}
     {record.payment && <p className={styles.payment}>{c.paymentStates[record.payment]}</p>}
     <form onSubmit={save} className={styles.form}>
       <label>{c.status}<select value={status} onChange={(event) => { setStatus(event.target.value as DemoStatus); setFeedback(""); }}>{demoStatuses.map((state) => <option key={state} value={state}>{c.statuses[state]}</option>)}</select></label>
@@ -88,7 +88,7 @@ function NewRecord({ locale, close, created, onDirtyChange }: { locale: Locale; 
     event.preventDefault(); const form = new FormData(event.currentTarget);
     try {
       const product = products.find((entry) => entry.id === productId);
-      const input: DemoInput = { kind, locale, name: String(form.get("name") ?? ""), email: String(form.get("email") ?? ""), phone: String(form.get("phone") ?? ""), message: String(form.get("message") ?? ""), ...(kind === "order" && product ? { items: [{ id: product.id, quantity: Number(form.get("quantity")), unitPrice: product.price }], payment: "enquiry" } : {}) };
+      const input: DemoInput = { kind, locale, name: String(form.get("name") ?? ""), email: String(form.get("email") ?? ""), phone: String(form.get("phone") ?? ""), message: String(form.get("message") ?? ""), ...(kind === "order" && product ? { items: [{ id: product.id, quantity: Number(form.get("quantity")), unitPrice: 0 }], payment: "enquiry" } : {}) };
       if (kind === "wholesale") input.wholesale = { productId, quantity: Number(fields.quantity), business: fields.business, destination: fields.destination, neededBy: fields.neededBy };
       const payload = JSON.stringify(input);
       if (!submission.current || submission.current.payload !== payload) submission.current = { id: crypto.randomUUID(), payload };
@@ -113,9 +113,9 @@ function BrowserOperations({ locale, view, onDirtyChange }: { locale: Locale; vi
   const [query, setQuery] = useState(""), [status, setStatus] = useState("all"), [sort, setSort] = useState("new"), [page, setPage] = useState(1);
   const [kind, setKind] = useState("all"), [assignment, setAssignment] = useState("all");
   const [selected, setSelected] = useState<string | null>(null), [customer, setCustomer] = useState<string | null>(null), [creating, setCreating] = useState(false), [feedback, setFeedback] = useState(""), [error, setError] = useState("");
-  const [dirty, setDirty] = useState(false), [settingsDirty, setSettingsDirty] = useState(false);
+  const [dirty, setDirty] = useState(false);
   const { confirm, confirmation } = useCmsConfirm(locale);
-  useEffect(() => { onDirtyChange?.(dirty || settingsDirty); return () => onDirtyChange?.(false); }, [dirty, settingsDirty, onDirtyChange]);
+  useEffect(() => { onDirtyChange?.(dirty); return () => onDirtyChange?.(false); }, [dirty, onDirtyChange]);
   const filtered = demo.records.filter((record) => (view !== "orders" || record.kind === "order") && (view === "orders" || kind === "all" || record.kind === kind) && (status === "all" || record.status === status) && (assignment === "all" || Boolean(record.assignedTo) === (assignment === "assigned")) && `${record.name} ${record.email} ${record.reference} ${record.message ?? ""} ${record.assignedTo ?? ""} ${record.wholesale?.business ?? ""}`.toLowerCase().includes(query.toLowerCase())).sort((a, b) => sort === "new" ? b.updatedAt.localeCompare(a.updatedAt) : a.updatedAt.localeCompare(b.updatedAt));
   const totalPages = Math.max(1, Math.ceil(filtered.length / 20)), currentPage = Math.min(page, totalPages);
   const shown = filtered.slice((currentPage - 1) * 20, currentPage * 20);
@@ -134,7 +134,7 @@ function BrowserOperations({ locale, view, onDirtyChange }: { locale: Locale; vi
   };
   const close = () => { void requestClose(); };
   function seed() { try { demo.seedSamples(); setError(""); } catch { setError(t.failed); } }
-  const recordsExport = () => downloadCsv([["Reference", "Kind", "Name", "Email", "Phone", "Status", "Assigned to", "Order stage", "Tracking", "Business", "Quantity", "Destination", "Needed by", "Subtotal THB", "Created", "Notes"], ...filtered.map((r) => [r.reference, r.kind, r.name, r.email, r.phone ?? "", r.status, r.assignedTo || "", r.order?.stage || "", r.order?.tracking || "", r.wholesale?.business || "", String(r.wholesale?.quantity || ""), r.wholesale?.destination || "", r.wholesale?.neededBy || "", String(r.subtotal ?? ""), r.createdAt, r.notes])], `vetra-${view}.csv`);
+  const recordsExport = () => downloadCsv([["Reference", "Kind", "Name", "Email", "Phone", "Status", "Assigned to", "Order stage", "Tracking", "Business", "Quantity", "Destination", "Needed by", "Currency", "Subtotal", "Created", "Notes"], ...filtered.map((r) => [r.reference, r.kind, r.name, r.email, r.phone ?? "", r.status, r.assignedTo || "", r.order?.stage || "", r.order?.tracking || "", r.wholesale?.business || "", String(r.wholesale?.quantity || ""), r.wholesale?.destination || "", r.wholesale?.neededBy || "", r.kind === "order" ? r.currency ?? "THB" : "", String(r.subtotal ?? ""), r.createdAt, r.notes])], `vetra-${view}.csv`);
   if (!demo.enabled) return <p>{t.unavailable}</p>;
   if (!demo.hydrated) return <p role="status">{c.loading}</p>;
   return <div className={styles.workspace}>
@@ -144,7 +144,6 @@ function BrowserOperations({ locale, view, onDirtyChange }: { locale: Locale; vi
       <article><Users aria-hidden="true" /><span>{t.customerCount}</span><strong>{customers.length}</strong></article>
     </div>
     <p className={styles.note}>{t.localNote}</p>
-    {view === "orders" && <MockCheckoutSettings locale={locale} onDirtyChange={setSettingsDirty} />}
     <div className={styles.toolbar}>
       {(view === "orders" || view === "messages") && <><select aria-label={w.allRequests} value={view === "orders" ? "order" : kind} disabled={view === "orders"} onChange={(event) => { setKind(event.target.value); setPage(1); }}><option value="all">{w.allRequests}</option>{(["contact", "wholesale", "order", "newsletter"] as const).map((value) => <option key={value} value={value}>{c.kinds[value]}</option>)}</select><select aria-label={w.assignedTo} value={assignment} onChange={(event) => { setAssignment(event.target.value); setPage(1); }}><option value="all">{w.allAssignees}</option><option value="assigned">{w.assigned}</option><option value="unassigned">{w.unassignedFilter}</option></select></>}
       <input type="search" aria-label={view === "orders" || view === "messages" ? t.requestSearch : c.search} placeholder={view === "orders" || view === "messages" ? t.requestSearchPlaceholder : c.searchPlaceholder} value={query} onChange={(event) => { setQuery(event.target.value); setPage(1); }} />

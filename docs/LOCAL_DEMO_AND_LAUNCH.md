@@ -86,7 +86,15 @@ Rebuild and restart. Confirm that mock checkout controls disappear and that `/st
 
 Previously saved demo records remain in that browser's storage until removed. They are not uploaded or migrated to MongoDB when demo mode is disabled.
 
-Outside demo mode, contact and newsletter forms use their existing server APIs. Without a configured database they return a retryable unavailable response and preserve input. Optional checkout enquiries require both MongoDB and `ORDER_ENQUIRIES_ENABLED=true`; they remain non-binding enquiries, not paid orders. Saving an enquiry does not automatically send an email.
+Outside demo mode, contact and newsletter forms use their existing server APIs. Without a configured database they return a retryable unavailable response and preserve input. Optional checkout enquiries require both MongoDB and `ORDER_ENQUIRIES_ENABLED=true`; they remain non-binding enquiries. Saving an enquiry does not automatically send an email.
+
+### Stripe payment path
+
+Real payment orders are stored separately from enquiries and demo records. Keep `PAYMENTS_ENABLED=false` until the live-payment launch gate below is complete. The technical configuration also requires durable MongoDB CMS storage, a published catalog, `PAYMENT_ACCESS_SECRET`, `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET`, and the correct `NEXT_PUBLIC_SITE_URL`. Register `/api/payments/webhooks/stripe` as the Stripe webhook endpoint for Checkout Session completed, asynchronous success/failure and expiration events. Use Stripe test credentials and a test webhook before live credentials.
+
+The server recalculates the selected bundle from published database prices, saves a pending THB order, and creates a separate Stripe payment attempt. The customer sees the exact THB charge before leaving for Stripe. Only a verified Stripe webhook can mark the order paid; the return page reads the saved status. For now, online payment is limited to Thai delivery addresses with the confirmed free-shipping quote. Other destinations remain enquiries until shipping and inventory operations are ready. Merchant iPay remains disabled until Bangkok Bank supplies its current merchant integration guide and credentials. See [payment requirements](PAYMENTS.md).
+
+**Live-payment launch blocker:** Checking a published stock number is not an atomic reservation. The real payment path has no committed inventory ledger or stock release flow, so concurrent paid orders can oversell. Implement and test server-side reservation, commitment and release before collecting live payments. The CMS Orders view has separate authenticated, read-only groups for paid orders and pending orders needing review. It shows the last saved payment attempt and provider reference but cannot resolve payment outcomes, manage fulfilment or notify staff; elapsed local time is not proof of failed payment. Define staff follow-up and reconciliation, including duplicate successful payment review and official refunds. Complete a Stripe test checkout with signed webhooks, retries and out-of-order events. Keep `PAYMENTS_ENABLED=false` until these checks pass.
 
 ## Configuration for connected services
 
@@ -98,10 +106,14 @@ Outside demo mode, contact and newsletter forms use their existing server APIs. 
 | `MONGODB_URI` | Server-side connection for actual contact, newsletter and order-enquiry persistence. Keep credentials outside the repository. |
 | `MONGODB_DB` | Target database name; the code defaults to `vetra_store`. Verify the intended environment before writing data. |
 | `ORDER_ENQUIRIES_ENABLED` | Allows the non-binding enquiry path when MongoDB is configured. It does not enable payment collection. |
+| `PAYMENTS_ENABLED` | Explicit gate for real payment orders; defaults to false. Do not turn on until atomic inventory reservation/ledger, authenticated staff fulfilment and reconciliation, and the signed webhook test pass. Also requires durable MongoDB CMS storage, a public site origin and an available provider. |
+| `PAYMENT_PRIMARY_PROVIDER` | `stripe` until Merchant iPay is approved, fully integrated and production-ready. |
+| `PAYMENT_ACCESS_SECRET` | Server-only random secret of at least 32 characters used to authorize deliberate payment retries. |
+| `STRIPE_SECRET_KEY`, `STRIPE_WEBHOOK_SECRET` | Server-only Stripe credentials. Configure matching test or live values and register the webhook endpoint before enabling payments. |
 | `CLOUDINARY_MEDIA_ENABLED` | Optional delivery for the configured bundled media. Keep false until the intended assets are uploaded and verified. |
 | `CLOUDINARY_CLOUD_NAME`, `CLOUDINARY_API_KEY`, `CLOUDINARY_API_SECRET` | Cloudinary setup; API key and secret remain server-side. Follow [media setup](MEDIA_SETUP.md). |
 
-Live email and payment providers have not been connected. Staff authentication and roles are available through the CMS configuration; configure real staff accounts before deployment. Provider credentials should be defined when those services are chosen and implemented. Adding environment values alone will not activate delivery or payment. Keep secrets server-side and use separate test and production environments.
+Live email delivery remains unconfigured. The Stripe adapter is implemented but stays disabled unless all payment prerequisites are set; Merchant iPay has no technical integration yet. Staff authentication and roles are available through the CMS configuration; configure real staff accounts before deployment. Keep secrets server-side and use separate test and production environments.
 
 ## Staged launch checklist
 
@@ -118,7 +130,9 @@ Live email and payment providers have not been connected. Staff authentication a
 
 - Configure the intended MongoDB environment and test successful persistence, duplicate retries and unavailable-service recovery.
 - Connect email notifications; test actual delivery, retry handling and the distinction between saving a request and sending a notification.
-- Choose and implement a payment provider before accepting paid orders. Verify authoritative payment confirmation, failure, cancellation and refund handling. Mock payment outcomes cannot be reused as production confirmation.
+- Complete atomic inventory reservation, commitment and release for real orders; a stock-number check and the simulation ledger do not prevent overselling.
+- Verify the Stripe test checkout and signed webhook end to end, including authoritative success/failure, retries, duplicates and out-of-order events. Keep `PAYMENTS_ENABLED=false` until the inventory and webhook checks pass. Mock outcomes cannot be reused as production confirmation.
+- Assign staff to review the authenticated paid-order view, fulfil orders and reconcile provider payments. Define how to handle duplicate successful charges and official refunds before launch.
 - Configure the shared CMS staff accounts and durable operations storage. Define private request retention, deletion and backup processes; the browser prototype is not a production staff workspace.
 - Keep bundled media active or complete the documented Cloudinary verification before changing delivery.
 
@@ -144,6 +158,7 @@ Preparation does not publish the website or activate outside services. Productio
 npm.cmd run typecheck
 npm.cmd run lint
 npm.cmd test
+npm.cmd run test:payments
 npm.cmd run test:demo
 npm.cmd run build
 ```

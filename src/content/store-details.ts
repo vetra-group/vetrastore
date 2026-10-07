@@ -1,4 +1,6 @@
 import { formatPrice, honey } from "@/lib/catalog";
+import { publicQuote } from "@/lib/public-pricing";
+import { publicPricingCopy } from "./public-pricing";
 import type { Locale, Localized } from "@/lib/i18n";
 
 type SellingDetail = { title: string; summary: string; description: string };
@@ -49,9 +51,9 @@ export const storeDetails = {
     },
     shipping: {
       title: "การจัดส่ง",
-      summary: "แจ้งพื้นที่เพื่อสอบถามค่าจัดส่ง",
+      summary: "จัดส่งฟรีในประเทศไทย",
       description:
-        "ค่าจัดส่ง พื้นที่ให้บริการ และระยะเวลาจัดส่งยังรอการยืนยัน กรุณาแจ้งจังหวัดและรหัสไปรษณีย์เพื่อสอบถามรายละเอียดก่อนสั่งซื้อ",
+        "จัดส่งฟรีภายในประเทศไทย กรุณาแจ้งจังหวัดและรหัสไปรษณีย์เพื่อให้ทีมงานยืนยันพื้นที่ให้บริการและระยะเวลาจัดส่งก่อนสั่งซื้อ",
     },
     returns: {
       title: "ปัญหาเกี่ยวกับสินค้า",
@@ -107,12 +109,14 @@ export const storeDetails = {
 } satisfies Localized<SellingDetails>;
 
 export function honeySellingSummary(locale: Locale) {
+  const quote = publicQuote(honey, 1, locale);
+  const price = quote ? formatPrice(quote.total, locale, quote.currency) : publicPricingCopy[locale].unavailable;
   if (locale === "ar") {
-    return `${honey.name.ar} من ${honey.brand}، بوزن ${honey.weight} غرامًا، بسعر ${formatPrice(honey.price, locale)} للعبوة. تُضاف رسوم التوصيل بشكل منفصل.`;
+    return `${honey.name.ar} من ${honey.brand}، بوزن ${honey.weight} غرامًا، بسعر \u2068${price}\u2069 للعبوة. تُضاف رسوم التوصيل بشكل منفصل.`;
   }
   return locale === "th"
-    ? `${honey.brand} ${honey.name.th} ขนาด ${honey.weight} กรัม ราคา ${formatPrice(honey.price, locale)} ต่อกระปุก ยังไม่รวมค่าจัดส่ง`
-    : `${honey.brand} ${honey.name.en}, ${honey.weight} g, is ${formatPrice(honey.price, locale)} per jar. Delivery charges are separate.`;
+    ? `${honey.brand} ${honey.name.th} ขนาด ${honey.weight} กรัม ราคา ${price} ต่อกระปุก จัดส่งฟรีในประเทศไทย`
+    : `${honey.brand} ${honey.name.en}, ${honey.weight} g, is ${price} per jar. Delivery charges are separate.`;
 }
 
 // Used by launch preparation and staff tools; pending items are not store policies.

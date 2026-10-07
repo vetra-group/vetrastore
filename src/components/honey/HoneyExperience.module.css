@@ -627,14 +627,18 @@
   }
 }
 
-@container honey-page (max-width: 22rem) {
+@container honey-page (max-width: 40rem) {
   .factStrip {
     grid-template-columns: repeat(2, minmax(0, 1fr));
     row-gap: var(--space-3);
   }
 
   .factStrip > div {
-    padding-inline: 0;
+    padding-inline: var(--space-2);
+  }
+
+  .factStrip p {
+    text-wrap: balance;
   }
 
   .factStrip > div:last-child {
