@@ -2,7 +2,7 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { randomUUID } from "node:crypto";
+import { createHmac, randomUUID } from "node:crypto";
 import { createRequire } from "node:module";
 import { fileURLToPath } from "node:url";
 import ts from "typescript";
@@ -25,17 +25,42 @@ function load(relative, mocks = {}, cache = new Map()) {
   return record.exports;
 }
 
-const prior = { key: process.env.STRIPE_SECRET_KEY, webhook: process.env.STRIPE_WEBHOOK_SECRET };
+const prior = { key: process.env.STRIPE_SECRET_KEY, webhook: process.env.STRIPE_WEBHOOK_SECRET, vercelEnv: process.env.VERCEL_ENV, vercel: process.env.VERCEL };
 const priorFetch = globalThis.fetch;
+process.env.VERCEL_ENV = "preview";
 process.env.STRIPE_SECRET_KEY = "sk_test_offline-only";
 process.env.STRIPE_WEBHOOK_SECRET = "whsec_offline-only";
 
 try {
   const providers = load("src/lib/payments/providers.ts");
+  const stripe = providers.getProvider("stripe");
+  for (const [environment, key, available] of [
+    ["production", "sk_test_offline-only", false],
+    ["production", "sk_live_offline-only", true],
+    ["preview", "sk_test_offline-only", true],
+    ["preview", "sk_live_offline-only", false],
+    ["development", "sk_test_offline-only", true],
+    ["unknown", "sk_test_offline-only", false],
+  ]) {
+    process.env.VERCEL_ENV = environment;
+    process.env.STRIPE_SECRET_KEY = key;
+    assert.equal(stripe.available, available, `${environment} must ${available ? "accept" : "reject"} ${key.slice(0, 7)} credentials`);
+    assert.equal(providers.listAvailableProviders().some((provider) => provider.id === "stripe"), available);
+    if (!available) await assert.rejects(stripe.verify({ rawBody: Buffer.from("{}"), signature: "invalid" }), (error) => error.kind === "unavailable", "Wrong-mode credentials must not process a webhook");
+  }
+  delete process.env.VERCEL_ENV;
+  delete process.env.VERCEL;
+  process.env.STRIPE_SECRET_KEY = "sk_test_offline-only";
+  assert.equal(stripe.available, true, "Local test checkout remains available");
+  process.env.STRIPE_SECRET_KEY = "sk_live_offline-only";
+  assert.equal(stripe.available, false, "A live key cannot silently run in a local test rehearsal");
+  process.env.VERCEL_ENV = "preview";
+  process.env.STRIPE_SECRET_KEY = "sk_test_offline-only";
   const input = { providerPaymentId: "cs_test_saved", orderId: randomUUID(), attemptId: randomUUID(), reference: "VT-P-TEST", amountMinor: 38000, currency: "THB" };
   let currentStatus = "complete";
   let currentPaymentStatus = "paid";
   let mismatch = false;
+  let providerLiveMode = false;
   let requests = 0;
   globalThis.fetch = async (url, options) => {
     requests++;
@@ -45,11 +70,10 @@ try {
       id: input.providerPaymentId,
       client_reference_id: input.orderId,
       amount_total: mismatch ? input.amountMinor + 1 : input.amountMinor,
-      currency: "thb", status: currentStatus, payment_status: currentPaymentStatus,
+      currency: "thb", status: currentStatus, payment_status: currentPaymentStatus, livemode: providerLiveMode,
       metadata: { app: "vetra-store", orderId: input.orderId, attemptId: input.attemptId, reference: input.reference },
     });
   };
-  const stripe = providers.getProvider("stripe");
   assert.equal((await stripe.inspect(input)).status, "paid", "Only a provider-retrieved paid Session confirms payment");
   currentStatus = "expired"; currentPaymentStatus = "unpaid";
   assert.equal((await stripe.inspect(input)).status, "failed", "A provider-retrieved expired unpaid Session can release stock");
@@ -58,6 +82,29 @@ try {
   mismatch = true;
   await assert.rejects(stripe.inspect(input), (error) => error.kind === "uncertain", "Mismatched provider amount never settles an order");
   assert.equal(requests, 4);
+  mismatch = false;
+  providerLiveMode = true;
+  await assert.rejects(stripe.inspect(input), (error) => error.kind === "uncertain", "A wrong-mode Session cannot settle an order");
+  providerLiveMode = false;
+  currentStatus = "complete"; currentPaymentStatus = "paid";
+  const signedEvent = (livemode) => {
+    const rawBody = Buffer.from(JSON.stringify({ id: "evt_mode_guard", type: "checkout.session.completed", livemode, data: { object: { id: input.providerPaymentId } } }));
+    const timestamp = Math.floor(Date.now() / 1000);
+    const signature = createHmac("sha256", process.env.STRIPE_WEBHOOK_SECRET).update(`${timestamp}.`).update(rawBody).digest("hex");
+    return { rawBody, signature: `t=${timestamp},v1=${signature}` };
+  };
+  await assert.rejects(stripe.verify(signedEvent(true)), (error) => error.kind === "invalid-webhook", "A signed wrong-mode event is rejected before provider lookup");
+  assert.equal(requests, 5);
+  process.env.VERCEL_ENV = "production";
+  process.env.STRIPE_SECRET_KEY = "sk_live_offline-only";
+  await assert.rejects(stripe.verify(signedEvent(false)), (error) => error.kind === "invalid-webhook", "Production rejects a signed test-mode event even with a live key");
+  assert.equal(requests, 5);
+  process.env.VERCEL_ENV = "preview";
+  process.env.STRIPE_SECRET_KEY = "sk_test_offline-only";
+  assert.equal((await stripe.verify(signedEvent(false))).status, "paid", "A signed same-mode event can use provider-verified state");
+  providerLiveMode = true;
+  await assert.rejects(stripe.verify(signedEvent(false)), (error) => error.kind === "uncertain", "A retrieved Session must match the signed event mode");
+  providerLiveMode = false;
 
   class CmsError extends Error {
     constructor(message, status = 400, code = "INVALID_REQUEST") { super(message); this.status = status; this.code = code; }
@@ -112,9 +159,11 @@ try {
   assert.equal(inspectionCount, 1);
   assert.equal(applied.length, 1, "Only the provider-observed state enters the payment transition");
 
-  console.log("PASS: server-side Stripe lookup recognizes paid/expired/open states, rejects mismatch, and owner-only reconciliation applies observed outcomes. Fake provider/DB only.");
+  console.log("PASS: Stripe deployment mode guard, signed event and Session mode checks, provider lookup and owner-only reconciliation. Fake provider/DB only.");
 } finally {
   globalThis.fetch = priorFetch;
   if (prior.key === undefined) delete process.env.STRIPE_SECRET_KEY; else process.env.STRIPE_SECRET_KEY = prior.key;
   if (prior.webhook === undefined) delete process.env.STRIPE_WEBHOOK_SECRET; else process.env.STRIPE_WEBHOOK_SECRET = prior.webhook;
+  if (prior.vercelEnv === undefined) delete process.env.VERCEL_ENV; else process.env.VERCEL_ENV = prior.vercelEnv;
+  if (prior.vercel === undefined) delete process.env.VERCEL; else process.env.VERCEL = prior.vercel;
 }

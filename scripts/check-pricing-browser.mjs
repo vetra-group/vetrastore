@@ -12,6 +12,22 @@ const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const output = path.join(root, "output", "qa", "pricing");
 await mkdir(output, { recursive: true });
 const browser = await launchBrowser(output);
+// Currency selection must be deterministic in CI and must not request live
+// exchange-rate providers. Only the browser's same-origin display-rate fetch
+// is replaced; checkout still uses the built storefront's THB prices.
+await browser.command("Page.addScriptToEvaluateOnNewDocument", { source: `(() => {
+  const originalFetch = window.fetch.bind(window);
+  const sampleRates = { AED: 0.11, SAR: 0.112, KWD: 0.009, QAR: 0.11, MYR: 0.13, BND: 0.04, SGD: 0.04, CAD: 0.041, AUD: 0.045, GBP: 0.022, EUR: 0.026, USD: 0.03, THB: 1 };
+  window.fetch = (input, init) => {
+    const url = new URL(typeof input === "string" ? input : input.url, location.href);
+    if (url.origin === location.origin && url.pathname === "/api/exchange-rates") {
+      const date = new Date().toISOString().slice(0, 10);
+      const rates = Object.fromEntries(Object.entries(sampleRates).map(([currency, rate]) => [currency, { rate, date, source: "ECB" }]));
+      return Promise.resolve(new Response(JSON.stringify({ rates }), { status: 200, headers: { "Content-Type": "application/json" } }));
+    }
+    return originalFetch(input, init);
+  };
+})()` });
 const quantity = 'input[name="quantity-coffee-blossom-honey"]';
 const currencyTrigger = '[...document.querySelectorAll(\'button[aria-controls="store-currencies"]\')].find(e=>e.getClientRects().length)';
 const languageTrigger = 'button[aria-controls="store-languages"]';

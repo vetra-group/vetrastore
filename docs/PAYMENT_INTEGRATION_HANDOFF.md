@@ -43,8 +43,12 @@ before making it selectable. No Merchant iPay endpoint or signature rule is
 assumed here.
 
 The existing Stripe adapter is the staged fallback. Its test credentials and
-registered webhook endpoint must be provided in the intended staging
-environment. Do not put secrets in the repository or browser.
+registered test webhook endpoint must be provided in the intended staging
+environment. Local, Vercel Preview and Development require `sk_test_`; Vercel
+Production requires `sk_live_` and its matching live webhook secret. A
+wrong-mode key disables Stripe, and signed events plus retrieved Sessions must
+report the expected mode before a payment can settle. Do not put secrets in the
+repository or browser.
 
 ## Launch verification
 

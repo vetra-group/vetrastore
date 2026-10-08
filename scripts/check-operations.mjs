@@ -227,7 +227,7 @@ try {
     async withTransaction(fn, opts) { options.push(opts); this.state = structuredClone(durable); const result = await fn(); if (duplicateOnce) { duplicateOnce = false; throw Object.assign(new Error("Synthetic concurrent upsert"), { code: 11000 }); } durable = this.state; return result; },
     async endSession() { ended++; },
   }; } };
-  Object.assign(process.env, { CMS_STORAGE: "mongodb", MONGODB_URI: "mongodb://synthetic.invalid/no-network", CLOUDINARY_CLOUD_NAME: "synthetic", CLOUDINARY_API_KEY: "synthetic", CLOUDINARY_API_SECRET: "synthetic" });
+  Object.assign(process.env, { CMS_STORAGE: "mongodb", MONGODB_URI: "mongodb://synthetic.invalid/no-network", MONGODB_DB: "vetra_operations_test", CLOUDINARY_CLOUD_NAME: "synthetic", CLOUDINARY_API_KEY: "synthetic", CLOUDINARY_API_SECRET: "synthetic" });
   dbModule.getDb = async () => fakeDb; dbModule.getMongoClient = async () => fakeClient;
   try {
     const command = { action: "create", key: key(), input };

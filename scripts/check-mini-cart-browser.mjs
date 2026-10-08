@@ -15,9 +15,9 @@ const pass = (message) => { checks.push(message); console.log(`PASS: ${message}`
 const drawer = "document.querySelector('#mini-cart')";
 const trigger = "document.querySelector('[data-cart-trigger]')";
 const locales = {
-  en: { prefix: "", shipping: "Free worldwide shipping", confirm: "Confirm order", close: "Close bag" },
-  ar: { prefix: "/ar", shipping: "شحن مجاني إلى جميع أنحاء العالم", confirm: "تأكيد الطلب", close: "إغلاق السلة" },
-  th: { prefix: "/th", shipping: "จัดส่งฟรีทั่วโลก", confirm: "ยืนยันคำสั่งซื้อ", close: "ปิดตะกร้า" },
+  en: { prefix: "", shipping: "Worldwide shipping included · charged in THB", confirm: "Confirm order", close: "Close bag" },
+  ar: { prefix: "/ar", shipping: "الشحن إلى جميع أنحاء العالم مشمول · يُحصّل المبلغ بالبات التايلاندي", confirm: "تأكيد الطلب", close: "إغلاق السلة" },
+  th: { prefix: "/th", shipping: "จัดส่งฟรีในประเทศไทย", confirm: "ยืนยันคำสั่งซื้อ", close: "ปิดตะกร้า" },
 };
 
 async function open() {

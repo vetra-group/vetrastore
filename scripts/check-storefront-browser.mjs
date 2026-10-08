@@ -80,7 +80,8 @@ async function checkCarousel(locale, prefix) {
   await key('Enter');
   await browser.wait(`${qs(rotation)}.dataset.rotation === 'playing'`);
   await browser.wait(`${currentSlide} !== ${JSON.stringify(stoppedSlide)}`, 10000);
-  await browser.evaluate('document.querySelector("[role=group][aria-hidden=false] a").focus()');
+  await browser.wait(`document.querySelector('[aria-roledescription] [aria-busy]')?.getAttribute('aria-busy') === 'false'`);
+  assert.equal(await browser.evaluate('(() => { const link = document.querySelector("[role=group][aria-hidden=false] a"); link.focus(); return document.activeElement === link; })()'), true, 'The active slide link receives focus.');
   await browser.wait(`${qs(rotation)}.dataset.rotation === 'paused'`);
   await browser.evaluate('document.querySelector("button[aria-controls=store-search]").focus()');
   stoppedSlide = await browser.evaluate(currentSlide);
@@ -142,17 +143,17 @@ try {
     const add = '#honey-purchase-controls > button:not([aria-pressed])';
     await browser.wait(`${qs(add)}?.disabled === false`);
     await browser.click(add);
-    await browser.wait(`${qs('#mini-cart')}?.open && ${qs('#mini-cart [role="group"] > span')}?.textContent === '1'`);
+    await browser.wait(`${qs('#mini-cart')}?.open && ${qs('#mini-cart select')}?.value === '1'`);
     const subtotal = await browser.evaluate(`${qs('#mini-cart dd')}.textContent`);
-    await browser.click(`#mini-cart button[aria-label=${JSON.stringify(t.increase)}]`);
-    await browser.wait(`${qs('#mini-cart [role="group"] > span')}?.textContent === '2'`);
+    await browser.evaluate(`(() => { const select = ${qs('#mini-cart select')}; select.value = '2'; select.dispatchEvent(new Event('change', { bubbles: true })); })()`);
+    await browser.wait(`${qs('#mini-cart select')}?.value === '2'`);
     assert.notEqual(await browser.evaluate(`${qs('#mini-cart dd')}.textContent`), subtotal);
     await layout(`${locale} mini-cart at ${t.width}px`);
     await browser.screenshot(path.join(output, `mini-cart-${locale}.png`));
     await browser.click(`#mini-cart button[aria-label^=${JSON.stringify(`${t.remove}:`)}]`);
     await browser.wait(`${qs('#mini-cart')}.textContent.includes(${JSON.stringify(t.empty)})`);
     await browser.clickText(t.undo, qs('#mini-cart'));
-    await browser.wait(`${qs('#mini-cart [role="group"] > span')}?.textContent === '2'`);
+    await browser.wait(`${qs('#mini-cart select')}?.value === '2'`);
     await browser.command('Input.dispatchKeyEvent', { type:'keyDown', key:'Tab', code:'Tab', windowsVirtualKeyCode:9, modifiers:8 });
     await browser.command('Input.dispatchKeyEvent', { type:'keyUp', key:'Tab', code:'Tab', modifiers:8 });
     assert.equal(await browser.evaluate('Boolean(document.activeElement.closest("#mini-cart"))'), true, 'Reverse Tab after Undo stays inside the drawer');
@@ -165,7 +166,7 @@ try {
     assert.equal(await browser.evaluate(`${qs('#mini-cart')}.open`), false, "Reload must not reopen the bag");
     await browser.wait(`${qs('[data-cart-trigger]')}?.getAttribute('aria-label').includes('(2)')`);
     await browser.click("[data-cart-trigger]");
-    await browser.wait(`${qs('#mini-cart')}?.open && ${qs('#mini-cart [role="group"] > span')}?.textContent === '2'`);
+    await browser.wait(`${qs('#mini-cart')}?.open && ${qs('#mini-cart select')}?.value === '2'`);
     pass(`${locale}: bag quantities persist across reload without reopening the drawer`);
     // Leave a clean bag for the next locale using the real customer controls.
     await browser.click(`#mini-cart button[aria-label^=${JSON.stringify(`${t.remove}:`)}]`);

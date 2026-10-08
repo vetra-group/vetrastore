@@ -349,9 +349,12 @@ async function main() {
     const originalFetch = globalThis.fetch;
     const originalStripeKey = process.env.STRIPE_SECRET_KEY;
     const originalWebhookSecret = process.env.STRIPE_WEBHOOK_SECRET;
+    const originalVercelEnv = process.env.VERCEL_ENV;
+    process.env.VERCEL_ENV = "preview";
     process.env.STRIPE_SECRET_KEY = "sk_test_offline-only";
     process.env.STRIPE_WEBHOOK_SECRET = "whsec_offline-only";
     const stripeRequests = [];
+    let responseLiveMode = false;
     globalThis.fetch = async (url, init) => {
       stripeRequests.push({ url, method: init.method, idempotencyKey: init.headers["Idempotency-Key"], body: String(init.body) });
       if (stripeRequests.length === 1) throw new TypeError("Simulated lost provider response");
@@ -360,6 +363,7 @@ async function main() {
         url: `https://checkout.stripe.com/test/${stripeInput.attemptId}`,
         amount_total: stripeInput.amountMinor,
         currency: "thb",
+        livemode: responseLiveMode,
         metadata: { app: "vetra-store", orderId: stripeInput.orderId, attemptId: stripeInput.attemptId, reference: stripeInput.reference },
       });
     };
@@ -370,10 +374,13 @@ async function main() {
       assert.equal(resumed.providerPaymentId, `cs_test_${stripeInput.attemptId}`);
       assert.equal(stripeRequests.length, 2);
       assert.deepEqual(stripeRequests[1], stripeRequests[0], "The Stripe HTTP retry preserves the complete form and idempotency key");
+      responseLiveMode = true;
+      await assert.rejects(realStripe.createPayment(stripeInput), (error) => error.kind === "uncertain", "A wrong-mode Session is never returned as payable");
     } finally {
       globalThis.fetch = originalFetch;
       if (originalStripeKey === undefined) delete process.env.STRIPE_SECRET_KEY; else process.env.STRIPE_SECRET_KEY = originalStripeKey;
       if (originalWebhookSecret === undefined) delete process.env.STRIPE_WEBHOOK_SECRET; else process.env.STRIPE_WEBHOOK_SECRET = originalWebhookSecret;
+      if (originalVercelEnv === undefined) delete process.env.VERCEL_ENV; else process.env.VERCEL_ENV = originalVercelEnv;
     }
 
     const lateId = randomUUID();

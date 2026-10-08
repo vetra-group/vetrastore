@@ -25,7 +25,7 @@ async function ready() {
 }
 async function header(shopActive) {
   assert.equal(await browser.evaluate("document.querySelectorAll('header a[aria-label=\"VETRA STORE\"]').length"), 1);
-  const active = await browser.evaluate("Array.from(document.querySelectorAll('header nav:not(#store-languages) a')).filter(a=>/\\/products$/.test(new URL(a.href).pathname)).map(a=>a.getAttribute('aria-current'))");
+  const active = await browser.evaluate("Array.from(document.querySelectorAll('header > div > nav a, #mobile-navigation nav a')).filter(a=>/\\/products$/.test(new URL(a.href).pathname)).map(a=>a.getAttribute('aria-current'))");
   assert.equal(active.length, 2, "Desktop and mobile retain the shared Shop link");
   const onCatalog = await browser.evaluate("/\\/products$/.test(location.pathname)");
   assert.ok(active.every(value => value === (shopActive ? onCatalog ? "page" : "location" : null)));

@@ -20,14 +20,17 @@ const legacy = { ...structuredClone(honey), id: "legacy-product", slug: "legacy-
 const before = structuredClone(legacy), fullRegistry = [honey, legacy];
 const stored = { items: [{ id: legacy.id, quantity: 2 }], wishlist: [legacy.id] };
 for (const locale of ["en", "ar", "th"]) {
-  const details = savedProductDetails(legacy, locale), cart = parseStoredCart(structuredClone(stored), fullRegistry);
-  assert.deepEqual(cart, stored, "Language changes preserve saved IDs and quantities when using the full published registry");
+  const market = locale === "th" ? "TH" : "INTL";
+  const details = savedProductDetails(legacy, locale), cart = parseStoredCart(structuredClone(stored), fullRegistry, market, locale);
+  assert.deepEqual({ items: cart.items, wishlist: cart.wishlist }, stored, "Language changes preserve saved IDs and quantities when using the full published registry");
+  assert.equal(cart.market, market, "The selected language determines the initial delivery market");
+  assert.equal(cart.displayCurrency, locale === "th" ? "THB" : "USD", "The selected language determines the initial display currency");
   assert.equal(cart.items.reduce((total, item) => total + fullRegistry.find((product) => product.id === item.id).price * item.quantity, 0), 246);
   assert.equal(details.locale, locale === "ar" ? "en" : locale);
   assert.equal(details.fallback, locale === "ar");
   assert.equal(details.href, locale === "th" ? "/th/products/legacy-product" : "/products/legacy-product");
   assert.ok(details.name && details.alt && details.ready);
-  const changed = parseStoredCart({ ...cart, items: addCartItem(cart.items, honey.id, 1, 20) }, fullRegistry);
+  const changed = parseStoredCart({ ...cart, items: addCartItem(cart.items, honey.id, 1, 20) }, fullRegistry, market, locale);
   assert.ok(changed.items.some((item) => item.id === legacy.id && item.quantity === 2), "A later cart update must not silently discard the untranslated item");
   assert.deepEqual(changed.wishlist, stored.wishlist);
 }

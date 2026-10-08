@@ -83,6 +83,7 @@ const APP_METADATA = "vetra-store";
 type StripeSession = {
   id?: unknown;
   url?: unknown;
+  livemode?: unknown;
   amount_total?: unknown;
   currency?: unknown;
   status?: unknown;
@@ -94,12 +95,24 @@ type StripeSession = {
 type StripeEvent = {
   id?: unknown;
   type?: unknown;
+  livemode?: unknown;
   data?: { object?: { id?: unknown } };
 };
 
+/** Vercel production must never present a test checkout as a real sale.
+ * Preview/development and local rehearsals cannot use a live Stripe key. */
+function expectedStripeLiveMode(): boolean | null {
+  const environment = process.env.VERCEL_ENV;
+  if (environment === "production") return true;
+  if (environment === "preview" || environment === "development") return false;
+  if (environment || process.env.VERCEL) return null;
+  return false;
+}
+
 function stripeKey(): string | null {
   const value = process.env.STRIPE_SECRET_KEY?.trim();
-  return value && /^sk_(?:test|live)_/.test(value) ? value : null;
+  const live = expectedStripeLiveMode();
+  return live !== null && value?.startsWith(live ? "sk_live_" : "sk_test_") ? value : null;
 }
 
 function webhookSecret(): string | null {
@@ -287,13 +300,14 @@ const stripeProvider: PaymentProvider = {
     } catch {
       // The Session may exist even when Stripe returned a malformed URL.
     }
-    if (typeof session.id !== "string" || !session.id.startsWith("cs_") || !checkoutUrl || checkoutUrl.protocol !== "https:" || checkoutUrl.hostname !== "checkout.stripe.com" || checkoutUrl.username || checkoutUrl.password || session.currency !== "thb" || session.amount_total !== input.amountMinor || metadata?.app !== APP_METADATA || metadata.orderId !== input.orderId || metadata.attemptId !== input.attemptId || metadata.reference !== input.reference) {
+    if (typeof session.id !== "string" || !session.id.startsWith("cs_") || !checkoutUrl || checkoutUrl.protocol !== "https:" || checkoutUrl.hostname !== "checkout.stripe.com" || checkoutUrl.username || checkoutUrl.password || session.livemode !== expectedStripeLiveMode() || session.currency !== "thb" || session.amount_total !== input.amountMinor || metadata?.app !== APP_METADATA || metadata.orderId !== input.orderId || metadata.attemptId !== input.attemptId || metadata.reference !== input.reference) {
       throw new PaymentProviderError("uncertain", "Stripe created a Session with unexpected details", "stripe");
     }
     return { providerPaymentId: session.id, redirectUrl: checkoutUrl.toString() };
   },
 
   async verify({ rawBody, signature }) {
+    if (!this.available) throw new PaymentProviderError("unavailable", "Stripe is not configured for this deployment", "stripe");
     const secret = webhookSecret();
     if (!secret) throw new PaymentProviderError("unavailable", "Stripe webhook is not configured", "stripe");
     verifyStripeSignature(rawBody, signature, secret);
@@ -306,6 +320,7 @@ const stripeProvider: PaymentProvider = {
     if (typeof event.id !== "string" || !event.id.startsWith("evt_") || typeof event.type !== "string") {
       throw new PaymentProviderError("invalid-webhook", "Invalid Stripe webhook event", "stripe");
     }
+    if (event.livemode !== expectedStripeLiveMode()) throw new PaymentProviderError("invalid-webhook", "Stripe webhook mode does not match this deployment", "stripe");
     const relevant = ["checkout.session.completed", "checkout.session.async_payment_succeeded", "checkout.session.async_payment_failed", "checkout.session.expired"];
     if (!relevant.includes(event.type)) return null;
     const sessionId = event.data?.object?.id;
@@ -313,7 +328,7 @@ const stripeProvider: PaymentProvider = {
       throw new PaymentProviderError("invalid-webhook", "Invalid Stripe Session reference", "stripe");
     }
     const session = await stripeRequest(`/checkout/sessions/${encodeURIComponent(sessionId)}`, { method: "GET" }, "retrieve");
-    if (session.id !== sessionId) throw new PaymentProviderError("uncertain", "Stripe Session reference mismatch", "stripe");
+    if (session.id !== sessionId || session.livemode !== event.livemode) throw new PaymentProviderError("uncertain", "Stripe Session reference or mode mismatch", "stripe");
     const metadata = sessionMetadata(session);
     if (metadata?.app !== APP_METADATA) return null;
     const orderId = metadata.orderId;
@@ -344,7 +359,7 @@ const stripeProvider: PaymentProvider = {
     }
     const session = await stripeRequest(`/checkout/sessions/${encodeURIComponent(input.providerPaymentId)}`, { method: "GET" }, "retrieve");
     const metadata = sessionMetadata(session);
-    if (session.id !== input.providerPaymentId || metadata?.app !== APP_METADATA || metadata.orderId !== input.orderId || metadata.attemptId !== input.attemptId || metadata.reference !== input.reference || session.client_reference_id !== input.orderId || session.currency !== "thb" || session.amount_total !== input.amountMinor) {
+    if (session.id !== input.providerPaymentId || session.livemode !== expectedStripeLiveMode() || metadata?.app !== APP_METADATA || metadata.orderId !== input.orderId || metadata.attemptId !== input.attemptId || metadata.reference !== input.reference || session.client_reference_id !== input.orderId || session.currency !== "thb" || session.amount_total !== input.amountMinor) {
       throw new PaymentProviderError("uncertain", "Stripe Session does not match the saved payment", "stripe");
     }
     const status: PaymentEventStatus = session.status === "complete" && session.payment_status === "paid"

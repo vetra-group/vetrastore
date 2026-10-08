@@ -44,6 +44,10 @@ jobs:
       - run: node scripts/check-cms-live.mjs --release --expected-site-url=http://127.0.0.1:3310
       - run: npm run test:browser
       - run: npm run test:storefront
+      - run: npm run test:identity
+      - run: npm run test:loading
+      - run: npm run test:minicart
+      - run: npm run test:pricing
       - uses: actions/upload-artifact@v4
         if: always()
         with:
