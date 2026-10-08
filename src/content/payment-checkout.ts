@@ -114,21 +114,21 @@ export const paymentCheckoutCopy: Localized<typeof en> = {
 };
 
 const publicEn = {
-  deliveryNote: "Online payment in THB is currently available through Thai checkout for delivery in Thailand. For other destinations, send an enquiry. Adding to your bag does not place an order.",
-  summaryNote: "Prices shown in USD are for reference. Online payment is charged in THB through Thai checkout for delivery in Thailand.",
-  honeyFaq: "Add honey to your bag to review your selection. For delivery in Thailand, use Thai checkout with a 5-digit Thai postcode to pay in THB. For other destinations or wholesale, contact our team. Adding to the bag alone does not place an order.",
+  deliveryNote: "Shipping is included in each bundle price. Online THB payment is for delivery in Thailand; for other destinations, send an enquiry. Adding to your bag does not place an order.",
+  summaryNote: "The exact order price is in THB. Currency conversions are estimates; payment for Thailand delivery is charged in THB.",
+  honeyFaq: "Choose your delivery market, then add a listed bundle to your bag. Thailand delivery can use online THB payment when available; for other destinations or wholesale, send an enquiry. Adding to the bag alone does not place an order.",
 };
 
 export const publicPaymentCopy: Localized<typeof publicEn> = {
   en: publicEn,
   ar: {
-    deliveryNote: "الدفع عبر الإنترنت بالبات التايلاندي متاح حاليًا عبر صفحة إتمام الطلب باللغة التايلاندية للتوصيل داخل تايلاند. للوجهات الأخرى، أرسل استفسارًا. إضافة المنتجات إلى السلة لا تُعدّ طلب شراء.",
-    summaryNote: "الأسعار بالدولار الأمريكي للعرض فقط. تُحصّل المدفوعات عبر الإنترنت بالبات التايلاندي عند إتمام الطلب باللغة التايلاندية للتوصيل داخل تايلاند.",
-    honeyFaq: "أضف العسل إلى سلتك لمراجعة اختياراتك. للتوصيل داخل تايلاند، استخدم صفحة إتمام الطلب باللغة التايلاندية مع رمز بريدي تايلاندي من 5 أرقام للدفع بالبات. للوجهات الأخرى أو البيع بالجملة، تواصل مع فريقنا. إضافة المنتج إلى السلة وحدها لا تُنشئ طلبًا.",
+    deliveryNote: "الشحن مشمول في سعر كل باقة. الدفع الإلكتروني بالبات التايلاندي مخصص للتوصيل داخل تايلاند؛ أرسل استفسارًا للوجهات الأخرى. إضافة المنتجات إلى السلة لا تُعدّ طلب شراء.",
+    summaryNote: "سعر الطلب النهائي بالبات التايلاندي. تحويلات العملات تقديرية، وتُحصّل دفعات التوصيل داخل تايلاند بالبات.",
+    honeyFaq: "اختر وجهة التوصيل، ثم أضف إحدى الباقات المحددة إلى السلة. يمكن الدفع بالبات للتوصيل داخل تايلاند عند إتاحة الدفع، وأرسل استفسارًا للوجهات الأخرى أو البيع بالجملة.",
   },
   th: {
-    deliveryNote: "จัดส่งฟรีในประเทศไทย กรอกรหัสไปรษณีย์ไทย 5 หลักในขั้นตอนชำระเงินเพื่อชำระเป็นเงินบาท การเพิ่มสินค้าในตะกร้ายังไม่ถือเป็นการสั่งซื้อ",
-    summaryNote: "จัดส่งฟรีในประเทศไทย ระบบจะตรวจสอบยอดเงินบาทอีกครั้งก่อนเปิดหน้าชำระเงิน",
-    honeyFaq: "เพิ่มน้ำผึ้งลงตะกร้าและตรวจสอบรายการ จากนั้นกรอกรหัสไปรษณีย์ไทย 5 หลักเพื่อชำระเป็นเงินบาทพร้อมจัดส่งฟรีในประเทศไทย หากต้องการซื้อส่งหรือจัดส่งไปต่างประเทศ กรุณาติดต่อทีมงาน การเพิ่มลงตะกร้ายังไม่ถือเป็นการสั่งซื้อ",
+    deliveryNote: "ราคาชุดสินค้ารวมค่าจัดส่งแล้ว การชำระออนไลน์เป็นเงินบาทสำหรับที่อยู่ในไทย ส่วนที่อยู่นอกไทยให้ส่งคำสอบถาม การเพิ่มสินค้าในตะกร้ายังไม่ถือเป็นการสั่งซื้อ",
+    summaryNote: "ราคาสั่งซื้อเป็นเงินบาท การแปลงสกุลเงินเป็นเพียงการประมาณ และการชำระเงินสำหรับที่อยู่ในไทยเป็นเงินบาท",
+    honeyFaq: "เลือกพื้นที่จัดส่งและชุดสินค้าที่ต้องการ สำหรับที่อยู่ในไทยสามารถชำระเป็นเงินบาทเมื่อเปิดใช้การชำระออนไลน์ ที่อยู่นอกไทยหรือการซื้อส่งให้ส่งคำสอบถาม",
   },
 };

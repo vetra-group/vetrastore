@@ -23,7 +23,7 @@ const { quickSearch } = load("src/lib/search-suggestions.ts");
 const { blogListing, blogListingPath, BLOG_PAGE_SIZE } = load("src/lib/blog.ts");
 const { listingQuery, requestedPage, paginate, pageLinks, pageNeedsRedirect } = load("src/lib/listing.ts");
 const { localizedPath } = load("src/lib/i18n.ts");
-const { quoteProduct, currencyForLocale } = load("src/lib/catalog.ts");
+const { quoteProduct } = load("src/lib/catalog.ts");
 const { createProductCaseStudy } = load("src/content/case-study-template.ts");
 const { validateCmsContent } = load("src/lib/cms/validation.ts");
 let checks = 0;
@@ -195,10 +195,10 @@ pass("quick suggestions cap visible results at six while retaining real totals a
 for (const locale of ["en", "ar", "th"]) {
   const result = quickSearch(content, locale, content.products[0].name[locale]);
   const honey = result.results.find(entry => entry.key === `product-${content.products[0].id}`);
-  const quote = quoteProduct(content.products[0], 1, locale);
+  const quote = quoteProduct(content.products[0], 1, "TH");
   assert.equal(honey.href, localizedPath(locale, "/coffee-blossom-honey"));
   assert.equal(honey.price, quote.total);
-  assert.equal(honey.currency, currencyForLocale(locale));
+  assert.equal(honey.currency, "THB");
   assert.equal(honey.title, `${content.products[0].brand} ${content.products[0].name[locale]}`);
 }
 pass("quick product suggestions preserve trilingual names, current prices and the dedicated honey route");

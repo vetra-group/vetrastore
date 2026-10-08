@@ -1,4 +1,4 @@
-import { HONEY_ID } from "@/lib/catalog";
+import { HONEY_ID, MAX_QUANTITY, honey } from "@/lib/catalog";
 import { defaultCopy, defaultContent } from "./defaults";
 import { upgradeLocalized } from "./localization";
 import type { CmsArticle, CmsBusinessKey, CmsContent, CmsMedia, CmsProduct, CmsSettings, CmsSlide, CmsState, CmsStatus, CmsTrashEntry } from "./types";
@@ -55,32 +55,25 @@ function price(value: unknown, label: string, allowZero = false): number {
   return value;
 }
 function productPricing(value: unknown) {
-  const record = object(value, "product pricing", ["THB", "USD"]);
-  const tiers = (currency: "THB" | "USD") => {
-    const rows = list(record[currency], `${currency} price tiers`, 96);
+  const record = object(value, "product pricing", ["THB", "USD", "internationalTHB"]);
+  const tiers = (currency: "THB" | "USD" | "internationalTHB") => {
+    const rows = list(record[currency], `${currency} price tiers`, MAX_QUANTITY);
     if (!rows.length) throw new CmsError(`Add a ${currency} price for one bottle.`);
     let previous = 0;
     const parsed = rows.map((value) => {
       const row = object(value, `${currency} price tier`, ["quantity", "total"]);
-      const quantity = integer(row.quantity, `${currency} bottle quantity`, 1, 96);
+      const quantity = integer(row.quantity, `${currency} bottle quantity`, 1, MAX_QUANTITY);
       if (quantity <= previous) throw new CmsError(`${currency} bottle quantities must increase without duplicates.`);
       previous = quantity;
       return { quantity, total: price(row.total, `${currency} total price`) };
     });
-    // Storefront quotes choose the cheapest combination. Reject a listed pack
-    // whose total would be undercut by smaller packs on the same product.
-    const cheapest = new Array<number>(97).fill(Number.POSITIVE_INFINITY);
-    cheapest[0] = 0;
-    for (const tier of parsed) {
-      const cents = Math.round(tier.total * 100);
-      if (cheapest[tier.quantity] < cents) throw new CmsError(`${currency} price for ${tier.quantity} units must not exceed a combination of smaller packs.`);
-      for (let quantity = tier.quantity; quantity <= 96; quantity++) cheapest[quantity] = Math.min(cheapest[quantity], cheapest[quantity - tier.quantity] + cents);
-    }
     return parsed;
   };
-  const THB = tiers("THB"), USD = tiers("USD");
-  if (THB[0].quantity !== 1 || USD[0].quantity !== 1) throw new CmsError("Add a one-bottle price in both THB and USD.");
-  return { THB, USD };
+  const THB = tiers("THB");
+  const internationalTHB = record.internationalTHB === undefined ? undefined : tiers("internationalTHB");
+  const USD = record.USD === undefined ? undefined : tiers("USD");
+  if (THB[0].quantity !== 1 || internationalTHB && internationalTHB[0].quantity !== 1) throw new CmsError("Add a one-bottle price for each market.");
+  return { THB, ...(internationalTHB ? { internationalTHB } : {}), ...(USD ? { USD } : {}) };
 }
 function unique(values: string[], label: string) {
   if (new Set(values).size !== values.length) throw new CmsError(`${label} must be unique.`);
@@ -129,6 +122,18 @@ function product(value: unknown): CmsProduct {
   if (value && typeof value === "object" && !Array.isArray(value)) {
     const legacy = value as Record<string, unknown>;
     if (legacy.id === HONEY_ID && legacy.price === 480 && legacy.pricing === undefined && seed?.pricing && seed.price === 380) value = { ...legacy, price: seed.price, pricing: structuredClone(seed.pricing) };
+    else if (legacy.id === HONEY_ID && legacy.pricing && typeof legacy.pricing === "object" && !Array.isArray(legacy.pricing)) {
+      const old = legacy.pricing as Record<string, unknown>;
+      const oldThai = [{ quantity: 1, total: 380 }, { quantity: 2, total: 700 }, { quantity: 6, total: 1980 }, { quantity: 12, total: 3800 }, { quantity: 24, total: 7200 }, { quantity: 48, total: 13000 }, { quantity: 96, total: 24000 }];
+      const oldForeign = [{ quantity: 1, total: 54.29 }, { quantity: 2, total: 100 }, { quantity: 6, total: 282.86 }, { quantity: 12, total: 542.86 }, { quantity: 24, total: 1028.57 }, { quantity: 48, total: 1857.14 }, { quantity: 96, total: 3428.57 }];
+      if (JSON.stringify(old.THB) === JSON.stringify(oldThai) && JSON.stringify(old.USD) === JSON.stringify(oldForeign) && old.internationalTHB === undefined) {
+        value = { ...legacy, pricing: structuredClone(honey.pricing) };
+      } else if (Array.isArray(old.THB) && !old.THB.some((tier) => tier && typeof tier === "object" && "quantity" in tier && tier.quantity === 4)) {
+        // Add the owner's new Thai bundle to saved honey pricing without
+        // changing any edited tiers or the international price schedule.
+        value = { ...legacy, pricing: { ...old, THB: [...old.THB, { quantity: 4, total: 1360 }].sort((a, b) => a?.quantity - b?.quantity) } };
+      }
+    }
   }
   const item = object(value, "product", ["id", "slug", "brand", "category", "price", "pricing", "weight", "image", "searchTerms", "name", "description", "card", "status", "stock", "featured", "previousSlugs", "gallery"]);
   const id = key(item.id, "product ID", true), slug = key(item.slug, "product slug", true);

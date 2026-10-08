@@ -2,13 +2,14 @@ import { createHash, createHmac, timingSafeEqual } from "node:crypto";
 import type { Db } from "mongodb";
 import { MAX_QUANTITY, type CatalogProduct } from "@/lib/catalog";
 import type { Locale } from "@/lib/i18n";
+import { marketForShippingCountry } from "@/lib/shipping-market";
 import type { PaymentOrderQuote } from "./order-pricing";
 import type { PaymentProviderId, VerifiedPaymentEvent } from "./providers";
 
 export const PAYMENT_INITIATION_MS = 30 * 60 * 1000;
 export const paymentIdPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 
-export type PaymentCustomer = Record<"name" | "email" | "phone" | "address" | "district" | "province" | "postcode" | "notes", string>;
+export type PaymentCustomer = Record<"name" | "email" | "phone" | "address" | "district" | "province" | "country" | "postcode" | "notes", string>;
 export type PaymentOrderStatus = "pending" | "paid";
 export type PaymentAttemptStatus = "creating" | "ready" | "uncertain" | "failed" | "paid";
 
@@ -103,12 +104,12 @@ export function paymentsConfigured(): boolean {
   catch { return false; }
 }
 
-const limits = { name: 100, email: 254, phone: 30, address: 500, district: 100, province: 100, postcode: 5, notes: 1000 } as const;
+const limits = { name: 100, email: 254, phone: 30, address: 500, district: 100, province: 100, country: 100, postcode: 5, notes: 1000 } as const;
 
-/** Currently only a Thai delivery destination has a verified, zero-cost
- * shipping quote. Other destinations stay on the enquiry path. */
+/** Online payment currently accepts Thai delivery only. International
+ * deliveries use THB-priced enquiries with shipping included. */
 export function parsePaymentOrderInput(data: Record<string, unknown>) {
-  if (data.locale !== "th") throw new PaymentOrderError("SHIPPING_UNAVAILABLE", 409, "Online payment is available only for delivery within Thailand. Please send an enquiry for other destinations.");
+  if (data.market !== "TH" || !["th", "en", "ar"].includes(String(data.locale))) throw new PaymentOrderError("SHIPPING_UNAVAILABLE", 409, "Online payment is available only for delivery within Thailand. Please send an enquiry for other destinations.");
   if (data.consent !== true || !data.customer || typeof data.customer !== "object" || Array.isArray(data.customer)) {
     throw new PaymentOrderError("INVALID_CUSTOMER", 400, "Please check your details.");
   }
@@ -121,7 +122,7 @@ export function parsePaymentOrderInput(data: Record<string, unknown>) {
     }
     customer[field as keyof PaymentCustomer] = value.trim();
   }
-  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email) || !/^[+()\d\s.-]{7,30}$/.test(customer.phone) || !/^\d{5}$/.test(customer.postcode)) {
+  if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(customer.email) || !/^[+()\d\s.-]{7,30}$/.test(customer.phone) || !/^\d{5}$/.test(customer.postcode) || marketForShippingCountry(customer.country) !== "TH") {
     throw new PaymentOrderError("INVALID_CUSTOMER", 400, "Please check your contact details.");
   }
   if (!Array.isArray(data.items) || !data.items.length || data.items.length > 100) {
@@ -141,12 +142,13 @@ export function parsePaymentOrderInput(data: Record<string, unknown>) {
   if (!Number.isSafeInteger(data.expectedTotalMinor) || Number(data.expectedTotalMinor) < 1) {
     throw new PaymentOrderError("INVALID_TOTAL", 400, "Please review the displayed total.");
   }
-  return { locale: "th" as const, customer, items, expectedTotalMinor: data.expectedTotalMinor as number };
+  return { locale: data.locale as Locale, market: "TH" as const, customer, items, expectedTotalMinor: data.expectedTotalMinor as number };
 }
 
 export function paymentOrderFingerprint(input: ReturnType<typeof parsePaymentOrderInput>): string {
   return createHash("sha256").update(JSON.stringify({
     locale: input.locale,
+    market: input.market,
     customer: input.customer,
     items: [...input.items].sort((a, b) => a.id.localeCompare(b.id)),
     expectedTotalMinor: input.expectedTotalMinor,

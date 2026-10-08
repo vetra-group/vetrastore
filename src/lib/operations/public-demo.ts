@@ -7,24 +7,27 @@ import type { CatalogProduct } from "../catalog";
 import { operationsRepository } from "./repository";
 import type { OperationsRepository, OperationsRequest } from "./types";
 import { requestNotices } from "./service";
+import { marketForShippingCountry } from "../shipping-market";
 
 const uuid = /^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i;
 function validate(body: Record<string, unknown>) {
   if (Object.keys(body).some((key) => !["submissionId", "input", "consent", "website"].includes(key)) || typeof body.submissionId !== "string" || !uuid.test(body.submissionId) || body.consent !== true || body.website || !body.input || typeof body.input !== "object" || Array.isArray(body.input)) throw new CmsError("Check the enquiry details.");
   let input = body.input as DemoInput;
-  if (Object.keys(input).some((key) => !["kind", "locale", "name", "email", "phone", "message", "customer", "items", "currency", "payment", "wholesale"].includes(key)) || !["contact", "wholesale", "order"].includes(input.kind) || input.payment !== undefined && input.payment !== "enquiry") throw new CmsError("Only nonbinding test enquiries are accepted here.");
+  if (Object.keys(input).some((key) => !["kind", "locale", "market", "name", "email", "phone", "message", "customer", "items", "currency", "payment", "wholesale"].includes(key)) || !["contact", "wholesale", "order"].includes(input.kind) || input.payment !== undefined && input.payment !== "enquiry") throw new CmsError("Only nonbinding test enquiries are accepted here.");
   if (input.kind === "order") {
-    const limits = { name: 100, email: 254, phone: 30, address: 500, district: 100, province: 100, postcode: input.locale === "th" ? 5 : 20, notes: 1000, ...(input.locale === "th" ? {} : { country: 100 }) };
+    const market = input.market ?? "TH";
+    if (market !== "TH" && market !== "INTL") throw new CmsError("Check your delivery market.");
+    const limits = { name: 100, email: 254, phone: 30, address: 500, district: 100, province: 100, postcode: market === "TH" ? 5 : 20, notes: 1000, country: 100 };
     if (!input.customer || Object.keys(input.customer).some((key) => !Object.hasOwn(limits, key))) throw new CmsError("Check your delivery details.");
     const customer: Record<string, string> = {};
-    const optionalFields = new Set(["notes", ...(input.locale === "th" ? [] : ["province", "postcode"])]);
+    const optionalFields = new Set(["notes", ...(market === "TH" ? [] : ["province", "postcode"])]);
     for (const [key, limit] of Object.entries(limits)) {
       const value = input.customer[key] === undefined && optionalFields.has(key) ? "" : input.customer[key];
       if (typeof value !== "string" || value.length > limit || !optionalFields.has(key) && !value.trim()) throw new CmsError("Check your delivery details.");
       customer[key] = value.trim();
     }
     input = { ...input, customer };
-    if (!/^[+()\d\s.-]{7,30}$/.test(customer.phone) || !(input.locale === "th" ? /^\d{5}$/.test(customer.postcode) : !customer.postcode || /^[\p{L}\p{N}][\p{L}\p{N} -]{1,18}[\p{L}\p{N}]$/u.test(customer.postcode)) || input.name !== customer.name || input.email !== customer.email || input.phone !== customer.phone) throw new CmsError("Check your contact details.");
+    if (!/^[+()\d\s.-]{7,30}$/.test(customer.phone) || !(market === "TH" ? /^\d{5}$/.test(customer.postcode) : !customer.postcode || /^[\p{L}\p{N}][\p{L}\p{N} -]{1,18}[\p{L}\p{N}]$/u.test(customer.postcode)) || marketForShippingCountry(customer.country) !== market || input.name !== customer.name || input.email !== customer.email || input.phone !== customer.phone) throw new CmsError("Check your contact details.");
   } else {
     if (typeof input.message !== "string" || input.message.trim().length < 10 || input.items !== undefined || input.payment !== undefined) throw new CmsError("Check your message.");
     if (input.customer && (Object.keys(input.customer).some((key) => key !== "subject") || !["general", "product", "wholesale", "order", "privacy"].includes(input.customer.subject))) throw new CmsError("Check your enquiry subject.");

@@ -85,7 +85,7 @@ function fakeDb() {
 }
 
 function testCustomer() {
-  return { name: "Test Buyer", email: "buyer@example.test", phone: "0812345678", address: "1 Test Road", district: "Bang Kapi", province: "Bangkok", postcode: "10240", notes: "" };
+  return { name: "Test Buyer", email: "buyer@example.test", phone: "0812345678", address: "1 Test Road", district: "Bang Kapi", province: "Bangkok", country: "Thailand", postcode: "10240", notes: "" };
 }
 
 async function main() {
@@ -95,7 +95,7 @@ async function main() {
   const providers = load("src/lib/payments/providers.ts");
   const { parsePaymentOrderInput, paymentOrderFingerprint, newPaymentOrder, applyVerifiedPaymentEvent, PaymentOrderError } = orders;
 
-  const source = { locale: "th", consent: true, customer: testCustomer(), items: [{ id: honey.id, quantity: 6, lineTotal: 1 }], expectedTotalMinor: 198000 };
+  const source = { locale: "th", market: "TH", consent: true, customer: testCustomer(), items: [{ id: honey.id, quantity: 6, lineTotal: 1 }], expectedTotalMinor: 198000 };
   const input = parsePaymentOrderInput(source);
   assert.deepEqual(input.items, [{ id: honey.id, quantity: 6 }], "Browser prices are discarded during validation");
   const quote = quotePaymentOrder(input.items, [honey], input.locale);
@@ -111,10 +111,12 @@ async function main() {
   assert.notEqual(saved.items[0].lineTotalMinor, source.items[0].lineTotal);
   const reordered = parsePaymentOrderInput({ ...source, items: [...source.items].reverse() });
   assert.equal(paymentOrderFingerprint(reordered), saved.fingerprint, "Equivalent bag order keeps an idempotent fingerprint");
+  assert.equal(parsePaymentOrderInput({ ...source, locale: "en" }).locale, "en", "A Thai delivery can use English checkout");
   assert.throws(() => newPaymentOrder(randomUUID(), saved.fingerprint, { ...input, expectedTotalMinor: 1 }, quote, [honey]), (error) => error.code === "INVALID_TOTAL");
   for (const invalid of [
-    { ...source, locale: "en" }, { ...source, consent: false },
+    { ...source, market: "INTL" }, { ...source, consent: false },
     { ...source, customer: { ...testCustomer(), postcode: "SW1A 1AA" } },
+    { ...source, customer: { ...testCustomer(), country: "United Kingdom" } },
     { ...source, items: [{ id: honey.id, quantity: 0 }] },
     { ...source, items: [{ id: honey.id, quantity: 6 }, { id: honey.id, quantity: 1 }] },
     { ...source, expectedTotalMinor: 1980.5 },
@@ -333,7 +335,7 @@ async function main() {
     assert.equal(routeResponse.amountMinor, 198000);
     assert.equal(routeDb.table("payment_orders").get(routeKey).items[0].lineTotalMinor, 198000, "The API snapshots published prices, never forged client prices");
     const routeCalls = calls.length;
-    published.products[0].pricing.THB[2].total = 1900;
+    published.products[0].pricing.THB.find((tier) => tier.quantity === 6).total = 1900;
     const routeRetry = await orderRoute.POST(submit(routeKey));
     assert.equal(routeRetry.status, 201, "An identical submission stays retryable after publication changes");
     assert.equal((await routeRetry.json()).checkoutUrl, routeResponse.checkoutUrl);

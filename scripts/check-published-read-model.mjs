@@ -101,24 +101,24 @@ try {
   const mongo = load("src/lib/db.ts"); mongo.getDb = async () => db;
   mongo.getMongoClient = async () => ({ startSession: () => ({ async withTransaction(task) { const before = structuredClone(collections); try { return await task(); } catch (error) { collections.clear(); for (const [key, entries] of before) collections.set(key, entries); throw error; } }, async endSession() {} }) });
   process.env.CMS_STORAGE = "mongodb";
-  const remoteState = defaults.defaultState(); setThaiBase(remoteState.published.products[0], 543); remoteState.published.products[0].pricing.USD[0].total = 70;
+  const remoteState = defaults.defaultState(); setThaiBase(remoteState.published.products[0], 543); remoteState.published.products[0].pricing.internationalTHB[0].total = 70;
   await storage.withRemoteCmsLock(() => storage.atomicStateAndPublished(statePath, JSON.stringify(remoteState), publishedContentProjection(remoteState.published)));
   stateReads = 0; projectionReads = 0; readModel.invalidatePublishedReadModel();
   assert.equal((await readModel.readPublishedContent()).products[0].price, 543);
-  assert.equal((await readModel.readPublishedContent()).products[0].pricing.USD[0].total, 70);
+  assert.equal((await readModel.readPublishedContent()).products[0].pricing.internationalTHB[0].total, 70);
   assert.equal(stateReads, 0); assert.equal(projectionReads, 1);
   const stateProbes = probesSeen.filter((entry) => entry.filter._id === "state.json");
   assert.ok(stateProbes.length > 0 && stateProbes.every((entry) => entry.options?.projection?.hash === 1 && entry.options.projection.size === 1 && !entry.options.projection.text));
   pass("durable public reads fetch only small state metadata and the published projection, excluding full CMS state text");
 
-  failProjection = true; remoteState.revision++; setThaiBase(remoteState.published.products[0], 876); remoteState.published.products[0].pricing.USD[0].total = 75;
+  failProjection = true; remoteState.revision++; setThaiBase(remoteState.published.products[0], 876); remoteState.published.products[0].pricing.internationalTHB[0].total = 75;
   await assert.rejects(storage.withRemoteCmsLock(() => storage.atomicStateAndPublished(statePath, JSON.stringify(remoteState), publishedContentProjection(remoteState.published))), /projection transaction failure/);
   failProjection = false;
   assert.equal((await readModel.readPublishedContent()).products[0].price, 543);
   assert.equal(JSON.parse(collections.get("cms_files").get("state.json").text).published.products[0].price, 543);
   await storage.withRemoteCmsLock(() => storage.atomicStateAndPublished(statePath, JSON.stringify(remoteState), publishedContentProjection(remoteState.published)));
   assert.equal((await readModel.readPublishedContent()).products[0].price, 876);
-  assert.equal((await readModel.readPublishedContent()).products[0].pricing.USD[0].total, 75);
+  assert.equal((await readModel.readPublishedContent()).products[0].pricing.internationalTHB[0].total, 75);
   pass("a failed Mongo projection write rolls back state and publication together; a successful retry updates both atomically");
 
   unavailable = true;

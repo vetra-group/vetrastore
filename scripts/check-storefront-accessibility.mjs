@@ -11,6 +11,16 @@ await mkdir(output, { recursive: true });
 const views = [], errors = [], checks = [];
 const routes = ['/', '/products', '/coffee-blossom-honey', '/contact', '/blog', '/about'];
 const pass = name => { checks.push(name); console.log(`PASS: ${name}`); };
+async function openSearch(browser) {
+  const mobile = await browser.evaluate('Boolean(document.querySelector(\'button[aria-controls="mobile-navigation"]\')?.getClientRects().length)');
+  if (mobile) {
+    await browser.click('button[aria-controls="mobile-navigation"]');
+    await browser.wait('document.querySelector("#mobile-navigation")?.open');
+    await browser.click('#mobile-navigation button[aria-controls="store-search"]');
+  } else await browser.click('header button[aria-controls="store-search"]');
+  await browser.wait('document.activeElement?.id === "quick-search-input"');
+  return mobile ? 'mobile-navigation' : 'store-search';
+}
 async function layout(browser, label) {
   await browser.wait("document.fonts.status==='loaded'");
   const view = await browser.evaluate(`({width:innerWidth,scroll:document.documentElement.scrollWidth,rem:parseFloat(getComputedStyle(document.documentElement).fontSize),dpr:devicePixelRatio})`);
@@ -37,14 +47,13 @@ try {
       for (const prefix of ['', '/ar', '/th']) {
       const locale = prefix.slice(1) || 'en';
       await browser.goto(origin + (prefix || '/'));
-      await browser.click('button[aria-controls="store-search"]');
-      await browser.wait('document.activeElement?.id === "quick-search-input"');
+      const returnControl = await openSearch(browser);
       await layout(browser, `${locale} search dialog ${zoom * 100}%`);
       for (let i = 0; i < 8; i++) { await browser.key('Tab'); assert.equal(await browser.evaluate('Boolean(document.activeElement.closest("#store-search"))'), true); }
       await browser.screenshot(path.join(output, `search-${locale}-zoom-${zoom * 100}.png`));
       await browser.key('Escape');
       await browser.wait('!document.querySelector("#store-search")?.open');
-      assert.equal(await browser.evaluate('document.activeElement.getAttribute("aria-controls")'), 'store-search');
+      assert.equal(await browser.evaluate('document.activeElement.getAttribute("aria-controls")'), returnControl);
       }
       pass(`Actual ${zoom * 100}% browser zoom: 18 localized routes plus English, Arabic and Thai search focus containment/return`);
     } finally { errors.push(...browser.errors); await browser.close(); }
@@ -62,15 +71,15 @@ try {
     }
     pass('Real 32px browser default font: 36 localized route/width views');
     await fonts.viewport(390, 650);
-    for (const [prefix, continueLabel] of [['', 'Continue shopping'], ['/ar', 'متابعة التسوق'], ['/th', 'เลือกซื้อสินค้าต่อ']]) {
+    for (const [prefix, closeLabel] of [['', 'Close bag'], ['/ar', 'إغلاق السلة'], ['/th', 'ปิดตะกร้า']]) {
     await fonts.goto(origin + prefix + '/coffee-blossom-honey');
     await fonts.wait('document.querySelector("#honey-purchase-controls > button:not([aria-pressed])")?.disabled === false');
     await fonts.click('#honey-purchase-controls > button:not([aria-pressed])');
     await fonts.wait('document.querySelector("#mini-cart")?.open');
-    await fonts.clickText(continueLabel, 'document.querySelector("#mini-cart")');
+    await fonts.click(`#mini-cart button[aria-label=${JSON.stringify(closeLabel)}]`);
     await fonts.wait('!document.querySelector("#mini-cart")?.open');
     }
-    pass('Mini-cart footer in all three languages remains reachable on a short viewport with a real 32px font preference');
+    pass('Mini-cart and close control in all three languages remain reachable on a short viewport with a real 32px font preference');
   } finally { errors.push(...fonts.errors); await fonts.close(); }
   const responsive = await launchBrowser(output);
   try {

@@ -46,6 +46,16 @@ async function readyGallery() {
   await browser.evaluate("document.fonts.ready.then(()=>true)");
 }
 async function assertClosed(id) { await browser.wait(`!${qs(`#${id}`)}?.open`); }
+async function openSearch() {
+  const mobile = await browser.evaluate(`Boolean(${qs('button[aria-controls="mobile-navigation"]')}?.getClientRects().length)`);
+  if (mobile) {
+    await browser.click('button[aria-controls="mobile-navigation"]');
+    await browser.wait(`${qs('#mobile-navigation')}?.open`);
+    await browser.click('#mobile-navigation button[aria-controls="store-search"]');
+  } else await browser.click('header button[aria-controls="store-search"]');
+  await browser.wait(`${qs('#store-search')}?.open && document.activeElement === ${qs('#quick-search-input')}`);
+  return mobile ? 'button[aria-controls="mobile-navigation"]' : 'header button[aria-controls="store-search"]';
+}
 async function checkCarousel(locale, prefix) {
   const rotation = '[data-carousel-rotation]';
   const currentSlide = 'document.querySelector("[aria-roledescription] [role=group][aria-hidden=false]")?.getAttribute("aria-label")';
@@ -161,8 +171,7 @@ try {
     await browser.click(`#mini-cart button[aria-label^=${JSON.stringify(`${t.remove}:`)}]`);
     await key("Escape"); await assertClosed("mini-cart");
 
-    await browser.click('button[aria-controls="store-search"]');
-    await browser.wait(`${qs('#store-search')}?.open && document.activeElement === ${qs('#quick-search-input')}`);
+    await openSearch();
     await browser.fill("#quick-search-input", t.query);
     await browser.wait(`${qs('#quick-search-results')}?.getAttribute('aria-busy') === 'false' && document.querySelectorAll('#quick-search-results [role="option"]').length > 0`);
     const options = await browser.evaluate(`Array.from(document.querySelectorAll('#quick-search-results [role="option"]')).map(e=>({href:e.getAttribute('href'),kind:e.dataset.kind,title:e.textContent}))`);
@@ -182,13 +191,12 @@ try {
     assert.equal(await browser.evaluate("document.documentElement.lang"), locale);
     pass(`${locale}: live search focuses its input, renders products/articles and opens a localized result with the keyboard`);
 
-    await browser.click('button[aria-controls="store-search"]');
-    await browser.wait(`${qs('#store-search')}?.open`);
+    const searchReturn = await openSearch();
     await browser.fill("#quick-search-input", "vetra-no-match-qa-20431");
     await browser.wait(`${qs('#quick-search-results')}?.getAttribute('aria-busy') === 'false' && ${qs('#store-search')}.textContent.includes(${JSON.stringify(t.noResults)})`);
     assert.equal(await browser.evaluate("document.querySelectorAll('#quick-search-results [role=option]').length"), 0);
     await key("Escape"); await assertClosed("store-search");
-    assert.equal(await browser.evaluate(`document.activeElement === ${qs('button[aria-controls="store-search"]')}`), true);
+    assert.equal(await browser.evaluate(`document.activeElement === ${qs(searchReturn)}`), true);
     pass(`${locale}: an unmatched query clears old suggestions; Escape returns focus to Search`);
 
     // Navigate freshly so image 3 has not been prepared at main-image size.

@@ -60,9 +60,9 @@ export function productSchema(product: CatalogProduct & { stock: number | null }
   const path = product.id === HONEY_ID ? "/coffee-blossom-honey" : `/products/${product.slug}`;
   const url = absoluteUrl(localizedPath(locale, path));
   const images = [product.image, ...(product.gallery ?? []).map((image) => image.src)];
-  const quote = publicQuote(product, 1, locale);
-  // English/Arabic USD prices are reference amounts. Real payment currently
-  // charges THB through Thai checkout for Thai delivery. A demo, an enquiry,
+  const quote = publicQuote(product, 1, "TH");
+  // Public product offers use the Thailand THB price. Checkout charges THB
+  // for Thai delivery. A demo, an enquiry,
   // or unknown stock must not advertise a purchasable machine-readable Offer.
   const offer = locale === "th" && paymentsEnabled && product.stock !== null && quote?.currency === "THB" ? {
     "@type": "Offer", price: quote.total, priceCurrency: "THB", url,

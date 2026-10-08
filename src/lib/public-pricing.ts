@@ -1,9 +1,6 @@
-import { currencyForLocale, quoteProduct, type CatalogProduct } from "./catalog";
-import type { Locale } from "./i18n";
+import { quoteProduct, type CatalogProduct, type Market } from "./catalog";
 
-/** A missing USD schedule must not display a Thai amount with a dollar symbol. */
-export function publicQuote(product: CatalogProduct, quantity: number, locale: Locale) {
-  const currency = currencyForLocale(locale);
-  if (currency === "USD" && !product.pricing?.USD?.length) return null;
-  return quoteProduct(product, quantity, locale);
+export function publicQuote(product: CatalogProduct, quantity: number, market: Market = "TH") {
+  try { return quoteProduct(product, quantity, market); }
+  catch { return null; }
 }

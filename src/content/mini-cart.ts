@@ -3,7 +3,8 @@ import type { Localized } from "@/lib/i18n";
 
 const en = {
   title: "Your bag",
-  subtitle: "A few good things, selected by you.",
+  shipping: "Shipping included for the selected market",
+  confirmOrder: "Confirm order",
   close: "Close bag",
   undo: "Undo",
   removed: "Item removed from your bag.",
@@ -19,7 +20,8 @@ export const miniCartCopy: Localized<typeof en> = {
   en,
   th: {
     title: "ตะกร้าของคุณ",
-    subtitle: "สินค้าดี ๆ ที่คุณเลือกไว้",
+    shipping: "รวมค่าจัดส่งตามพื้นที่ที่เลือก",
+    confirmOrder: "ยืนยันคำสั่งซื้อ",
     close: "ปิดตะกร้า",
     undo: "เลิกทำ",
     removed: "นำสินค้าออกจากตะกร้าแล้ว",

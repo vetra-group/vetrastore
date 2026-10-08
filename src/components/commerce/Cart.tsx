@@ -3,7 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import Image from "next/image";
 import Link from "@/components/loading/NavigationLink";
 import Icon from "@/components/Icon";
-import { formatPrice } from "@/lib/catalog";
+import { allowedQuantities } from "@/lib/catalog";
 import { tryQuoteCart } from "@/lib/cart-pricing";
 import { savedProductDetails } from "@/lib/saved-product";
 import { cartQuantityLimit } from "@/lib/cart-actions";
@@ -16,13 +16,15 @@ import { commerce } from "@/content/commerce";
 import { publicPricingCopy } from "@/content/public-pricing";
 import { publicPaymentCopy } from "@/content/payment-checkout";
 import { useStore } from "./StoreProvider";
+import { useDisplayPrice } from "./useDisplayPrice";
 import Quantity from "./Quantity";
 import OrderSummary from "./OrderSummary";
 import styles from "./Cart.module.css";
 
 export default function Cart({ locale, paymentsEnabled = false }: { locale: Locale; paymentsEnabled?: boolean }) {
   const t = usePublishedCopy(commerce[locale], `commerce.${locale}`);
-  const { products, items, itemCount, setQuantity, removeItem, hydrated, removedItem, undoRemoval } = useStore();
+  const { products, items, itemCount, setQuantity, removeItem, hydrated, removedItem, undoRemoval, market } = useStore();
+  const display = useDisplayPrice(locale);
   const c = miniCartCopy[locale];
   const [feedback, setFeedback] = useState("");
   const browseRef = useRef<HTMLAnchorElement>(null);
@@ -75,7 +77,7 @@ export default function Cart({ locale, paymentsEnabled = false }: { locale: Loca
               const product = products.find((product) => product.id === item.id);
               if (!product) return null;
               const details = savedProductDetails(product, locale);
-              const lineQuote = tryQuoteCart([item], products, locale);
+              const lineQuote = tryQuoteCart([item], products, market);
               const average = lineQuote?.items[0].unitPrice;
               const approximate = average !== undefined && Math.abs(average * 100 - Math.round(average * 100)) > 0.000001;
               return (
@@ -108,17 +110,18 @@ export default function Cart({ locale, paymentsEnabled = false }: { locale: Loca
                     {product.weight} {t.gram}
                   </p>
                   <span className={styles.unitPrice}>
-                    {lineQuote && average !== undefined ? <>{approximate ? "≈ " : ""}{formatPrice(average, locale, lineQuote.currency)} {publicPricingCopy[locale].perJar}</> : t.toConfirm}
+                    {lineQuote && average !== undefined ? <>{approximate && !display.estimated ? "≈ " : ""}{display.format(average)} {publicPricingCopy[locale].perJar}</> : t.toConfirm}
                   </span>
                   <div className={styles.controls}>
                     <Quantity
                       locale={locale}
                       value={item.quantity}
                       max={cartQuantityLimit(product)}
+                      options={product.pricing ? allowedQuantities(product, market) : undefined}
                       onChange={(value) => {
                         setQuantity(item.id, value);
-                        const updated = tryQuoteCart([{ id: item.id, quantity: value }], products, locale);
-                        setFeedback(`${t.cartUpdated} ${updated ? formatPrice(updated.subtotal, locale, updated.currency) : t.toConfirm}`);
+                        const updated = tryQuoteCart([{ id: item.id, quantity: value }], products, market);
+                        setFeedback(`${t.cartUpdated} ${updated ? display.format(updated.subtotal) : t.toConfirm}`);
                       }}
                     />
                     <button
@@ -137,7 +140,7 @@ export default function Cart({ locale, paymentsEnabled = false }: { locale: Loca
                   </div>
                 </div>
                 <span className={styles.itemTotal}>
-                  {lineQuote ? formatPrice(lineQuote.subtotal, locale, lineQuote.currency) : t.toConfirm}
+                  {lineQuote ? display.format(lineQuote.subtotal) : t.toConfirm}
                 </span>
               </article>
             ); })}

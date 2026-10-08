@@ -7,7 +7,6 @@ import { publicPricingCopy } from "@/content/public-pricing";
 import {
   HONEY_ID,
   honey as defaultHoney,
-  formatPrice,
   formatProductCaption,
   type CatalogProduct,
 } from "@/lib/catalog";
@@ -15,6 +14,7 @@ import { publicQuote } from "@/lib/public-pricing";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import { commerce } from "@/content/commerce";
 import { useStore } from "./StoreProvider";
+import { useDisplayPrice } from "./useDisplayPrice";
 import styles from "./ProductCard.module.css";
 import { usePublished, usePublishedCopy } from "@/components/cms/PublishedProvider";
 export default function ProductCard({
@@ -29,10 +29,11 @@ export default function ProductCard({
   const t = usePublishedCopy(commerce[locale], `commerce.${locale}`);
   const { content } = usePublished();
   const c = usePublishedCopy(siteCopy[locale], `site.${locale}`);
-  const { wishlist, toggleWishlist } = useStore();
+  const { wishlist, toggleWishlist, market } = useStore();
+  const display = useDisplayPrice(locale);
   const saved = wishlist.includes(product.id);
-  const baseQuote = publicQuote(product, 1, locale);
-  const priceLabel = baseQuote ? formatPrice(baseQuote.total, locale, baseQuote.currency) : publicPricingCopy[locale].unavailable;
+  const baseQuote = publicQuote(product, 1, market);
+  const priceLabel = baseQuote ? display.format(baseQuote.total) : publicPricingCopy[locale].unavailable;
   const collectionCopy = product.id === HONEY_ID ? c.categories.honey : null;
   const href = localizedPath(
     locale,

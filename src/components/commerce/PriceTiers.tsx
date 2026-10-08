@@ -1,8 +1,10 @@
 "use client";
 
-import { formatPrice, currencyForLocale, type CatalogProduct } from "@/lib/catalog";
+import { formatPrice, priceTiers, type CatalogProduct } from "@/lib/catalog";
 import { publicPricingCopy } from "@/content/public-pricing";
 import type { Locale } from "@/lib/i18n";
+import { useStore } from "./StoreProvider";
+import { useDisplayPrice } from "./useDisplayPrice";
 import styles from "./PriceTiers.module.css";
 
 export default function PriceTiers({ product, locale, value, max, onChange }: {
@@ -12,8 +14,9 @@ export default function PriceTiers({ product, locale, value, max, onChange }: {
   max: number;
   onChange: (quantity: number) => void;
 }) {
-  const currency = currencyForLocale(locale);
-  const tiers = product.pricing?.[currency];
+  const { market } = useStore();
+  const display = useDisplayPrice(locale);
+  const tiers = priceTiers(product, market);
   if (!tiers?.length) return null;
   const copy = publicPricingCopy[locale];
   return (
@@ -34,20 +37,14 @@ export default function PriceTiers({ product, locale, value, max, onChange }: {
               />
               <span className={styles.quantity}>{copy.jars(tier.quantity)}</span>
               <strong className={styles.price}>
-                {currency === "USD" && <><span className="srOnly">{copy.approximately} </span><span aria-hidden="true">≈ </span></>}
-                <bdi>{formatPrice(tier.total, locale, currency)}</bdi>
+                <bdi>{display.format(tier.total)}</bdi>
               </strong>
-              {tier.quantity > 1 && (
-                <span className={styles.unit}>
-                  {(currency === "USD" || Math.round(tier.total * 100) % tier.quantity !== 0) && <>{copy.approximately} </>}
-                  <bdi>{formatPrice(tier.total / tier.quantity, locale, currency)}</bdi> {copy.perJar}
-                </span>
-              )}
+              {display.estimated && <span className={styles.exact}><bdi>{formatPrice(tier.total, locale, "THB")}</bdi> THB</span>}
             </label>
           );
         })}
       </div>
-      {currency === "USD" && <p className={styles.currencyNote}>{copy.usdChargeNote}</p>}
+      <p className={styles.currencyNote}>{market === "INTL" ? copy.freeShippingWorldwide : copy.freeShippingThailand}</p>
     </fieldset>
   );
 }

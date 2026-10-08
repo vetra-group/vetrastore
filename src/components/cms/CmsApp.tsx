@@ -63,10 +63,9 @@ function date(value: string | null, locale: Locale) {
 }
 
 function cmsProductPrice(product: CmsProduct, locale: Locale) {
-  const missing = { en: "USD price not set", ar: "لم يُحدَّد السعر بالدولار", th: "ยังไม่กำหนดราคา" };
-  if (locale !== "th" && (!product.pricing?.USD?.length || product.pricing.USD[0].total <= 0)) return missing[locale];
-  if (locale === "th" && (product.pricing?.THB[0]?.total ?? product.price) <= 0) return missing.th;
-  const quote = quoteProduct(product, 1, locale);
+  const missing = { en: "Price not set", ar: "لم يُحدَّد السعر", th: "ยังไม่กำหนดราคา" };
+  if ((product.pricing?.THB[0]?.total ?? product.price) <= 0) return missing[locale];
+  const quote = quoteProduct(product, 1, "TH");
   return formatPrice(quote.total, locale, quote.currency);
 }
 
@@ -308,7 +307,7 @@ export default function CmsApp({ locale }: { locale: Locale }) {
   const addProduct = () => {
     if (!content) return;
     const id = `product-${crypto.randomUUID().slice(0, 8)}`;
-    const product: CmsProduct = { id, slug: id, brand: "", category: "honey", price: 0, pricing: { THB: [{ quantity: 1, total: 0 }], USD: [{ quantity: 1, total: 0 }] }, weight: 1, stock: null, featured: false, status: "draft", image: "", searchTerms: [], name: { en: "", ar: "", th: "" }, description: { en: "", ar: "", th: "" }, card: { ar: { captionPrefix: "", imageAlt: "", cta: "" }, th: { captionPrefix: "", imageAlt: "", cta: "" }, en: { captionPrefix: "", imageAlt: "", cta: "" } } };
+    const product: CmsProduct = { id, slug: id, brand: "", category: "honey", price: 0, pricing: { THB: [{ quantity: 1, total: 0 }], internationalTHB: [{ quantity: 1, total: 0 }] }, weight: 1, stock: null, featured: false, status: "draft", image: "", searchTerms: [], name: { en: "", ar: "", th: "" }, description: { en: "", ar: "", th: "" }, card: { ar: { captionPrefix: "", imageAlt: "", cta: "" }, th: { captionPrefix: "", imageAlt: "", cta: "" }, en: { captionPrefix: "", imageAlt: "", cta: "" } } };
     setContent({ ...content, products: [...content.products, product] }); setUnsavedEntries((entries) => ({ ...entries, product: [...entries.product, id] })); setView("products"); setProductId(id); setDrawer(false);
   };
   const addSlide = () => {

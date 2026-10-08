@@ -1,5 +1,4 @@
-import { MAX_QUANTITY, type CatalogProduct } from "./catalog";
-import type { Locale } from "./i18n";
+import { MAX_QUANTITY, type CatalogProduct, type Market } from "./catalog";
 
 // Local simulations only. These rules never become published shipping terms.
 export type MockShippingRule = { id: string; label: string; postcodePrefix: string; fee: number; freeOver: number | null };
@@ -33,14 +32,13 @@ export function quoteMockShipping(rules: readonly MockShippingRule[], postcode: 
   return { state: "quoted", ruleId: rule.id, label: rule.label, postcode: destination, subtotal: value, fee, total: cents(value + fee) };
 }
 
-/** The published free-delivery offer applies to Thai-price orders addressed in Thailand. */
-export function quoteStoreShipping(locale: Locale, postcode: string, subtotal: number): MockShippingQuote | undefined {
-  if (locale !== "th") return undefined;
+/** The published bundle totals include delivery for their selected market. */
+export function quoteStoreShipping(market: Market, postcode: string, subtotal: number): MockShippingQuote {
   if (!Number.isFinite(subtotal) || subtotal < 0 || typeof postcode !== "string" || postcode.length > 1000) throw new Error("Check delivery details");
   const destination = postcode.trim();
   const value = cents(subtotal);
-  if (!/^\d{5}$/.test(destination)) return { state: "pending", reason: "destination-missing", postcode: destination, subtotal: value, fee: null, total: null };
-  return { state: "quoted", ruleId: "thai-free-delivery", label: "จัดส่งฟรีในประเทศไทย", postcode: destination, subtotal: value, fee: 0, total: value };
+  if (market === "TH" && !/^\d{5}$/.test(destination)) return { state: "pending", reason: "destination-missing", postcode: destination, subtotal: value, fee: null, total: null };
+  return { state: "quoted", ruleId: market === "TH" ? "thai-free-delivery" : "worldwide-included-delivery", label: market === "TH" ? "Free delivery in Thailand" : "Worldwide shipping included", postcode: destination, subtotal: value, fee: 0, total: value };
 }
 
 export function parseMockShippingQuote(value: unknown, subtotal: number): MockShippingQuote | undefined {

@@ -3,7 +3,7 @@
   inset-block: 0;
   inset-inline: auto 0;
   --drawer-travel: 100%;
-  width: min(100%, 32rem);
+  width: min(90vw, 36rem);
   max-width: 100%;
   height: 100dvh;
   max-height: 100dvh;
@@ -16,7 +16,7 @@
   overflow-x: hidden;
   overflow-y: auto;
   overscroll-behavior: contain;
-  box-shadow: var(--shadow);
+  box-shadow: var(--shadow-panel);
   container: mini-cart / size;
 }
 .drawer::backdrop { background: var(--overlay-navy-soft); backdrop-filter: blur(3px); }
@@ -25,12 +25,11 @@
 .drawer[data-phase="open"]::backdrop { animation: backdrop-in var(--motion-duration-drawer) ease-out both; }
 .drawer[data-phase="closing"]::backdrop { animation: backdrop-out var(--motion-duration-exit) ease-in both; }
 .frame { display: flex; flex-direction: column; height: 100%; }
-.heading { flex: 0 0 auto; display: flex; gap: var(--space-3); justify-content: space-between; padding: var(--space-4); padding-top: max(var(--space-4), env(safe-area-inset-top)); border-bottom: 1px solid var(--line); }
-.heading > div { min-width: 0; }
-.eyebrow { margin: 0 0 var(--space-1); color: var(--accent-ink); letter-spacing: .14em; font-size: var(--font-size-1); }
-.heading h2 { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); margin: 0; font-size: var(--font-size-6); }
-.heading h2 span { font-family: var(--font-body); font-size: var(--font-size-1); color: var(--accent-ink); font-variant-numeric: tabular-nums; }
-.subtitle { margin: var(--space-1) 0 0; color: var(--ink-soft); }
+.heading { flex: 0 0 auto; display: flex; align-items: center; gap: var(--space-3); justify-content: space-between; padding: var(--space-3) var(--space-4); padding-top: max(var(--space-3), env(safe-area-inset-top)); border-bottom: 1px solid var(--line); background: var(--paper); }
+.heading h2 { display: flex; align-items: center; gap: var(--space-2); margin: 0; }
+.bagIcon { display: grid; place-items: center; width: var(--control-size); height: var(--control-size); border: 1px solid var(--line); border-radius: 50%; color: var(--accent-ink); }
+.bagIcon svg { width: var(--icon-size); height: var(--icon-size); stroke-width: 1.5; }
+.bagCount { color: var(--ink-strong); font-family: var(--font-body); font-size: var(--font-size-3); font-weight: 500; font-variant-numeric: tabular-nums; }
 .iconButton { flex-shrink: 0; display: grid; place-items: center; width: var(--control-size); height: var(--control-size); padding: 0; border: 1px solid transparent; border-radius: var(--radius); background: transparent; color: var(--ink-soft); }
 .iconButton svg { width: var(--icon-size); height: var(--icon-size); stroke-width: 1.5; }
 .content { flex: 1 1 auto; min-height: 9rem; overflow: auto; overscroll-behavior: contain; padding: var(--space-4); }
@@ -60,13 +59,11 @@
 .total > div { display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: var(--space-2); }
 .total dd { margin: 0; font-size: var(--font-size-4); font-variant-numeric: tabular-nums; }
 .shipping { margin: var(--space-1) 0 var(--space-3); color: var(--ink-soft); }
-.links { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: var(--space-2); }
-.continue { display: block; margin: var(--space-2) auto 0; min-height: var(--control-size); padding: var(--space-1); border: 0; background: transparent; color: var(--ink-soft); text-decoration: underline; text-underline-offset: .25em; }
+.links { display: grid; }
 @container mini-cart (max-width: 23rem) {
   .item { grid-template-columns: 4.5rem minmax(0, 1fr); }
   .image { grid-row: auto; }
   .actions { grid-column: 1 / -1; }
-  .links { grid-template-columns: minmax(0, 1fr); }
   .heading, .content, .footer { padding-inline: var(--space-3); }
 }
 /* Keep the complete bag reachable when the keyboard, landscape layout, or
@@ -77,7 +74,7 @@
 }
 @media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) {
   .iconButton:hover { border-color: var(--line); color: var(--ink-strong); background: var(--surface); }
-  .details a:hover, .continue:hover { color: var(--accent-ink); }
+  .details a:hover { color: var(--accent-ink); }
   .undo button:hover { color: var(--ink-strong); }
 }
 .drawer:dir(rtl) { --drawer-travel: -100%; }

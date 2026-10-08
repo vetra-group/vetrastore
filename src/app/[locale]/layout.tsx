@@ -15,7 +15,6 @@ import { getPublishedContent } from "@/lib/cms/server";
 import { publicContent } from "@/lib/cms/public-content";
 import { articleLocaleReady, productLocaleReady } from "@/lib/cms/localization";
 import { HONEY_ID } from "@/lib/catalog";
-import { checkoutPaymentOptions } from "@/lib/public-payment-availability";
 import { organizationSchema, serializeSchema, websiteSchema } from "@/lib/structured-data";
 import { bodyLatin, bodyThai, headingThai, bodyArabic, headingArabic } from "../fonts";
 import "../globals.css";
@@ -52,12 +51,11 @@ export default async function LocaleLayout({
       <body>
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeSchema({ "@context": "https://schema.org", ...organizationSchema(storefront.settings, locale) }) }} />
         <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeSchema(websiteSchema(storefront.settings)) }} />
-        <PublishedProvider content={storefront}><StoreProvider products={fullStorefront.products}>
+        <PublishedProvider content={storefront}><StoreProvider locale={locale} products={fullStorefront.products}>
           <DemoProvider enabled={demoEnabled}>
             <StoreShell
               header={<Header locale={locale} availability={availability} />}
               footer={<Footer locale={locale} />}
-              paymentsEnabled={checkoutPaymentOptions().providers.length > 0}
             >
               {children}
             </StoreShell>

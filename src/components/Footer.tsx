@@ -33,6 +33,7 @@ export default async function Footer({ locale }: { locale: Locale }) {
             ))}
           </nav>
           <p>{c.copyright}</p>
+          <a className={styles.rateCredit} href="https://www.exchangerate-api.com" lang="en">Rates By Exchange Rate API</a>
         </div>
       </div>
     </footer>

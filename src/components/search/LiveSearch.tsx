@@ -5,8 +5,8 @@ import Link from "@/components/loading/NavigationLink";
 import { useEffect, useRef, useState } from "react";
 import { ArrowRight, LoaderCircle, Search, X } from "lucide-react";
 import { Modal } from "@/components/ui/Modal";
-import { formatPrice } from "@/lib/catalog";
-import { publicPricingCopy } from "@/content/public-pricing";
+import { useStore } from "@/components/commerce/StoreProvider";
+import { useDisplayPrice } from "@/components/commerce/useDisplayPrice";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import type { QuickSearch } from "@/lib/search-suggestions";
 import { quickSearchCopy } from "@/content/quick-search";
@@ -30,12 +30,16 @@ export default function LiveSearch({
   locale,
   open,
   onClose,
+  onAfterClose,
 }: {
   locale: Locale;
   open: boolean;
   onClose: () => void;
+  onAfterClose?: () => void;
 }) {
   const t = quickSearchCopy[locale];
+  const { market } = useStore();
+  const display = useDisplayPrice(locale);
   const input = useRef<HTMLInputElement>(null);
   const [query, setQuery] = useState("");
   const [active, setActive] = useState(-1);
@@ -46,7 +50,7 @@ export default function LiveSearch({
     error?: boolean;
   } | null>(null);
 
-  const key = `${locale}:${query.trim()}:${retry}`;
+  const key = `${locale}:${market}:${query.trim()}:${retry}`;
   const current = response?.key === key ? response : null;
   const busy = open && !current;
   const results = current?.result?.results || [];
@@ -64,7 +68,7 @@ export default function LiveSearch({
     const timer = setTimeout(() => {
       timeout = setTimeout(() => controller.abort(), 10000);
       void fetch(
-        `/api/search?locale=${locale}&q=${encodeURIComponent(query.trim())}`,
+        `/api/search?locale=${locale}&market=${market}&q=${encodeURIComponent(query.trim())}`,
         { cache: "no-store", signal: controller.signal },
       )
         .then(async (response) => {
@@ -86,7 +90,7 @@ export default function LiveSearch({
       clearTimeout(timeout);
       controller.abort();
     };
-  }, [key, locale, open, query]);
+  }, [key, locale, market, open, query]);
 
   useEffect(() => {
     if (selected >= 0) {
@@ -105,6 +109,7 @@ export default function LiveSearch({
       open={open}
       animate
       onClose={onClose}
+      onAfterClose={onAfterClose}
       initialFocusRef={input}
     >
       <div className={styles.heading}>
@@ -241,7 +246,7 @@ export default function LiveSearch({
               <span className={styles.kind}>{t[result.kind]}</span>
               <strong><Match text={result.title} query={query} /></strong>
               {result.price !== undefined && (
-                <span>{result.currency === "USD" && <>{publicPricingCopy[locale].approximately} </>}<bdi>{formatPrice(result.price, locale, result.currency)}</bdi></span>
+                <span><bdi>{display.format(result.price)}</bdi></span>
               )}
             </span>
             <ArrowRight aria-hidden="true" />

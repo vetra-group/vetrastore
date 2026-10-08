@@ -3,10 +3,8 @@ import Link from "@/components/loading/NavigationLink";
 import { ArrowDown, ArrowRight, ArrowUpRight, ChevronRight, Coffee, Flower2, Plus, Sandwich, Utensils } from "lucide-react";
 import { honeyStory } from "@/content/honey";
 import { commerce } from "@/content/commerce";
-import { publicPricingCopy } from "@/content/public-pricing";
 import { publicPaymentCopy } from "@/content/payment-checkout";
-import { HONEY_ID, formatPrice, honey as defaultHoney } from "@/lib/catalog";
-import { publicQuote } from "@/lib/public-pricing";
+import { HONEY_ID, honey as defaultHoney } from "@/lib/catalog";
 import { getLocalizedPublishedContent } from "@/lib/localized-content";
 import type { CmsContent } from "@/lib/cms/types";
 import { applyCopy } from "@/lib/cms/defaults";
@@ -14,6 +12,7 @@ import { localizedPath, type Locale } from "@/lib/i18n";
 import HoneyPurchase from "./HoneyPurchase";
 import HoneyGallery from "./HoneyGallery";
 import HoneyPurchaseShortcut from "./HoneyPurchaseShortcut";
+import { HoneyMarketPrice, HoneyMarketShipping } from "./HoneyMarketPrice";
 import styles from "./HoneyExperience.module.css";
 
 const servingIdeas = [
@@ -45,9 +44,6 @@ export default async function HoneyExperience({ locale, overrideContent, preview
   if (!honey) return null;
   const c = applyCopy(honeyStory[locale], `honey.${locale}`, content.copy);
   const t = applyCopy(commerce[locale], `commerce.${locale}`, content.copy);
-  const baseQuote = publicQuote(honey, 1, locale);
-  const priceLabel = baseQuote ? formatPrice(baseQuote.total, locale, baseQuote.currency) : publicPricingCopy[locale].unavailable;
-  const shippingNote = c.shippingNote;
   const href = (path: string) => localizedPath(locale, path);
   return (
     <div className={styles.experience} id="top">
@@ -64,8 +60,8 @@ export default async function HoneyExperience({ locale, overrideContent, preview
             <h1 id="honey-title"><span>{content.copy[`honey.${locale}.title.0`] ?? (honey.name[locale] === defaultHoney.name[locale] ? c.title[0] : honey.name[locale])}</span><em>{c.title[1]}</em></h1>
             <p className={styles.heroIntro}>{c.intro}</p>
             <div className={styles.heroOffer}>
-              <p>{honey.weight} {t.gram}<span aria-hidden="true">·</span><strong><bdi>{priceLabel}</bdi></strong></p>
-              <span>{shippingNote}</span>
+              <p>{honey.weight} {t.gram}<span aria-hidden="true">·</span><strong><HoneyMarketPrice product={honey} locale={locale} /></strong></p>
+              <span><HoneyMarketShipping locale={locale} /></span>
             </div>
             <div className={styles.heroActions}>
               <a href="#shop" className={styles.primaryLink}>{c.discover}<ChevronRight size="1.1875rem" aria-hidden="true" /></a>
@@ -126,7 +122,7 @@ export default async function HoneyExperience({ locale, overrideContent, preview
             <h2 id="shop-title">{content.copy[`honey.${locale}.shopTitle`] ?? (honey.name[locale] === defaultHoney.name[locale] && honey.brand === defaultHoney.brand ? c.shopTitle : `${honey.brand} ${honey.name[locale]}`)}</h2>
             <p>{honey.description[locale]}</p>
             <p className={styles.productMeta}>{honey.weight} {t.gram} · {t.oneJar}</p>
-            <p className={styles.price}><bdi>{priceLabel}</bdi><span>{shippingNote}</span></p>
+            <p className={styles.price}><HoneyMarketPrice product={honey} locale={locale} /><span><HoneyMarketShipping locale={locale} /></span></p>
             <HoneyPurchase locale={locale} preview={preview} paymentsEnabled={paymentsEnabled} />
           </div>
         </section>

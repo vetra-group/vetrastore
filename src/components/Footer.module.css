@@ -114,6 +114,14 @@
   text-align: center;
 }
 
+.rateCredit {
+  color: var(--cream);
+  font-size: var(--font-size-1);
+  text-underline-offset: 0.2em;
+}
+.rateCredit:hover,
+.rateCredit:focus-visible { color: var(--gold-light); }
+
 @media (max-width: 35rem) {
   .main {
     padding-block: var(--space-5) var(--space-4);

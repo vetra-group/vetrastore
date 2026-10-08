@@ -274,7 +274,7 @@ export const siteCopy: Localized<SiteCopy> = {
       newTab: "เปิดในแท็บใหม่",
     },
     naturalCollection: "คอลเลกชันจากธรรมชาติ",
-    announcement: "สิ่งดี ๆ ที่คัดสรรด้วยใจ",
+    announcement: "คัดเลือกสินค้า ด้วยความเชี่ยวชาญ",
     nav: {
       home: "หน้าแรก",
       shop: "สินค้า",

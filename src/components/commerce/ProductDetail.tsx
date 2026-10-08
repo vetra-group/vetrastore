@@ -5,36 +5,39 @@ import Image from "next/image";
 import Link from "@/components/loading/NavigationLink";
 import Icon from "@/components/Icon";
 import PriceTiers from "./PriceTiers";
+import ApproximatePrice from "./ApproximatePrice";
 import { commerce } from "@/content/commerce";
 import { publicPricingCopy } from "@/content/public-pricing";
 import { publicPaymentCopy } from "@/content/payment-checkout";
 import { galleryArabic } from "@/content/customer-ar";
-import { currencyForLocale, formatPrice, MAX_QUANTITY } from "@/lib/catalog";
+import { priceTiers, MAX_QUANTITY } from "@/lib/catalog";
 import { publicQuote } from "@/lib/public-pricing";
 import type { CmsProduct } from "@/lib/cms/types";
 import { localizedPath, type Locale } from "@/lib/i18n";
 import { usePublishedCopy } from "@/components/cms/PublishedProvider";
 import { useStore } from "./StoreProvider";
+import { useDisplayPrice } from "./useDisplayPrice";
 import Quantity from "./Quantity";
 import HoneyGallery from "../honey/HoneyGallery";
 import styles from "./ProductDetail.module.css";
 
 export default function ProductDetail({ locale, product, preview = false, paymentsEnabled = false }: { locale: Locale; product: CmsProduct; preview?: boolean; paymentsEnabled?: boolean }) {
   const t = usePublishedCopy(commerce[locale], `commerce.${locale}`);
-  const { addItem, items, wishlist, toggleWishlist } = useStore();
+  const { addItem, items, wishlist, toggleWishlist, market } = useStore();
+  const display = useDisplayPrice(locale);
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   const p = publicPricingCopy[locale];
   const saved = wishlist.includes(product.id);
   const bagQuantity = items.find((item) => item.id === product.id)?.quantity ?? 0;
-  const remaining = Math.max(0, Math.min(MAX_QUANTITY, product.stock ?? MAX_QUANTITY) - bagQuantity);
-  const tiers = product.pricing?.[currencyForLocale(locale)];
+  const remaining = Math.max(0, Math.min(MAX_QUANTITY, product.stock ?? MAX_QUANTITY));
+  const tiers = priceTiers(product, market);
   const availableTiers = tiers?.filter((tier) => tier.quantity <= remaining) ?? [];
   const selected = tiers?.length
     ? (availableTiers.some((tier) => tier.quantity === quantity) ? quantity : availableTiers.at(-1)?.quantity ?? 1)
     : Math.min(quantity, Math.max(1, remaining));
-  const baseQuote = publicQuote(product, 1, locale);
-  const selectedQuote = publicQuote(product, selected, locale);
+  const baseQuote = publicQuote(product, 1, market);
+  const selectedQuote = publicQuote(product, selected, market);
   return (
     <div className={styles.page}>
       <nav className={`container ${styles.breadcrumb}`} aria-label={t.breadcrumb}>
@@ -49,10 +52,10 @@ export default function ProductDetail({ locale, product, preview = false, paymen
           <p className={`eyebrow ${styles.origin}`}>{product.brand}</p>
           <h1>{product.name[locale]}</h1>
           <p className={styles.tagline}>{product.card[locale].captionPrefix}</p>
-          <p className={styles.price}>{baseQuote ? <bdi>{formatPrice(baseQuote.total, locale, baseQuote.currency)}</bdi> : p.unavailable}<span>{product.weight} {t.gram}</span></p>
+          <p className={styles.price}>{baseQuote ? <bdi>{display.format(baseQuote.total)}</bdi> : p.unavailable}<span>{product.weight} {t.gram}</span></p>
           <p className={styles.description}>{product.description[locale]}</p>
           {!!tiers?.length && <PriceTiers product={product} locale={locale} value={selected} max={remaining} onChange={(value) => { setQuantity(value); setAdded(false); }} />}
-          <div className={styles.selectedTotal} aria-live="polite" aria-atomic="true"><span>{p.selectedTotal}</span><strong>{selectedQuote ? <bdi>{formatPrice(selectedQuote.total, locale, selectedQuote.currency)}</bdi> : p.unavailable}</strong></div>
+          <div className={styles.selectedTotal} aria-live="polite" aria-atomic="true"><span>{p.selectedTotal}</span><strong>{selectedQuote ? <bdi>{display.format(selectedQuote.total)}</bdi> : p.unavailable}</strong>{selectedQuote && <ApproximatePrice amount={selectedQuote.total} locale={locale} />}</div>
           <div className={`${styles.purchase} ${tiers?.length ? styles.purchaseWithTiers : ""}`}>
             {!tiers?.length && <Quantity locale={locale} value={selected} max={Math.max(1, remaining)} onChange={(value) => { setQuantity(value); setAdded(false); }} />}
             <button type="button" className={`button ${styles.add}`} disabled={preview || remaining === 0 || !selectedQuote} onClick={() => { if (selectedQuote) setAdded(addItem(product.id, selected)); }}>

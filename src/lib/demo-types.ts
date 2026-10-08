@@ -1,5 +1,5 @@
 import type { Locale } from "./i18n";
-import type { Currency } from "./catalog";
+import type { Currency, Market } from "./catalog";
 import type { OrderWorkflow, RequestActivity, WholesaleRequest } from "./commerce-workflow";
 import type { MockInventoryHold, MockShippingQuote, MockShippingRule } from "./mock-checkout";
 
@@ -18,6 +18,7 @@ export type DemoItem = { id: string; quantity: number; unitPrice: number; lineTo
 export type DemoInput = {
   kind: DemoKind;
   locale: Locale;
+  market?: Market;
   name: string;
   email: string;
   phone?: string;

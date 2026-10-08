@@ -12,6 +12,7 @@ import { mockCheckoutCopy } from "@/content/mock-checkout";
 import { MockStockError, quoteStoreShipping } from "@/lib/mock-checkout";
 import { tryQuoteCart } from "@/lib/cart-pricing";
 import { formatPrice } from "@/lib/catalog";
+import { marketForShippingCountry } from "@/lib/shipping-market";
 import type { PaymentProviderId } from "@/lib/payments/providers";
 import { resolveSellingDetails } from "@/lib/business-settings";
 import { usePublished, usePublishedCopy } from "@/components/cms/PublishedProvider";
@@ -28,6 +29,11 @@ const recoverableFields = ["name", "email", "phone", "address", "district", "pro
 type Status = "idle" | "pending" | "error" | "success" | "declined";
 type CheckoutMethod = "enquiry" | "payment" | "online";
 const providerNames: Record<PaymentProviderId, string> = { stripe: "Stripe", "merchant-ipay": "Bangkok Bank Merchant iPay" };
+const destinationCopy = {
+  en: { hint: "Enter the country where we will deliver. Your order price will update if it differs from the language's starting region.", updated: "The order price has been updated for your delivery country. Shipping is included.", optional: " (optional)", foreignPostcode: "If your address has no postal code, leave this field blank." },
+  th: { hint: "ระบุประเทศที่ต้องการจัดส่ง ราคาจะปรับตามประเทศปลายทาง", updated: "ปรับราคาตามประเทศปลายทางแล้ว โดยรวมค่าจัดส่งไว้แล้ว", optional: " (ไม่บังคับ)", foreignPostcode: "หากที่อยู่ปลายทางไม่มีรหัสไปรษณีย์ เว้นช่องนี้ว่างได้" },
+  ar: { hint: "أدخل بلد التسليم. سيتغير سعر الطلب إذا اختلف عن المنطقة التي حددتها اللغة.", updated: "تم تحديث السعر وفق بلد التسليم، والشحن مشمول في السعر.", optional: " (اختياري)", foreignPostcode: "إذا لم يكن لعنوانك رمز بريدي، اترك هذا الحقل فارغًا." },
+} as const;
 
 export default function Checkout({ locale, enquiriesEnabled, paymentsEnabled = false, paymentProviders = [], defaultPaymentProvider = null, resumeOrderId }: { locale: Locale; enquiriesEnabled: boolean; paymentsEnabled?: boolean; paymentProviders?: PaymentProviderId[]; defaultPaymentProvider?: PaymentProviderId | null; resumeOrderId?: string }) {
   const { content } = usePublished();
@@ -38,7 +44,7 @@ export default function Checkout({ locale, enquiriesEnabled, paymentsEnabled = f
   const demo = useDemo();
   const sharedDemo = useSharedDemoTarget(demo.enabled), sharedCopy = sharedDemoCopy[locale];
   const [sharedSuccess, setSharedSuccess] = useState(false);
-  const { products, items, itemCount, hydrated } = useStore();
+  const { products, items, itemCount, hydrated, market: languageMarket } = useStore();
   const [status, setStatus] = useState<Status>("idle");
   const [reference, setReference] = useState("");
   const [method, setMethod] = useState<CheckoutMethod>(resumeOrderId ? "online" : "enquiry");
@@ -46,25 +52,27 @@ export default function Checkout({ locale, enquiriesEnabled, paymentsEnabled = f
   const [outcome, setOutcome] = useState<"approved" | "declined">("approved");
   const [successPayment, setSuccessPayment] = useState(false);
   const [postcode, setPostcode] = useState(""), [stockError, setStockError] = useState(false);
+  const [country, setCountry] = useState(locale === "th" ? "Thailand" : "");
+  const market = marketForShippingCountry(country) ?? languageMarket;
   const [paymentError, setPaymentError] = useState<"general" | "price" | "provider" | "previous">("general");
   const submission = useRef<{ key: string; payload: string } | null>(null);
   const failedAttempt = useRef<{ id: string; details: string } | null>(null);
   const inFlight = useRef(false);
   const confirmationRef = useRef<HTMLHeadingElement>(null);
-  const priced = tryQuoteCart(items, products, locale);
-  const realPaymentAvailable = paymentsEnabled && paymentProviders.length > 0 && !demo.enabled && locale === "th";
+  const priced = tryQuoteCart(items, products, market);
+  const realPaymentAvailable = paymentsEnabled && paymentProviders.length > 0 && !demo.enabled && market === "TH";
   const selectedMethod: CheckoutMethod = realPaymentAvailable && !enquiriesEnabled ? "online" : method === "online" && !realPaymentAvailable ? "enquiry" : method;
   const canSubmit = (demo.enabled || enquiriesEnabled || realPaymentAvailable) && priced !== null;
   const usesShared = demo.enabled && selectedMethod === "enquiry" && sharedDemo.target === "shared";
-  const shippingQuote = priced ? quoteStoreShipping(locale, postcode, priced.subtotal) : undefined;
+  const shippingQuote = priced ? quoteStoreShipping(market, postcode, priced.subtotal) : undefined;
   const canStartPayment = realPaymentAvailable && selectedProvider !== null && paymentProviders.includes(selectedProvider) && priced?.currency === "THB" && shippingQuote?.state === "quoted" && shippingQuote.fee === 0;
   const rules: FieldRules = {
     name: { label: t.fullName, required: true, max: 100 }, email: { label: t.email, required: true, max: 254, kind: "email" }, phone: { label: t.phone, required: true, kind: "phone" },
-    address: { label: t.address, required: true, max: 500 }, district: { label: t.district, required: true, max: 100 }, province: { label: t.province, required: locale === "th", max: 100 },
-    ...(locale === "th" ? {} : { country: { label: t.country, required: true, max: 100 } }),
-    postcode: { label: t.postcode, required: locale === "th", max: locale === "th" ? 5 : 20, kind: locale === "th" ? "postcode" : "postal-code" }, notes: { label: t.notes, max: 1000 }, consent: { label: t.privacy, kind: "consent" },
+    address: { label: t.address, required: true, max: 500 }, district: { label: t.district, required: true, max: 100 }, province: { label: t.province, required: market === "TH", max: 100 },
+    country: { label: t.country, required: true, max: 100 },
+    postcode: { label: t.postcode, required: market === "TH", max: market === "TH" ? 5 : 20, kind: market === "TH" ? "postcode" : "postal-code" }, notes: { label: t.notes, max: 1000 }, consent: { label: t.privacy, kind: "consent" },
   };
-  const feedback = useCustomerForm({ locale, kind: "checkout", rules, allowed: recoverableFields, onRestore: (values) => { setPostcode(values.postcode || ""); setStatus("idle"); } });
+  const feedback = useCustomerForm({ locale, kind: "checkout", rules, allowed: recoverableFields, onRestore: (values) => { setPostcode(values.postcode || ""); setCountry(values.country ?? (locale === "th" ? "Thailand" : "")); setStatus("idle"); } });
 
   useEffect(() => {
     if (status === "success") confirmationRef.current?.focus();
@@ -76,15 +84,23 @@ export default function Checkout({ locale, enquiriesEnabled, paymentsEnabled = f
     if (inFlight.current || !canSubmit || !priced || !itemCount || usesShared && !sharedDemo.ready) return;
     if (selectedMethod === "online" && !canStartPayment) return;
     if (!demo.enabled && selectedMethod === "enquiry" && !enquiriesEnabled) return;
+    // Browser autofill can change a field without firing React's change event.
+    const addressCountry = String(new FormData(event.currentTarget).get("country") || "").trim();
+    const addressMarket = marketForShippingCountry(addressCountry);
+    if (addressMarket !== null && addressMarket !== market) {
+      setCountry(addressCountry);
+      setStatus("idle");
+      return;
+    }
     if (!feedback.validate()) return;
     const data = new FormData(event.currentTarget);
     const customer = Object.fromEntries(
-      ["name", "email", "phone", "address", "district", "province", "postcode", "notes", ...(locale === "th" ? [] : ["country"])]
+      ["name", "email", "phone", "address", "district", "province", "postcode", "notes", "country"]
         .map((key) => { const value = String(data.get(key) || "").trim(); return [key, ["phone", "postcode"].includes(key) ? normalizeCustomerNumber(value) : value]; }),
     );
     const payment = selectedMethod === "enquiry" ? "enquiry" : outcome === "approved" ? "demo-paid" : "demo-failed";
-    const orderDetails = JSON.stringify({ customer, items, locale });
-    const payload = JSON.stringify({ customer, items, locale, consent: data.get("consent") === "on", ...(demo.enabled ? { payment, target: usesShared ? "shared" : "browser" } : {}) });
+    const orderDetails = JSON.stringify({ customer, items, locale, market });
+    const payload = JSON.stringify({ customer, items, locale, market, consent: data.get("consent") === "on", ...(demo.enabled ? { payment, target: usesShared ? "shared" : "browser" } : {}) });
     if (data.get("consent") !== "on") return;
     inFlight.current = true;
     setStockError(false);
@@ -93,14 +109,14 @@ export default function Checkout({ locale, enquiriesEnabled, paymentsEnabled = f
     let timeout: ReturnType<typeof setTimeout> | undefined;
     try {
       const expectedTotalMinor = Math.round(priced.subtotal * 100);
-      const paymentPayload = JSON.stringify({ customer, items, locale, consent: true, provider: selectedProvider, expectedTotalMinor });
-      const paymentOrderDetails = JSON.stringify({ customer, items, locale, consent: true, expectedTotalMinor });
+      const paymentPayload = JSON.stringify({ customer, items, locale, market, consent: true, provider: selectedProvider, expectedTotalMinor });
+      const paymentOrderDetails = JSON.stringify({ customer, items, locale, market, consent: true, expectedTotalMinor });
       const fingerprint = await customerRequestFingerprint(`${selectedMethod}:${selectedMethod === "online" ? paymentOrderDetails : payload}`), recovered = feedback.getSubmission();
       if (!submission.current || submission.current.payload !== fingerprint) submission.current = { key: selectedMethod === "online" && resumeOrderId ? resumeOrderId : recovered?.fingerprint === fingerprint ? recovered.id : crypto.randomUUID(), payload: fingerprint };
       feedback.saveSubmission({ id: submission.current.key, fingerprint });
       if (demo.enabled) {
         const input: DemoInput = {
-          kind: "order", locale, name: customer.name, email: customer.email, phone: customer.phone,
+          kind: "order", locale, market, name: customer.name, email: customer.email, phone: customer.phone,
           message: customer.notes, customer,
           items: priced.items,
           subtotal: priced.subtotal, currency: priced.currency, payment,
@@ -233,10 +249,10 @@ export default function Checkout({ locale, enquiriesEnabled, paymentsEnabled = f
                     <fieldset className={styles.section}><legend>{f.deliveryDetails}</legend><div className={styles.fields}>
                       <label className={styles.wide}>{t.address} *<textarea {...feedback.field("address")} name="address" autoComplete="street-address" required maxLength={500} rows={2} /><FieldError state={feedback} name="address" /></label>
                       <label>{t.district} *<input {...feedback.field("district")} name="district" autoComplete="address-level2" required maxLength={100} /><FieldError state={feedback} name="district" /></label>
-                      <label>{t.province}{locale === "th" ? " *" : locale === "ar" ? " (اختياري)" : " (optional)"}<input {...feedback.field("province")} name="province" autoComplete="address-level1" required={locale === "th"} maxLength={100} /><FieldError state={feedback} name="province" /></label>
-                      {locale !== "th" && <label>{t.country} *<input {...feedback.field("country")} name="country" autoComplete="country-name" required maxLength={100} /><FieldError state={feedback} name="country" /></label>}
-                      <label>{t.postcode}{locale === "th" ? " *" : locale === "ar" ? " (اختياري)" : " (optional)"}<input {...feedback.field("postcode", `${feedback.field("postcode").id}-hint`)} name="postcode" inputMode={locale === "th" ? "numeric" : "text"} autoComplete="postal-code" required={locale === "th"} pattern={locale === "th" ? "[0-9]{5}" : undefined} maxLength={locale === "th" ? 5 : 20} value={postcode} onChange={(event) => setPostcode(normalizeCustomerNumber(event.target.value))} /><span className={styles.hint} id={`${feedback.field("postcode").id}-hint`}>{locale === "th" ? f.postcodeHint : locale === "ar" ? "إذا لم يكن لعنوانك رمز بريدي، اترك هذا الحقل فارغًا." : "If your address has no postal code, leave this field blank."}</span><FieldError state={feedback} name="postcode" /></label>
-                    </div></fieldset>
+                      <label>{t.province}{market === "TH" ? " *" : destinationCopy[locale].optional}<input {...feedback.field("province")} name="province" autoComplete="address-level1" required={market === "TH"} maxLength={100} /><FieldError state={feedback} name="province" /></label>
+                      <label>{t.country} *<input {...feedback.field("country", `${feedback.field("country").id}-hint`)} name="country" autoComplete="country-name" required maxLength={100} value={country} onChange={(event) => { setCountry(event.target.value); setStatus("idle"); }} /><span className={styles.hint} id={`${feedback.field("country").id}-hint`}>{destinationCopy[locale].hint}</span><FieldError state={feedback} name="country" /></label>
+                      <label>{t.postcode}{market === "TH" ? " *" : destinationCopy[locale].optional}<input {...feedback.field("postcode", `${feedback.field("postcode").id}-hint`)} name="postcode" inputMode={market === "TH" ? "numeric" : "text"} autoComplete="postal-code" required={market === "TH"} pattern={market === "TH" ? "[0-9]{5}" : undefined} maxLength={market === "TH" ? 5 : 20} value={postcode} onChange={(event) => setPostcode(normalizeCustomerNumber(event.target.value))} /><span className={styles.hint} id={`${feedback.field("postcode").id}-hint`}>{market === "TH" ? f.postcodeHint : destinationCopy[locale].foreignPostcode}</span><FieldError state={feedback} name="postcode" /></label>
+                    </div>{country.trim() && market !== languageMarket && <p className={styles.destinationUpdate} role="status">{destinationCopy[locale].updated}</p>}</fieldset>
                     <fieldset className={styles.section}><legend>{f.optionalDetails}</legend><div className={styles.fields}>
                       <label className={styles.wide}>{t.notes}<textarea {...feedback.field("notes")} name="notes" maxLength={1000} rows={3} /><FieldError state={feedback} name="notes" /></label>
                     </div>
@@ -307,7 +323,7 @@ export default function Checkout({ locale, enquiriesEnabled, paymentsEnabled = f
               </>
             )}
           </div>
-          <OrderSummary locale={locale} shippingQuote={shippingQuote} paymentsEnabled={realPaymentAvailable} />
+          <OrderSummary locale={locale} marketOverride={market} shippingQuote={shippingQuote} paymentsEnabled={realPaymentAvailable} />
         </div>
       )}
     </section>

@@ -61,37 +61,62 @@ async function main() {
       ],
     },
   ])
-    assert.deepEqual(parseStoredCart(invalid), { items: [], wishlist: [] });
+    assert.deepEqual(parseStoredCart(invalid), { items: [], wishlist: [], market: "TH", displayCurrency: "USD" });
   assert.deepEqual(
     parseStoredCart({
       items: [
-        { id: "coffee-blossom-honey", quantity: 72 },
-        { id: "coffee-blossom-honey", quantity: 55 },
+        { id: "coffee-blossom-honey", quantity: 96 },
+        { id: "coffee-blossom-honey", quantity: 96 },
       ],
       wishlist: ["coffee-blossom-honey", "invalid"],
     }),
     {
       items: [{ id: "coffee-blossom-honey", quantity: 96 }],
       wishlist: ["coffee-blossom-honey"],
+      market: "TH",
+      displayCurrency: "USD",
     },
   );
+  assert.deepEqual(parseStoredCart({ items: [{ id: "coffee-blossom-honey", quantity: 2 }, { id: "coffee-blossom-honey", quantity: 2 }] }).items, [{ id: "coffee-blossom-honey", quantity: 2 }], "Duplicate saved rows cannot create an unlisted bundle");
+  assert.equal(parseStoredCart({ displayCurrency: "THB" }).displayCurrency, "THB", "THB is a selectable display currency");
+  assert.equal(parseStoredCart({ displayCurrency: "EUR", displayCurrencyLocale: "th" }, undefined, "TH", "th").displayCurrency, "EUR", "A manual currency choice persists within its language");
+  assert.equal(parseStoredCart({ displayCurrency: "EUR", displayCurrencyLocale: "th" }, undefined, "INTL", "en").displayCurrency, "USD", "English resets a Thai currency choice to USD");
+  assert.equal(parseStoredCart({ displayCurrency: "USD" }, undefined, "TH", "th").displayCurrency, "THB", "Thai routes default legacy bags to THB");
+  assert.equal(parseStoredCart({ displayCurrency: "KRW" }).displayCurrency, "USD", "A retired saved currency falls back to USD");
+  assert.deepEqual(parseStoredCart({ items: [{ id: "coffee-blossom-honey", quantity: 6 }] }, [{ ...load("src/lib/catalog.ts").honey, stock: 4 }]).items, [{ id: "coffee-blossom-honey", quantity: 4 }], "Reduced stock falls back to a valid listed bundle");
   const { formatPrice, quoteProduct, honey } = load("src/lib/catalog.ts");
-  for (const [quantity, thb, usd] of [[1, 380, 54.29], [2, 700, 100], [6, 1980, 282.86], [12, 3800, 542.86], [24, 7200, 1028.57], [48, 13000, 1857.14], [96, 24000, 3428.57]]) {
-    assert.equal(quoteProduct(honey, quantity, "th").total, thb, `THB total for ${quantity} jars`);
-    assert.equal(quoteProduct(honey, quantity, "en").total, usd, `USD total for ${quantity} jars`);
+  for (const [quantity, thb] of [[1, 380], [2, 700], [4, 1360], [6, 1980], [12, 3800], [24, 7200], [48, 13000], [96, 24000], [192, 46000]]) {
+    assert.equal(quoteProduct(honey, quantity, "TH").total, thb, `Thailand total for ${quantity} jars`);
   }
-  assert.equal(quoteProduct(honey, 3, "th").total, 1080, "Three jars combine one two-pack and one single");
-  assert.equal(quoteProduct(honey, 7, "th").total, 2360, "Seven jars combine one six-pack and one single");
-  assert.equal(quoteProduct(honey, 13, "th").total, 4180, "Thirteen jars combine one twelve-pack and one single");
-  assert.equal(quoteProduct(honey, 3, "ar").total, 154.29, "Arabic displays the same USD schedule");
+  for (const [quantity, thb] of [[1, 5000], [2, 8000], [4, 11200], [6, 13200], [12, 21600], [24, 38400], [48, 67200], [96, 115200], [192, 192000]]) {
+    assert.equal(quoteProduct(honey, quantity, "INTL").total, thb, `International total for ${quantity} jars`);
+  }
+  for (const quantity of [3, 5, 7, 13, 191]) assert.throws(() => quoteProduct(honey, quantity, "INTL"), /No INTL bundle/);
+  const fx = load("src/app/api/exchange-rates/route.ts");
+  const originalFetch = globalThis.fetch;
+  try {
+    const today = new Date().toISOString().slice(0, 10);
+    const openRates = { result: "success", base_code: "THB", time_last_update_unix: Math.floor(Date.now() / 1000), rates: { THB: 1, USD: 0.031, AED: 0.11, SAR: 0.12, KWD: 0.009, QAR: 0.10, BND: 0.04 } };
+    globalThis.fetch = async (url) => new Response(String(url).includes("ecb.europa.eu")
+      ? `<Cube time='${today}'><Cube currency='THB' rate='40'/><Cube currency='USD' rate='1.25'/></Cube>`
+      : JSON.stringify(openRates), { status: 200 });
+    const rates = await fx.GET();
+    assert.equal(rates.status, 200);
+    const converted = (await rates.json()).rates;
+    assert.deepEqual(converted.USD, { rate: 1.25 / 40, date: today, source: "ECB" });
+    assert.deepEqual(converted.EUR, { rate: 1 / 40, date: today, source: "ECB" });
+    for (const currency of ["AED", "SAR", "KWD", "QAR", "BND"]) assert.equal(converted[currency].source, "ExchangeRate-API", `${currency} has a working non-ECB rate`);
+    globalThis.fetch = async () => new Response("<Cube time='2020-01-01'><Cube currency='THB' rate='40'/></Cube>", { status: 200 });
+    assert.equal((await fx.GET()).status, 503, "Stale reference rates never display estimates");
+  } finally { globalThis.fetch = originalFetch; }
   const { quoteCart } = load("src/lib/cart-pricing.ts");
-  assert.equal(quoteCart([{ id: honey.id, quantity: 1 }, { id: "second-honey", quantity: 2 }], [honey, { ...honey, id: "second-honey", slug: "second-honey" }], "en").subtotal, 154.29, "USD bag subtotals add exact cents");
+  assert.equal(quoteCart([{ id: honey.id, quantity: 1 }, { id: "second-honey", quantity: 2 }], [honey, { ...honey, id: "second-honey", slug: "second-honey" }], "INTL").subtotal, 13000, "International THB bag totals match listed bundles");
   const { addCartItem, cartQuantityLimit, restoreCartItem } = load("src/lib/cart-actions.ts");
   assert.equal(cartQuantityLimit(undefined), 0, "Removed products cannot be restored");
-  assert.equal(cartQuantityLimit(honey), 96);
+  assert.equal(cartQuantityLimit(honey), 192);
   assert.equal(cartQuantityLimit({ ...honey, stock: 3.8 }), 3);
   for (const stock of [-1, NaN, Infinity, 0]) assert.equal(cartQuantityLimit({ ...honey, stock }), 0);
-  assert.equal(cartQuantityLimit({ ...honey, stock: 100 }), 96);
+  assert.equal(cartQuantityLimit({ ...honey, stock: 100 }), 100);
   const bag = [{ id: "first", quantity: 2 }, { id: honey.id, quantity: 3 }, { id: "last", quantity: 1 }];
   assert.deepEqual(addCartItem(bag, honey.id, 2, 5), [bag[0], { id: honey.id, quantity: 5 }, bag[2]], "Changing quantity preserves stable row order");
   for (const quantity of [NaN, Infinity, -2, 0, 0.5]) assert.equal(addCartItem(bag, honey.id, quantity, 20), bag);
@@ -150,6 +175,7 @@ async function main() {
   });
   const makeBody = () => ({
     locale: "en",
+    market: "INTL",
     consent: true,
     customer: {
       name: "Test customer",
@@ -187,7 +213,7 @@ async function main() {
     assert.equal(calls, 0);
     process.env.ORDER_ENQUIRIES_ENABLED = "true";
     process.env.MONGODB_URI = "mongodb://not-used.invalid/test";
-    for (const quantity of [0, 97, 1.5, "2", -1, null]) {
+    for (const quantity of [0, 193, 1.5, "2", -1, null]) {
       const body = makeBody();
       body.items[0].quantity = quantity;
       assert.equal((await POST(request(body))).status, 400);
@@ -255,10 +281,10 @@ async function main() {
     assert.equal(response.status, 201);
     const result = await response.json();
     assert.match(result.reference, /^VT-[0-9A-F]{12}$/);
-    assert.equal(documents.get(key).subtotal, 100);
-    assert.equal(documents.get(key).items[0].lineTotal, 100);
-    assert.equal(documents.get(key).items[0].unitPrice, 50);
-    assert.equal(documents.get(key).currency, "USD");
+    assert.equal(documents.get(key).subtotal, 8000);
+    assert.equal(documents.get(key).items[0].lineTotal, 8000);
+    assert.equal(documents.get(key).items[0].unitPrice, 4000);
+    assert.equal(documents.get(key).currency, "THB");
     assert.equal(documents.get(key).status, "enquiry");
     assert.equal(documents.get(key).paymentStatus, "not-requested");
     assert.equal(documents.get(key).fulfilmentStatus, "not-started");
@@ -268,13 +294,13 @@ async function main() {
     assert.equal(response.status, 201);
     assert.equal((await response.json()).reference, result.reference);
     assert.equal(documents.size, 1);
-    publishedContent.products[0].pricing.USD[1].total = 150;
+    publishedContent.products[0].pricing.internationalTHB[1].total = 9000;
     publishedContent.products[0].stock = 0;
     publishedContent.products[0].status = "archived";
     response = await POST(request(makeBody(), key));
     assert.equal(response.status, 201, "An existing retry must survive price, stock and publication changes");
     assert.equal((await response.json()).reference, result.reference);
-    assert.equal(documents.get(key).subtotal, 100, "Historical order prices are preserved");
+    assert.equal(documents.get(key).subtotal, 8000, "Historical order prices are preserved");
     assert.equal((await POST(request(makeBody(), randomUUID()))).status, 400, "Archived products cannot create new enquiries");
     const changedCustomer = makeBody(); changedCustomer.customer.email = "different@example.com";
     assert.equal((await POST(request(changedCustomer, key))).status, 409);
@@ -283,7 +309,7 @@ async function main() {
     publishedContent = defaultContent();
     body.items[0].quantity = 3;
     assert.equal((await POST(request(body, key))).status, 409);
-    assert.equal(documents.get(key).subtotal, 100);
+    assert.equal(documents.get(key).subtotal, 8000);
     fail = true;
     const retryKey = randomUUID();
     assert.equal((await POST(request(makeBody(), retryKey))).status, 503);
@@ -296,14 +322,14 @@ async function main() {
     assert.equal((await POST(request(makeBody(), uncertainKey))).status, 503);
     assert.equal(documents.size, 3);
     failRead = false;
-    publishedContent.products[0].pricing.USD[1].total = 175; publishedContent.products[0].status = "archived";
+    publishedContent.products[0].pricing.internationalTHB[1].total = 9500; publishedContent.products[0].status = "archived";
     assert.equal((await POST(request(makeBody(), uncertainKey))).status, 201);
     assert.equal(
       documents.size,
       3,
       "Retry after an uncertain save must not duplicate the enquiry",
     );
-    assert.equal(documents.get(uncertainKey).subtotal, 100);
+    assert.equal(documents.get(uncertainKey).subtotal, 8000);
     publishedContent = defaultContent();
     duplicateRace = true;
     const raceKey = randomUUID();
@@ -312,7 +338,8 @@ async function main() {
     duplicateRace = false;
     const thaiBody = makeBody();
     thaiBody.locale = "th";
-    delete thaiBody.customer.country;
+    thaiBody.market = "TH";
+    thaiBody.customer.country = "Thailand";
     thaiBody.customer.postcode = "10110";
     thaiBody.items[0].quantity = 12;
     const thaiKey = randomUUID();
@@ -320,6 +347,12 @@ async function main() {
     assert.equal(documents.get(thaiKey).currency, "THB");
     assert.equal(documents.get(thaiKey).items[0].lineTotal, 3800);
     assert.equal(documents.get(thaiKey).subtotal, 3800, "A twelve-jar total stays exact despite a repeating average unit price");
+    const mismatchedThaiAddress = structuredClone(thaiBody);
+    mismatchedThaiAddress.customer.country = "Singapore";
+    assert.equal((await POST(request(mismatchedThaiAddress))).status, 400, "Thai prices cannot be submitted for an overseas address");
+    const mismatchedInternationalAddress = makeBody();
+    mismatchedInternationalAddress.customer.country = "ประเทศไทย";
+    assert.equal((await POST(request(mismatchedInternationalAddress))).status, 400, "International prices cannot be submitted for Thailand");
     const wrongThaiPostcode = structuredClone(thaiBody);
     wrongThaiPostcode.customer.postcode = "SW1A 1AA";
     assert.equal((await POST(request(wrongThaiPostcode, randomUUID()))).status, 400);

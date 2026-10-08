@@ -1,4 +1,4 @@
-import { catalogProducts, currencyForLocale, formatPrice, HONEY_ID, MAX_QUANTITY, quoteProduct, type CatalogProduct } from "./catalog";
+import { catalogProducts, formatPrice, HONEY_ID, MAX_QUANTITY, quoteProduct, type CatalogProduct } from "./catalog";
 import { isLocale } from "./i18n";
 import { initialOrderWorkflow, normalizeWholesale, parseOrderWorkflow, parseRequestActivity } from "./commerce-workflow";
 import { workflowCopy } from "@/content/workflow";
@@ -30,6 +30,7 @@ export function emptyDemoData(): DemoData {
 // Normalize demo inputs too: UI simulations use the catalog's price and bounds.
 export function normalizeDemoInput(input: DemoInput, products: readonly CatalogProduct[] = catalogProducts, historical = false): DemoInput {
   if (!input || !demoKinds.includes(input.kind) || !isLocale(input.locale)) throw new Error("Invalid demo submission");
+  if (input.market !== undefined && input.market !== "TH" && input.market !== "INTL") throw new Error("Invalid delivery market");
   if (typeof input.name !== "string" || !input.name.trim() || input.name.length > 100) throw new Error("Check your name");
   if (typeof input.email !== "string" || input.email.length > 254 || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(input.email.trim())) throw new Error("Check your email");
   if (input.message !== undefined && (typeof input.message !== "string" || input.message.length > 5000)) throw new Error("Check your message");
@@ -37,7 +38,7 @@ export function normalizeDemoInput(input: DemoInput, products: readonly CatalogP
   if (input.payment !== undefined && !payments.includes(input.payment)) throw new Error("Invalid demo payment");
   if (input.customer && (typeof input.customer !== "object" || Array.isArray(input.customer) || Object.entries(input.customer).some(([key, value]) => key.length > 40 || typeof value !== "string" || value.length > 1000))) throw new Error("Check your details");
   const result: DemoInput = {
-    kind: input.kind, locale: input.locale,
+    kind: input.kind, locale: input.locale, ...(input.market ? { market: input.market } : {}),
     name: input.name.trim(), email: input.email.trim().toLowerCase(),
     ...(input.phone ? { phone: input.phone.trim() } : {}),
     ...(input.message ? { message: input.message.trim() } : {}),
@@ -52,7 +53,7 @@ export function normalizeDemoInput(input: DemoInput, products: readonly CatalogP
     if (historical && input.currency !== undefined && !["THB", "USD"].includes(input.currency)) throw new Error("Check order currency");
     if (historical) {
       if (input.currency !== undefined) result.currency = input.currency;
-    } else result.currency = currencyForLocale(input.locale);
+    } else result.currency = "THB";
     const ids = new Set<string>();
     result.items = input.items.map((item) => {
       const product = products.find((entry) => entry.id === item?.id);
@@ -61,7 +62,7 @@ export function normalizeDemoInput(input: DemoInput, products: readonly CatalogP
       if (!item || typeof item.id !== "string" || !/^[a-z0-9][a-z0-9-]{0,99}$/.test(item.id) || (!historical && !product) || ids.has(item.id) || !Number.isInteger(item.quantity) || item.quantity < 1 || item.quantity > limit || (historical && (!Number.isFinite(item.unitPrice) || item.unitPrice < 0 || item.unitPrice > 10000000 || (item.lineTotal !== undefined && (!Number.isFinite(item.lineTotal) || item.lineTotal < 0 || item.lineTotal > 1_000_000_000 || Math.abs(item.lineTotal * 100 - Math.round(item.lineTotal * 100)) > 0.000001))))) throw new Error("Check your bag");
       ids.add(item.id);
       if (historical) return { id: item.id, quantity: item.quantity, unitPrice: item.unitPrice, ...(item.lineTotal !== undefined ? { lineTotal: item.lineTotal } : {}) };
-      const quote = quoteProduct(product!, item.quantity, input.locale);
+      const quote = quoteProduct(product!, item.quantity, input.market ?? "TH");
       if (quote.currency !== result.currency) throw new Error("Check order currency");
       return { id: item.id, quantity: item.quantity, unitPrice: quote.unitPrice, lineTotal: quote.total };
     });
@@ -233,7 +234,7 @@ export function createDemoSubmission(data: DemoData, input: DemoInput, key: stri
     return { data, record: existing };
   }
   if (data.records.length >= 200) throw new Error("Demo inbox is full");
-  const storeShipping = normalized.kind === "order" ? quoteStoreShipping(normalized.locale, normalized.customer?.postcode || "", normalized.subtotal || 0) : undefined;
+  const storeShipping = normalized.kind === "order" ? quoteStoreShipping(normalized.market ?? "TH", normalized.customer?.postcode || "", normalized.subtotal || 0) : undefined;
   const record: DemoRecord = { ...normalized, id: key, reference: `DEMO-${key.replace(/-/g, "").slice(0, 10).toUpperCase()}`, fingerprint, status: "new", notes: "", createdAt: now, updatedAt: now, assignedTo: "", activity: [{ id: `${key}-0`, at: now, actor: "Mock customer", action: "request-created", detail: normalized.kind }], ...(normalized.kind === "order" ? { order: initialOrderWorkflow(normalized.payment), ...(storeShipping ? { shippingQuote: storeShipping } : {}) } : {}) };
   const inventory = record.kind === "order" && record.payment !== "enquiry" ? allocateMockStock(data.inventory, key, record.items!, record.payment === "demo-paid" ? "committed" : "reserved", products, Date.parse(now)) : data.inventory;
   return { data: { ...data, inventory, records: [record, ...data.records], outbox: [...notificationPreviews(record, products), ...data.outbox] }, record };

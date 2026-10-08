@@ -10,13 +10,21 @@ export default function Quantity({
   onChange,
   locale,
   max = MAX_QUANTITY,
+  options,
 }: {
   value: number;
   onChange: (value: number) => void;
   locale: Locale;
   max?: number;
+  options?: readonly number[];
 }) {
   const t = usePublishedCopy(commerce[locale], `commerce.${locale}`);
+  if (options?.length) return <label className={styles.control}>
+    <span className="srOnly">{t.quantity}</span>
+    <select className={styles.select} value={value} onChange={(event) => onChange(Number(event.target.value))}>
+      {options.filter((quantity) => quantity <= max).map((quantity) => <option key={quantity} value={quantity}>{new Intl.NumberFormat(locale).format(quantity)}</option>)}
+    </select>
+  </label>;
   return (
     <div className={styles.control} role="group" aria-label={t.quantity}>
       <button

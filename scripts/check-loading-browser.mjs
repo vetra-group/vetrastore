@@ -114,7 +114,7 @@ try {
   await browser.evaluate("window.__loadingTest.hold.rsc=true");
   await browser.click('#mobile-navigation a[href="/about"]');
   await browser.wait("Boolean(document.querySelector('[data-navigation-loading]'))");
-  assert.equal(await browser.evaluate("document.querySelector('#mobile-navigation').hidden"), true);
+  await browser.wait("!document.querySelector('#mobile-navigation').open");
   await browser.wait("window.__loadingTest.requests.some(r=>r.kind==='rsc')");
   await pause(250);
   await browser.screenshot(path.join(output, "mobile-navigation-pending.png"));

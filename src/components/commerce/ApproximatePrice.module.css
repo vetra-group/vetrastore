@@ -1,0 +1,2 @@
+.estimate { display: grid; gap: 0.2rem; margin: var(--space-2) 0 0; color: var(--ink-soft); font-size: var(--font-size-1); }
+.estimate small { font-size: 1em; line-height: 1.45; }

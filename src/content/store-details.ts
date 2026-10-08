@@ -23,8 +23,8 @@ export const storeDetails = {
     },
     shipping: {
       title: "التوصيل",
-      summary: "أرسل موقعك للاستفسار عن رسوم التوصيل",
-      description: "لم تُؤكَّد بعد رسوم التوصيل ومناطق الخدمة ومواعيد الوصول. أرسل بلد الوجهة والمدينة والرمز البريدي إن وُجد للاستفسار عن التفاصيل قبل الطلب.",
+      summary: "الشحن إلى وجهتك مشمول في سعر الباقة المختارة",
+      description: "تختلف أسعار الباقات داخل تايلاند عن الأسعار الدولية. يشمل كل سعر الشحن إلى وجهته المحددة. أرسل بلد الوجهة والمدينة والرمز البريدي إن وُجد ليؤكد فريقنا توافر المنتج وموعد التوصيل.",
     },
     returns: {
       title: "مشكلات المنتج",
@@ -51,9 +51,9 @@ export const storeDetails = {
     },
     shipping: {
       title: "การจัดส่ง",
-      summary: "จัดส่งฟรีในประเทศไทย",
+      summary: "ราคาชุดสินค้ารวมค่าจัดส่งตามพื้นที่ที่เลือก",
       description:
-        "จัดส่งฟรีภายในประเทศไทย กรุณาแจ้งจังหวัดและรหัสไปรษณีย์เพื่อให้ทีมงานยืนยันพื้นที่ให้บริการและระยะเวลาจัดส่งก่อนสั่งซื้อ",
+        "ราคาไทยและราคาต่างประเทศเป็นคนละชุด แต่ละชุดรวมค่าจัดส่งไปยังพื้นที่ที่เลือกแล้ว กรุณาแจ้งประเทศหรือจังหวัดและรหัสไปรษณีย์เพื่อให้ทีมงานยืนยันสินค้าและระยะเวลาจัดส่ง",
     },
     returns: {
       title: "ปัญหาเกี่ยวกับสินค้า",
@@ -83,9 +83,9 @@ export const storeDetails = {
     },
     shipping: {
       title: "Delivery",
-      summary: "Share your location for a delivery quote",
+      summary: "Shipping to your selected destination is included",
       description:
-        "Delivery charges, service areas, and delivery times are awaiting confirmation. Share the destination country and city, with a postal code if applicable, to ask for details before ordering.",
+        "Thailand and international bundles have separate prices. Each includes shipping to its selected market. Share the destination country and city, with a postal code if applicable, so our team can confirm availability and delivery timing.",
     },
     returns: {
       title: "Product concerns",
@@ -109,21 +109,21 @@ export const storeDetails = {
 } satisfies Localized<SellingDetails>;
 
 export function honeySellingSummary(locale: Locale) {
-  const quote = publicQuote(honey, 1, locale);
+  const quote = publicQuote(honey, 1, "TH");
   const price = quote ? formatPrice(quote.total, locale, quote.currency) : publicPricingCopy[locale].unavailable;
   if (locale === "ar") {
-    return `${honey.name.ar} من ${honey.brand}، بوزن ${honey.weight} غرامًا، بسعر \u2068${price}\u2069 للعبوة. تُضاف رسوم التوصيل بشكل منفصل.`;
+    return `${honey.name.ar} من ${honey.brand}، بوزن ${honey.weight} غرامًا، يبدأ سعر العبوة للتوصيل داخل تايلاند من \u2068${price}\u2069. الشحن مشمول في سعر كل باقة حسب وجهتها.`;
   }
   return locale === "th"
-    ? `${honey.brand} ${honey.name.th} ขนาด ${honey.weight} กรัม ราคา ${price} ต่อกระปุก จัดส่งฟรีในประเทศไทย`
-    : `${honey.brand} ${honey.name.en}, ${honey.weight} g, is ${price} per jar. Delivery charges are separate.`;
+    ? `${honey.brand} ${honey.name.th} ขนาด ${honey.weight} กรัม ราคาเริ่มต้น ${price} ต่อกระปุกสำหรับจัดส่งในไทย ราคาชุดสินค้ารวมค่าจัดส่งตามพื้นที่ที่เลือก`
+    : `${honey.brand} ${honey.name.en}, ${honey.weight} g, starts at ${price} per jar for Thailand delivery. Shipping is included in each market's bundle price.`;
 }
 
 // Used by launch preparation and staff tools; pending items are not store policies.
 export const sellingConfirmationChecklist = [
   { key: "stock", label: { th: "จำนวนสินค้าปัจจุบัน", en: "Current stock quantity", ar: "كمية المخزون الحالية" } },
   { key: "batch", label: { th: "ล็อตสินค้าและวันควรบริโภคก่อน", en: "Current batch and best-before date", ar: "التشغيلة الحالية وتاريخ «يُفضّل استهلاكه قبل»" } },
-  { key: "shipping", label: { th: "ค่าจัดส่ง พื้นที่ และระยะเวลา", en: "Delivery charges, areas, and timing", ar: "رسوم التوصيل ومناطقه ومواعيده" } },
+  { key: "shipping", label: { th: "พื้นที่และระยะเวลาจัดส่ง", en: "Delivery areas and timing", ar: "مناطق التوصيل ومواعيده" } },
   { key: "returns", label: { th: "เงื่อนไขคืนสินค้าและคืนเงิน", en: "Return and refund terms", ar: "شروط الإرجاع واسترداد المبلغ" } },
   { key: "wholesale", label: { th: "ราคาและเงื่อนไขขายส่ง", en: "Wholesale pricing and terms", ar: "أسعار الجملة وشروطها" } },
 ] as const;

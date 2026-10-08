@@ -9,12 +9,10 @@ export default function StoreShell({
   children,
   header,
   footer,
-  paymentsEnabled = false,
 }: {
   children: ReactNode;
   header: ReactNode;
   footer: ReactNode;
-  paymentsEnabled?: boolean;
 }) {
   const segments = usePathname().split("/").filter(Boolean);
   const firstSegment = segments[0] ?? "";
@@ -28,14 +26,14 @@ export default function StoreShell({
   if (pageSegments[0] === "cms") return <>{children}</>;
 
   // The product story supplies its own main landmark and shares the store shell.
-  if (isHoneyExperience) return <>{header}{children}{footer}<MiniCart locale={locale} paymentsEnabled={paymentsEnabled} /></>;
+  if (isHoneyExperience) return <>{header}{children}{footer}<MiniCart locale={locale} /></>;
 
   return (
     <>
       {header}
       <main id="main-content">{children}</main>
       {footer}
-      <MiniCart locale={locale} paymentsEnabled={paymentsEnabled} />
+      <MiniCart locale={locale} />
     </>
   );
 }

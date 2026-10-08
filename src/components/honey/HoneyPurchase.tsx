@@ -5,13 +5,15 @@ import Link from "@/components/loading/NavigationLink";
 import { ArrowUpRight, Check, Heart, ShoppingBag } from "lucide-react";
 import Quantity from "@/components/commerce/Quantity";
 import PriceTiers from "@/components/commerce/PriceTiers";
+import ApproximatePrice from "@/components/commerce/ApproximatePrice";
 import { useStore } from "@/components/commerce/StoreProvider";
+import { useDisplayPrice } from "@/components/commerce/useDisplayPrice";
 import { commerce } from "@/content/commerce";
 import { honeyStory } from "@/content/honey";
 import { publicPricingCopy } from "@/content/public-pricing";
 import { publicPaymentCopy } from "@/content/payment-checkout";
 import { workflowCopy } from "@/content/workflow";
-import { currencyForLocale, formatPrice, HONEY_ID, MAX_QUANTITY } from "@/lib/catalog";
+import { priceTiers, HONEY_ID, MAX_QUANTITY } from "@/lib/catalog";
 import { publicQuote } from "@/lib/public-pricing";
 import { usePublished, usePublishedCopy } from "@/components/cms/PublishedProvider";
 import { localizedPath, type Locale } from "@/lib/i18n";
@@ -23,20 +25,21 @@ export default function HoneyPurchase({ locale, preview = false, paymentsEnabled
   const t = usePublishedCopy(commerce[locale], `commerce.${locale}`);
   const c = usePublishedCopy(honeyStory[locale], `honey.${locale}`);
   const p = publicPricingCopy[locale];
-  const { addItem, items, itemCount, wishlist, toggleWishlist } = useStore();
+  const { addItem, items, itemCount, wishlist, toggleWishlist, market } = useStore();
+  const display = useDisplayPrice(locale);
   const [quantity, setQuantity] = useState(1);
   const [added, setAdded] = useState(false);
   if (!honey) return null;
   const saved = wishlist.includes(honey.id);
   const bagQuantity = items.find((item) => item.id === honey.id)?.quantity ?? 0;
   const showAdded = added && bagQuantity > 0;
-  const remaining = Math.max(0, Math.min(MAX_QUANTITY, honey.stock ?? MAX_QUANTITY) - bagQuantity);
-  const tiers = honey.pricing?.[currencyForLocale(locale)];
+  const remaining = Math.max(0, Math.min(MAX_QUANTITY, honey.stock ?? MAX_QUANTITY));
+  const tiers = priceTiers(honey, market);
   const availableTiers = tiers?.filter((tier) => tier.quantity <= remaining) ?? [];
   const selectedQuantity = tiers?.length
     ? (availableTiers.some((tier) => tier.quantity === quantity) ? quantity : availableTiers.at(-1)?.quantity ?? 1)
     : Math.min(quantity, Math.max(1, remaining));
-  const selectedQuote = publicQuote(honey, selectedQuantity, locale);
+  const selectedQuote = publicQuote(honey, selectedQuantity, market);
 
   return (
     <div className={styles.purchase}>
@@ -45,7 +48,8 @@ export default function HoneyPurchase({ locale, preview = false, paymentsEnabled
       )}
       <div className={styles.selectedTotal} aria-live="polite" aria-atomic="true">
         <span>{p.selectedTotal}</span>
-        <strong>{selectedQuote ? <bdi>{formatPrice(selectedQuote.total, locale, selectedQuote.currency)}</bdi> : p.unavailable}</strong>
+        <strong>{selectedQuote ? <bdi>{display.format(selectedQuote.total)}</bdi> : p.unavailable}</strong>
+        {selectedQuote && <ApproximatePrice amount={selectedQuote.total} locale={locale} />}
       </div>
       <div className={styles.controls} id="honey-purchase-controls" tabIndex={-1}>
         {!tiers?.length && <Quantity

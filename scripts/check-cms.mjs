@@ -62,8 +62,8 @@ async function main() {
   const legacy = defaults.defaultState(); delete legacy.trash; assert.deepEqual(validation.validateCmsState(legacy).trash, []);
   for (const mutate of [
     (c) => { c.products[0].price = Infinity; }, (c) => { c.products[0].price = -1; }, (c) => { c.products[0].price = 1.234; },
-    (c) => { c.products[0].pricing.USD = []; }, (c) => { c.products[0].pricing.THB[1].quantity = 1; },
-    (c) => { c.products[0].pricing.USD[0].total = 0; }, (c) => { c.products[0].pricing.THB[1].total = 1000; },
+    (c) => { c.products[0].pricing.internationalTHB = []; }, (c) => { c.products[0].pricing.THB[1].quantity = 1; },
+    (c) => { c.products[0].pricing.internationalTHB[0].total = 0; }, (c) => { c.products[0].pricing.THB[1].total = -1; },
     (c) => { c.products[0].slug = "different-honey"; }, (c) => { c.products = []; }, (c) => { c.products[0].stock = 1.5; },
     (c) => { c.products[0].weight = 0; }, (c) => { c.products[0].name.th = ""; }, (c) => { c.products.push(clone(c.products[0])); },
     (c) => { c.products[0].image = "https://evil.example/file.png"; }, (c) => { c.products[0].image = "/images/../private.png"; },
@@ -78,6 +78,23 @@ async function main() {
   assert.equal(upgradedPrice.draft.products[0].price, 380); assert.equal(upgradedPrice.published.products[0].price, 380);
   assert.deepEqual(upgradedPrice.draft.products[0].pricing, content.products[0].pricing);
   assert.deepEqual(legacyPrice, originalLegacy, "Price migration must not mutate saved snapshots");
+  const oldTiered = clone(defaults.defaultState());
+  const oldThai = [[1, 380], [2, 700], [6, 1980], [12, 3800], [24, 7200], [48, 13000], [96, 24000]].map(([quantity, total]) => ({ quantity, total }));
+  const oldUsd = [[1, 54.29], [2, 100], [6, 282.86], [12, 542.86], [24, 1028.57], [48, 1857.14], [96, 3428.57]].map(([quantity, total]) => ({ quantity, total }));
+  for (const snapshot of [oldTiered.draft, oldTiered.published]) snapshot.products[0].pricing = { THB: clone(oldThai), USD: clone(oldUsd) };
+  const oldTieredOriginal = clone(oldTiered);
+  assert.deepEqual(validation.validateCmsState(oldTiered).published.products[0].pricing, content.products[0].pricing, "Only the exact old honey seed upgrades to the new markets");
+  assert.deepEqual(oldTiered, oldTieredOriginal, "The old CMS snapshot stays unchanged on disk");
+  oldTiered.draft.products[0].pricing.USD[0].total = 60;
+  assert.equal(validation.validateCmsState(oldTiered).draft.products[0].pricing.USD[0].total, 60, "Custom international edits remain intact");
+  const previousPrices = clone(defaults.defaultState());
+  for (const snapshot of [previousPrices.draft, previousPrices.published]) snapshot.products[0].pricing.THB = snapshot.products[0].pricing.THB.filter((tier) => tier.quantity !== 4);
+  previousPrices.draft.products[0].pricing.internationalTHB[0].total = 5100;
+  const previousOriginal = clone(previousPrices);
+  const upgradedPrevious = validation.validateCmsState(previousPrices);
+  assert.equal(upgradedPrevious.published.products[0].pricing.THB.find((tier) => tier.quantity === 4).total, 1360);
+  assert.equal(upgradedPrevious.draft.products[0].pricing.internationalTHB[0].total, 5100, "Adding the Thai bundle preserves edited international prices");
+  assert.deepEqual(previousPrices, previousOriginal, "Adding the Thai bundle does not rewrite saved CMS data");
   assert.equal(validation.validLink("https://example.com/path"), "https://example.com/path");
   assert.equal(validation.validImageSource("https://res.cloudinary.com/example/image/upload/photo.webp"), "https://res.cloudinary.com/example/image/upload/photo.webp");
   pass("deep content validation, localized required fields, identity, uniqueness, prices, URLs and copy allowlist");

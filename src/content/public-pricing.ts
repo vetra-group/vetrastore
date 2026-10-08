@@ -8,6 +8,7 @@ export const publicPricingCopy: Localized<{
   approximately: string;
   usdChargeNote: string;
   freeShippingThailand: string;
+  freeShippingWorldwide: string;
   jars: (quantity: number) => string;
 }> = {
   en: {
@@ -16,8 +17,9 @@ export const publicPricingCopy: Localized<{
     unavailable: "Contact us for pricing",
     perJar: "per jar",
     approximately: "about",
-    usdChargeNote: "USD amounts are approximate. When payment is available, the charge is in Thai baht (THB).",
+    usdChargeNote: "Other currency amounts are estimates. The order price is in Thai baht (THB).",
     freeShippingThailand: "Free shipping in Thailand",
+    freeShippingWorldwide: "Worldwide shipping included · charged in THB",
     jars: (quantity) => `${quantity} ${quantity === 1 ? "jar" : "jars"}`,
   },
   ar: {
@@ -26,8 +28,9 @@ export const publicPricingCopy: Localized<{
     unavailable: "تواصل معنا لمعرفة السعر",
     perJar: "للعبوة الواحدة",
     approximately: "نحو",
-    usdChargeNote: "المبالغ المعروضة بالدولار الأمريكي تقديرية. وعند إتاحة الدفع، تُحصّل قيمة الطلب بالبات التايلاندي (THB).",
+    usdChargeNote: "المبالغ بعملات أخرى تقديرية. سعر الطلب بالبات التايلاندي.",
     freeShippingThailand: "شحن مجاني داخل تايلاند",
+    freeShippingWorldwide: "الشحن إلى جميع أنحاء العالم مشمول · يُحصّل المبلغ بالبات التايلاندي",
     jars: (quantity) => quantity === 1 ? "عبوة واحدة" : quantity === 2 ? "عبوتان" : `${new Intl.NumberFormat("ar").format(quantity)} ${quantity >= 3 && quantity <= 10 ? "عبوات" : "عبوة"}`,
   },
   th: {
@@ -38,6 +41,7 @@ export const publicPricingCopy: Localized<{
     approximately: "ประมาณ",
     usdChargeNote: "ราคาแสดงเป็นเงินบาท",
     freeShippingThailand: "จัดส่งฟรีในประเทศไทย",
+    freeShippingWorldwide: "รวมค่าจัดส่งทั่วโลก · ชำระเป็นเงินบาท",
     jars: (quantity) => `${new Intl.NumberFormat("th").format(quantity)} ขวด`,
   },
 };

@@ -29,6 +29,7 @@
 .form .section + .section { border-top: 1px solid var(--line); padding-top: var(--space-4); }
 .form .section > legend { font-size: var(--type-card-title); }
 .fields input[aria-invalid="true"], .fields textarea[aria-invalid="true"] { border-color: var(--feedback-error-ink, #922f25); }
+.destinationUpdate { margin: var(--space-3) 0 0; padding: var(--space-3); border-inline-start: 2px solid var(--gold); background: var(--surface); color: var(--ink-strong); line-height: 1.7; }
 .fields { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 16rem), 1fr)); gap: var(--space-4) var(--space-3); }
 .fields label, .outcome { display: flex; flex-direction: column; gap: var(--space-1); min-width: 0; color: var(--ink-strong); }
 .fields input, .fields textarea, .outcome select { min-width: 0; width: 100%; border: 1px solid var(--field-border); background: var(--paper); border-radius: var(--radius); padding: var(--space-2); min-height: var(--field-min-height); font-size: var(--font-size-1); color: var(--text); resize: vertical; transition: border-color 0.2s, box-shadow 0.2s; }

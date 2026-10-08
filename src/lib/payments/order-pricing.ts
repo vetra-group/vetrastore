@@ -2,10 +2,6 @@ import { MAX_QUANTITY, quoteProduct, type CatalogProduct, type Currency } from "
 import type { CartItem } from "../cart";
 import type { Locale } from "../i18n";
 
-/** The fixed display basis for the current foreign price schedule. This is a
- * merchandising price conversion, not a live exchange-rate quote. */
-export const FOREIGN_THB_PER_USD = 35;
-
 export type PaymentOrderLine = {
   id: string;
   quantity: number;
@@ -30,10 +26,7 @@ export type PaymentOrderQuote = {
   };
 };
 
-/** Build a THB charge snapshot only from the server's published product data.
- * Thai prices use the published THB tiers. Foreign prices use the separately
- * editable USD tiers, then convert each entire line to whole THB at the fixed
- * pricing basis. The USD display is approximate because THB is charged. */
+/** Build an exact THB charge snapshot from the server's Thai bundle prices. */
 export function quotePaymentOrder(
   items: readonly CartItem[],
   products: readonly CatalogProduct[],
@@ -45,7 +38,6 @@ export function quotePaymentOrder(
   if (locale !== "th" && locale !== "en" && locale !== "ar") {
     throw new Error("Choose a valid language.");
   }
-  const foreign = locale !== "th";
   const seen = new Set<string>();
   const chargeLines: PaymentOrderLine[] = [];
   const displayLines: PaymentDisplayLine[] = [];
@@ -57,13 +49,9 @@ export function quotePaymentOrder(
     seen.add(item.id);
     const product = products.find((candidate) => candidate.id === item.id);
     if (!product) throw new Error("Product is unavailable.");
-    const displayed = quoteProduct(product, item.quantity, locale);
+    const displayed = quoteProduct(product, item.quantity, "TH");
     const displayMinor = Math.round(displayed.total * 100);
-    // Multiplying integer USD cents avoids a floating-point edge at a .5-baht
-    // boundary. A THB tier retains its published satang precision.
-    const chargeMinor = foreign
-      ? Math.round((displayMinor * FOREIGN_THB_PER_USD) / 100) * 100
-      : displayMinor;
+    const chargeMinor = displayMinor;
     if (!Number.isSafeInteger(chargeMinor) || chargeMinor < 1) {
       throw new Error("The current price is unavailable.");
     }
@@ -79,8 +67,8 @@ export function quotePaymentOrder(
     subtotal: subtotalMinor / 100,
     subtotalMinor,
     display: {
-      currency: foreign ? "USD" : "THB",
-      approximate: foreign,
+      currency: "THB",
+      approximate: false,
       items: displayLines,
       subtotal: displaySubtotalMinor / 100,
     },

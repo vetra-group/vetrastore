@@ -4,9 +4,11 @@ import { useEffect, useState } from "react";
 import { ChevronRight } from "lucide-react";
 import { commerce } from "@/content/commerce";
 import { publicPricingCopy } from "@/content/public-pricing";
-import { formatPrice, HONEY_ID } from "@/lib/catalog";
+import { HONEY_ID } from "@/lib/catalog";
 import { publicQuote } from "@/lib/public-pricing";
 import { usePublished, usePublishedCopy } from "@/components/cms/PublishedProvider";
+import { useStore } from "@/components/commerce/StoreProvider";
+import { useDisplayPrice } from "@/components/commerce/useDisplayPrice";
 import type { Locale } from "@/lib/i18n";
 import styles from "./HoneyPurchaseShortcut.module.css";
 
@@ -23,6 +25,8 @@ function isEditing() {
 
 export default function HoneyPurchaseShortcut({ locale, label }: HoneyPurchaseShortcutProps) {
   const { products } = usePublished();
+  const { market } = useStore();
+  const display = useDisplayPrice(locale);
   const honey = products.find((product) => product.id === HONEY_ID);
   const t = usePublishedCopy(commerce[locale], `commerce.${locale}`);
   const [visible, setVisible] = useState(false);
@@ -72,12 +76,12 @@ export default function HoneyPurchaseShortcut({ locale, label }: HoneyPurchaseSh
   }, []);
 
   if (!visible || editing || !honey) return null;
-  const baseQuote = publicQuote(honey, 1, locale);
+  const baseQuote = publicQuote(honey, 1, market);
 
   return (
     <aside className={styles.shortcut} aria-label={honey.name[locale]}>
       <p className={styles.summary}>
-        <strong><bdi>{baseQuote ? formatPrice(baseQuote.total, locale, baseQuote.currency) : publicPricingCopy[locale].unavailable}</bdi></strong>
+        <strong><bdi>{baseQuote ? display.format(baseQuote.total) : publicPricingCopy[locale].unavailable}</bdi></strong>
         <span>{honey.weight} {t.gram}</span>
       </p>
       <a className={styles.choose} href="#honey-purchase">

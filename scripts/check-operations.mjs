@@ -139,18 +139,18 @@ try {
   assert.equal((await service.operationsDetail(shared.id, repository)).source, "website-test");
   await assert.rejects(submitSharedDemo({ ...publicBody, input: { ...input, message: "Changed after saved" } }, deps), (error) => error.code === "OPERATIONS_KEY_CONFLICT");
   for (const body of [{ ...publicBody, consent: false }, { ...publicBody, website: "spam" }, { ...publicBody, input: { ...input, payment: "demo-paid" } }, { ...publicBody, input: { ...input, kind: "wholesale" } }]) await assert.rejects(submitSharedDemo(body, deps), (error) => error.status === 400);
-  const customer = { name: input.name, email: input.email, phone: "+66000000000", address: "Synthetic address", district: "Synthetic district", province: "Synthetic province", postcode: "10110", notes: "" };
+  const customer = { name: input.name, email: input.email, phone: "+66000000000", address: "Synthetic address", district: "Synthetic district", province: "Synthetic province", country: "Thailand", postcode: "10110", notes: "" };
   const publicOrder = { submissionId: key(), consent: true, input: { ...orderInput, phone: customer.phone, customer } };
   const savedOrder = await submitSharedDemo(publicOrder, deps);
   assert.equal((await service.operationsDetail(savedOrder.id, repository)).items[0].lineTotal, 700);
   assert.deepEqual(await submitSharedDemo(publicOrder, { ...deps, products: [] }), savedOrder);
   const foreignCustomer = { ...customer, country: "United Kingdom", postcode: "SW1A 1AA" };
-  const foreignOrder = { submissionId: key(), consent: true, input: { ...orderInput, locale: "en", currency: "THB", phone: foreignCustomer.phone, customer: foreignCustomer } };
+  const foreignOrder = { submissionId: key(), consent: true, input: { ...orderInput, locale: "en", market: "INTL", currency: "USD", phone: foreignCustomer.phone, customer: foreignCustomer } };
   const foreignSaved = await submitSharedDemo(foreignOrder, deps);
   const foreignRecord = await service.operationsDetail(foreignSaved.id, repository);
-  assert.equal(foreignRecord.currency, "USD", "The server ignores a client currency claim");
-  assert.equal(foreignRecord.items[0].lineTotal, 100);
-  assert.equal(foreignRecord.shippingQuote, undefined, "USD orders do not receive Thai delivery quotes");
+  assert.equal(foreignRecord.currency, "THB", "The server ignores a client currency claim");
+  assert.equal(foreignRecord.items[0].lineTotal, 8000);
+  assert.equal(foreignRecord.shippingQuote.fee, 0);
   assert.deepEqual(await submitSharedDemo(foreignOrder, { ...deps, products: [] }), foreignSaved);
   await assert.rejects(submitSharedDemo({ ...foreignOrder, submissionId: key(), input: { ...foreignOrder.input, customer: { ...foreignCustomer, country: "" } } }, deps), (error) => error.status === 400);
   for (const [locale, country, district] of [["ar", "United Arab Emirates", "Dubai"], ["ar", "Qatar", "Doha"], ["en", "Singapore", "Singapore"]]) {
@@ -160,7 +160,7 @@ try {
     const internationalRecord = await service.operationsDetail(internationalSaved.id, repository);
     assert.equal(internationalRecord.customer.postcode, "");
     assert.equal(internationalRecord.customer.province, "");
-    assert.equal(internationalRecord.shippingQuote, undefined);
+    assert.equal(internationalRecord.shippingQuote.fee, 0);
     const omitted = structuredClone(internationalOrder);
     delete omitted.input.customer.province;
     delete omitted.input.customer.postcode;

@@ -48,7 +48,7 @@ const en = {
   add: "Add to bag",
   added: "Added to your bag",
   viewBag: "View bag",
-  fullBag: "You have reached the limit of 96 jars per enquiry.",
+  fullBag: "You have reached the limit of 192 jars per enquiry.",
   save: "Save to favourites",
   saved: "Remove from favourites",
   quantity: "Quantity",
@@ -67,7 +67,7 @@ const en = {
   storage: "Simply stored",
   storageValue: "Keep at room temperature",
   deliveryNote:
-    "Shipping and payment arrangements are confirmed by our team. Adding to your bag does not place an order.",
+    "Shipping is included in the bundle price. Our team confirms availability and payment; adding to your bag does not place an order.",
   details: "The details",
   ingredients: "Ingredients & storage",
   use: "Everyday rituals",
@@ -80,7 +80,7 @@ const en = {
   useBody:
     "Drizzle over warm toast, spoon into plain yoghurt, or stir into your favourite drink. Start with a little and adjust to taste.",
   shippingBody:
-    "Online payment is not available yet. Shipping cost, delivery timing and payment arrangements must be confirmed before an order can be completed. For retail or wholesale enquiries, please contact our team.",
+    "Bundle prices include shipping. Delivery timing and payment arrangements must be confirmed before an order can be completed. For retail or wholesale enquiries, please contact our team.",
   editorialEyebrow: "SIMPLE PLEASURES",
   editorialTitle: "Make a little room\nfor something good.",
   editorialBody:
@@ -109,7 +109,7 @@ const en = {
   toConfirm: "To be confirmed",
   estimated: "Product subtotal",
   exclShipping:
-    "Shipping is not included. Final arrangements are confirmed before payment.",
+    "Shipping is included in the selected bundle price. Delivery timing is confirmed before the order proceeds.",
   checkout: "Continue to checkout",
   loading: "Loading your selection…",
   checkoutTitle: "Review your selection",
@@ -228,7 +228,7 @@ export const commerce: Localized<typeof en> = {
     add: "เพิ่มลงตะกร้า",
     added: "เพิ่มลงตะกร้าแล้ว",
     viewBag: "ดูตะกร้า",
-    fullBag: "เพิ่มได้สูงสุด 96 ขวดต่อการสอบถามหนึ่งครั้ง",
+    fullBag: "เพิ่มได้สูงสุด 192 ขวดต่อการสอบถามหนึ่งครั้ง",
     save: "บันทึกเป็นรายการโปรด",
     saved: "นำออกจากรายการโปรด",
     quantity: "จำนวน",
@@ -247,7 +247,7 @@ export const commerce: Localized<typeof en> = {
     storage: "เก็บรักษาง่าย",
     storageValue: "เก็บไว้ที่อุณหภูมิห้อง",
     deliveryNote:
-      "จัดส่งฟรีในประเทศไทย ทีมงานจะยืนยันพื้นที่จัดส่งและการชำระเงิน การเพิ่มลงตะกร้ายังไม่ถือเป็นการสั่งซื้อ",
+      "ราคาชุดสินค้ารวมค่าจัดส่งตามพื้นที่ที่เลือก ทีมงานจะยืนยันสินค้าและการชำระเงิน การเพิ่มลงตะกร้ายังไม่ถือเป็นการสั่งซื้อ",
     details: "รายละเอียดสินค้า",
     ingredients: "ส่วนประกอบและการเก็บรักษา",
     use: "ไอเดียในทุกวัน",
@@ -260,7 +260,7 @@ export const commerce: Localized<typeof en> = {
     useBody:
       "เติมบนขนมปังอุ่น ๆ ตักใส่โยเกิร์ตรสธรรมชาติ หรือผสมในเครื่องดื่มแก้วโปรด เริ่มทีละน้อยแล้วปรับความหวานตามชอบ",
     shippingBody:
-      "จัดส่งฟรีในประเทศไทย ยังไม่เปิดรับชำระเงินออนไลน์ ทีมงานจะยืนยันพื้นที่ ระยะเวลาจัดส่ง และวิธีชำระเงินก่อนดำเนินการ ติดต่อทีมงานสำหรับการซื้อปลีกหรือซื้อส่ง",
+      "ราคาชุดสินค้ารวมค่าจัดส่งตามพื้นที่ที่เลือก ทีมงานจะยืนยันสินค้า ระยะเวลาจัดส่ง และวิธีชำระเงินก่อนดำเนินการ ติดต่อทีมงานสำหรับการซื้อปลีกหรือซื้อส่ง",
     editorialEyebrow: "ความสุขที่เรียบง่าย",
     editorialTitle: "เผื่อเวลาเล็กน้อย\nให้สิ่งดี ๆ ในทุกวัน",
     editorialBody:
@@ -287,7 +287,7 @@ export const commerce: Localized<typeof en> = {
     delivery: "การจัดส่ง",
     toConfirm: "รอยืนยัน",
     estimated: "ยอดรวมสินค้า",
-    exclShipping: "จัดส่งฟรีในประเทศไทย ทีมงานจะยืนยันพื้นที่จัดส่งและการชำระเงิน",
+    exclShipping: "ราคาชุดสินค้ารวมค่าจัดส่งตามพื้นที่ที่เลือก ทีมงานจะยืนยันสินค้าและการชำระเงิน",
     checkout: "ดำเนินการต่อ",
     loading: "กำลังโหลดสินค้าที่เลือก…",
     checkoutTitle: "ตรวจสอบรายการสินค้า",
