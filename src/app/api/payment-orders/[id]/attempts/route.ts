@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getDb } from "@/lib/db";
+import { getPublishedContent } from "@/lib/cms/server";
 import { isRateLimited, readFormJson } from "@/app/api/contact/validation";
 import { paymentIdPattern, paymentsConfigured, validPaymentAccess, PaymentOrderError } from "@/lib/payments/orders";
 import { listAvailableProviders, type PaymentProviderId } from "@/lib/payments/providers";
@@ -18,7 +19,8 @@ export async function POST(request: NextRequest, context: { params: Promise<{ id
   try {
     const db = await getDb();
     if (!db) throw new PaymentOrderError("PAYMENT_UNAVAILABLE", 503, "Online payment is unavailable.");
-    const result = await startPaymentAttempt(db, id, body.provider as PaymentProviderId);
+    const result = await startPaymentAttempt(db, id, body.provider as PaymentProviderId,
+      async () => (await getPublishedContent()).products.filter((product) => product.status === "published"));
     return NextResponse.json(result, { status: 201, headers });
   } catch (error) {
     if (error instanceof PaymentOrderError) return NextResponse.json({ code: error.code, error: error.message, availableProviders: listAvailableProviders().map((entry) => entry.id) }, { status: error.status, headers });

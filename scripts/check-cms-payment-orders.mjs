@@ -23,7 +23,7 @@ function load(relative, mocks) {
 class CmsError extends Error {
   constructor(message, status = 400, code = "INVALID_REQUEST") { super(message); this.status = status; this.code = code; }
 }
-const saved = { payment_orders: [], payment_attempts: [] };
+const saved = { payment_orders: [], payment_attempts: [], payment_inventory_allocations: [] };
 function matches(row, query) {
   return Object.entries(query).every(([key, expected]) => expected && typeof expected === "object" && "$in" in expected
     ? expected.$in.includes(row[key]) : row[key] === expected);
@@ -85,14 +85,19 @@ function order(status, reference, expiryMs) {
 }
 const paid = order("paid", "VT-PAID", now + 300_000);
 paid.paidAttemptId = paid.lastAttemptId;
+const secondaryAttemptId = randomUUID();
+paid.secondaryPaidAttemptIds = [secondaryAttemptId];
+paid.requiresPaymentReview = true;
 const unknown = order("pending", "VT-UNKNOWN", now - 60_000);
 const open = order("pending", "VT-OPEN", now + 1_800_000);
 saved.payment_orders.push(paid, unknown, open);
 saved.payment_attempts.push(
   { _id: paid.lastAttemptId, orderId: paid._id, status: "paid", provider: "stripe", providerPaymentId: "cs_paid", providerExpiresAtUnix: Math.floor(now / 1000) + 1800 },
+  { _id: secondaryAttemptId, orderId: paid._id, status: "paid", provider: "stripe", providerPaymentId: "cs_second", createdAt: new Date(now - 90_000) },
   { _id: unknown.lastAttemptId, orderId: unknown._id, status: "uncertain", provider: "stripe", providerPaymentId: "cs_unknown", providerExpiresAtUnix: Math.floor(now / 1000) - 60 },
   { _id: open.lastAttemptId, orderId: open._id, status: "ready", provider: "stripe", providerPaymentId: "cs_open", providerExpiresAtUnix: Math.floor(now / 1000) + 1800 },
 );
+saved.payment_inventory_allocations.push({ _id: paid._id, state: "committed", updatedAt: new Date(now - 100_000) });
 const initialSnapshot = JSON.stringify(saved);
 const oldStorage = process.env.CMS_STORAGE;
 process.env.CMS_STORAGE = "mongodb";
@@ -109,6 +114,14 @@ try {
   const paidList = await paidResponse.json();
   assert.deepEqual(paidList.orders.map((entry) => entry.reference), ["VT-PAID"]);
   assert.doesNotMatch(JSON.stringify(paidList), /private@example\.test|Private address/);
+
+  const paidDetail = (await (await GET(request(`/api/cms/payment-orders?id=${paid._id}`))).json()).order;
+  assert.equal(paidDetail.inventory.state, "committed", "Staff can see recorded inventory allocation state");
+  assert.deepEqual(paidDetail.additionalPaidAttemptDetails.map((attempt) => attempt.providerPaymentId), ["cs_second"], "Staff can identify a second provider charge");
+  assert.equal(paidDetail.additionalPaidAttempts, 1);
+  assert.ok(paidDetail.attemptHistory.some((attempt) => attempt.role === "secondary" && attempt.providerPaymentId === "cs_second"), "Payment history identifies the additional provider charge");
+  assert.ok(paidDetail.attemptHistory.some((attempt) => attempt.role === "primary" && attempt.providerPaymentId === "cs_paid"), "Payment history identifies the confirmed primary charge");
+  assert.equal(paidDetail.attemptHistoryHasMore, false);
 
   const reviewResponse = await GET(request("/api/cms/payment-orders?group=review"));
   const reviewList = await reviewResponse.json();
@@ -127,6 +140,7 @@ try {
   assert.equal(detail.attempt.status, "uncertain");
   assert.equal(detail.initiationWindowElapsed, true);
   assert.equal(detail.status, "pending");
+  assert.equal(detail.inventory, null, "Orders without an allocation have a neutral historical state");
   assert.ok(!Object.hasOwn(detail, "accessToken"));
 
   assert.equal((await GET(request("/api/cms/payment-orders?group=other"))).status, 400);

@@ -27,26 +27,28 @@ from authoritative order/payment state.
 ## Live-payment launch gate
 
 Keep `PAYMENTS_ENABLED=false` by default. A confirmed stock number is required
-for each product, but that check alone does not prevent concurrent customers
-from buying the same units. The real payment path does not yet atomically
-reserve stock, commit a paid inventory ledger entry, or release stock after a
-failed or expired attempt. Implement and test those server-side transitions
-before accepting live money; the demo and enquiry ledgers are separate and
-cannot satisfy this requirement.
+for each product. The real payment path now reserves stock with the pending
+order, commits a paid inventory ledger entry, and releases stock after a
+verified failure or expiry. Credential-free tests exercise those transitions
+with fake transactions; confirm them against the intended MongoDB deployment,
+including concurrent last-unit checkouts, before accepting live money. A CMS
+stock edit pauses new reservations until an owner reconciles the real balance.
+The demo and enquiry ledgers remain separate.
 
-The CMS Orders view includes separate authenticated, read-only groups for
-provider-confirmed paid orders and pending orders needing review. It exposes
-the last saved attempt and provider reference to staff. A local initiation
-window ending is not proof that a provider payment failed, and this view does
-not change payment or inventory state. It does not create a fulfilment or
-reconciliation workflow, send staff notifications, or resolve duplicate
-successful payment attempts. Before launch, assign staff ownership
-for fulfilment, shipment and reconciliation; test the paid-order view with
-real staff accounts and verify that an unexpected second charge is detected,
-reviewed and refunded through the provider's official process. Exercise the
-complete Stripe test checkout and signed webhook path, including duplicate,
-out-of-order, failed and uncertain events. Do not enable live payments until
-the inventory ledger/reservation and webhook test have passed.
+The CMS Orders view separates provider-confirmed paid orders from pending
+orders needing review. It shows saved attempts and provider references. Owners
+can inspect a known provider reference through the provider's server API and
+reconcile real inventory; staff can track preparation and shipment for a paid,
+inventory-committed order. A local initiation window ending is not proof that
+a provider payment failed. The view does not send staff notifications or issue
+refunds, and an unexpected second successful charge stays flagged for official
+provider review. Before launch, assign staff ownership for fulfilment,
+shipment and reconciliation; test the workflow with real staff accounts and
+verify that a second charge is detected, reviewed and refunded through the
+provider's official process. Exercise the complete Stripe test checkout and
+signed webhook path, including duplicate, out-of-order, failed and uncertain
+events. Do not enable live payments until the connected inventory and webhook
+tests have passed. See [payment integration handoff](PAYMENT_INTEGRATION_HANDOFF.md).
 
 Keep provider logic behind a shared adapter/interface. Products, cart,
 pricing, discounts, shipping, orders, inventory, customers, invoices and CMS

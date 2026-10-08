@@ -1,10 +1,10 @@
 # Cloudinary media setup
 
-The nine storefront images stay bundled in `public/images` and work without a Cloudinary account. Cloudinary delivery is optional until its assets have been uploaded and verified. This setup script is for the curated storefront images; it is not a CMS upload interface.
+The twelve storefront images stay bundled in `public/images` and work without a Cloudinary account. Cloudinary delivery is optional until its assets have been uploaded and verified. This setup script is for the curated storefront images; it is not a CMS upload interface.
 
 ## Preview the exact assets
 
-Use Node.js 20.9 or later from the repository root:
+Use the project's supported Node.js version (22.18 or later) from the repository root:
 
 ```powershell
 node scripts/cloudinary-media.mjs
@@ -17,6 +17,9 @@ The default and `--dry-run` modes read local files only. They validate the file 
 | `hero-eshan-1.webp` | `vetra/hero-eshan-1` |
 | `hero-eshan-2.webp` | `vetra/hero-eshan-2` |
 | `hero-eshan-3.webp` | `vetra/hero-eshan-3` |
+| `hero-eshan-4.webp` | `vetra/hero-eshan-4` |
+| `hero-coffee-landscape.webp` | `vetra/hero-coffee-landscape` |
+| `hero-honey-ritual.webp` | `vetra/hero-honey-ritual` |
 | `honey-product.png` | `vetra/honey-product` |
 | `nature-story.webp` | `vetra/nature-story` |
 | `coffee-beans.webp` | `vetra/coffee-beans` |
@@ -47,7 +50,7 @@ After reviewing the dry-run manifest, explicitly run:
 node --env-file=.env.local scripts/cloudinary-media.mjs --apply
 ```
 
-This is the only mode that writes to Cloudinary. It first checks all nine IDs, then uploads missing assets in order. Existing assets are accepted only when their metadata and delivered bytes match the local originals. Each upload uses `overwrite=false`, a deterministic public ID, and a signed request. Cloudinary documents this combination for avoiding duplicate uploads. [Upload guide](https://cloudinary.com/documentation/upload_images#avoiding_duplicate_uploads)
+This is the only mode that writes to Cloudinary. It first checks all twelve IDs, then uploads missing assets in order. Existing assets are accepted only when their metadata and delivered bytes match the local originals. Each upload uses `overwrite=false`, a deterministic public ID, and a signed request. Cloudinary documents this combination for avoiding duplicate uploads. [Upload guide](https://cloudinary.com/documentation/upload_images#avoiding_duplicate_uploads)
 
 The script checks provider identity, format, byte count, HTTPS URL, upload-response signature, and the SHA-256 digest of the exact unversioned delivery URL used by the storefront. Signatures use native Node crypto according to the provider's [authentication](https://cloudinary.com/documentation/authentication_signatures) and [response signature](https://cloudinary.com/documentation/response_signatures) documentation. Every request has a 20-second timeout and at most three attempts for temporary failures.
 
@@ -63,7 +66,7 @@ This mode performs provider lookups and delivery reads only; it never uploads:
 node --env-file=.env.local scripts/cloudinary-media.mjs --verify
 ```
 
-Only after all nine assets verify successfully, set `CLOUDINARY_MEDIA_ENABLED=true` for the deployment and rebuild/restart Next.js. The exact `/images/<filename>` routes are then served through configured rewrites to:
+Only after all twelve assets verify successfully, set `CLOUDINARY_MEDIA_ENABLED=true` for the deployment and rebuild/restart Next.js. The exact `/images/<filename>` routes are then served through configured rewrites to:
 
 ```text
 https://res.cloudinary.com/<cloud_name>/image/upload/vetra/<filename>

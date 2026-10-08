@@ -34,7 +34,7 @@ npm.cmd run dev
 
 ## Configuration and launch boundaries
 
-See [local demo behavior](docs/LOCAL_DEMO_AND_LAUNCH.md) for browser-local customer/staff flows, and [production setup and staging rehearsal](docs/PRODUCTION_SETUP.md) for staff authentication, durable storage, backup migration, monitoring and release preparation. Provider configuration does not constitute a successful provider test.
+See [local demo behavior](docs/LOCAL_DEMO_AND_LAUNCH.md) for browser-local customer/staff flows, [production setup and staging rehearsal](docs/PRODUCTION_SETUP.md) for staff authentication and release preparation, and the [data management handoff](docs/DATA_MANAGEMENT_HANDOFF.md) for MongoDB/Cloudinary backups and recovery boundaries. Provider configuration does not constitute a successful provider test.
 
 Copy `.env.example` to `.env.local` and set the required values locally. Never commit credentials.
 

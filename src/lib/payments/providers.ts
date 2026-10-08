@@ -37,12 +37,24 @@ export interface VerifiedPaymentEvent {
   currency: "THB";
 }
 
+export interface InspectPaymentInput {
+  providerPaymentId: string;
+  orderId: string;
+  attemptId: string;
+  reference: string;
+  amountMinor: number;
+  currency: "THB";
+}
+
 export interface PaymentProvider {
   readonly id: PaymentProviderId;
   readonly available: boolean;
   createPayment(input: CreatePaymentInput): Promise<CreatedPayment>;
   /** A null result means the signed event belongs to another integration. */
   verify(input: { rawBody: Buffer; signature: string | null }): Promise<VerifiedPaymentEvent | null>;
+  /** Server-to-provider lookup for an authenticated staff reconciliation.
+   * An open or ambiguous payment remains pending. */
+  inspect(input: InspectPaymentInput): Promise<VerifiedPaymentEvent>;
 }
 
 export type PaymentProviderErrorKind = "unavailable" | "invalid-input" | "rejected" | "uncertain" | "invalid-webhook";
@@ -324,6 +336,29 @@ const stripeProvider: PaymentProvider = {
       currency: "THB",
     };
   },
+
+  async inspect(input) {
+    if (!this.available) throw new PaymentProviderError("unavailable", "Stripe is not configured", "stripe");
+    if (!input.providerPaymentId.startsWith("cs_") || input.currency !== "THB" || !validMinorAmount(input.amountMinor)) {
+      throw new PaymentProviderError("invalid-input", "Invalid saved payment reference", "stripe");
+    }
+    const session = await stripeRequest(`/checkout/sessions/${encodeURIComponent(input.providerPaymentId)}`, { method: "GET" }, "retrieve");
+    const metadata = sessionMetadata(session);
+    if (session.id !== input.providerPaymentId || metadata?.app !== APP_METADATA || metadata.orderId !== input.orderId || metadata.attemptId !== input.attemptId || metadata.reference !== input.reference || session.client_reference_id !== input.orderId || session.currency !== "thb" || session.amount_total !== input.amountMinor) {
+      throw new PaymentProviderError("uncertain", "Stripe Session does not match the saved payment", "stripe");
+    }
+    const status: PaymentEventStatus = session.status === "complete" && session.payment_status === "paid"
+      ? "paid"
+      : session.status === "expired" && session.payment_status === "unpaid"
+        ? "failed"
+        : "pending";
+    return {
+      provider: "stripe", eventId: `reconcile:${input.providerPaymentId}:${status}`,
+      providerPaymentId: input.providerPaymentId, orderId: input.orderId,
+      attemptId: input.attemptId, reference: input.reference,
+      status, amountMinor: input.amountMinor, currency: "THB",
+    };
+  },
 };
 
 const merchantIpayProvider: PaymentProvider = {
@@ -335,6 +370,9 @@ const merchantIpayProvider: PaymentProvider = {
     throw new PaymentProviderError("unavailable", "Merchant iPay is not yet approved or configured", "merchant-ipay");
   },
   async verify() {
+    throw new PaymentProviderError("unavailable", "Merchant iPay is not yet approved or configured", "merchant-ipay");
+  },
+  async inspect() {
     throw new PaymentProviderError("unavailable", "Merchant iPay is not yet approved or configured", "merchant-ipay");
   },
 };

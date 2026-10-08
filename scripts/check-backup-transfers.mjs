@@ -28,6 +28,7 @@ try {
   for (const file of [undefined, null, "0", -1, .5]) assert.equal((await api.POST(request("POST", { action: "verify", id: randomUUID(), file }, cookie))).status, 400, "A file index must be an explicit nonnegative integer");
   for (const file of ["", "01", "NaN", "-1", "0.5"]) assert.equal((await api.GET(new Request(`http://127.0.0.1:3100/api/cms/backup-transfer?id=${randomUUID()}&file=${file}&chunk=0`, { headers: { cookie } }))).status, 400);
   let state = await server.getCmsState();
+  const capturedPrice = state.draft.products[0].price;
   const image = fs.readFileSync(path.join(root, "public", "images", "honey-product.png"));
   const staged = await server.stageCmsMedia(sha("backup-owner"), randomUUID(), image, "image/png", "backup-test.png");
   const id = randomUUID(), exported = await transfers.startBackupExport(id), manifest = exported.manifest;
@@ -42,7 +43,7 @@ try {
   let unblock, entered; const enteredPromise = new Promise((resolve) => { entered = resolve; }), blocked = new Promise((resolve) => { unblock = resolve; });
   storage.readFile = async (filename, encoding) => { if (filename === path.join(source, manifest.files[mediaIndex].name)) { entered(); await blocked; } return originalRead(filename, encoding); };
   const downloading = transfers.downloadBackupChunk(id, mediaIndex, 0); await enteredPromise;
-  const changed = structuredClone(state.draft); changed.products[0].price = 529;
+  const changed = structuredClone(state.draft); changed.products[0].price = capturedPrice + 49;
   try { state = await Promise.race([server.updateCmsContent(state.revision, changed, "save"), new Promise((_, reject) => { const timer = setTimeout(() => reject(new Error("Export held the content write lock during media transfer")), 3000); timer.unref(); })]); }
   finally { unblock(); storage.readFile = originalRead; }
   const firstChunk = await downloading; assert.equal(firstChunk.bytes.length, format.BACKUP_CHUNK_BYTES);
@@ -52,7 +53,7 @@ try {
   const chunks = new Map();
   for (const [file, entry] of manifest.files.entries()) for (let chunk = 0; chunk < format.chunkCount(entry); chunk++) { const part = await transfers.downloadBackupChunk(id, file, chunk); assert.equal(part.sha256, sha(part.bytes)); chunks.set(`${file}-${chunk}`, part.bytes); }
   const sourceSnapshot = JSON.parse(Buffer.concat([...chunks].filter(([key]) => Number(key.split("-")[0]) === manifest.files.findIndex((file) => file.name === "state.json")).map(([, bytes]) => bytes)).toString());
-  assert.equal(sourceSnapshot.draft.products[0].price, 480, "Export stays at its captured revision after later edits");
+  assert.equal(sourceSnapshot.draft.products[0].price, capturedPrice, "Export stays at its captured revision after later edits");
   const ledgerPath = path.join(source, "uploads.json"), ledger = JSON.parse(fs.readFileSync(ledgerPath, "utf8")); for (const entry of ledger.submissions) entry.updatedAt = "2000-01-01T00:00:00.000Z"; fs.writeFileSync(ledgerPath, JSON.stringify(ledger));
   const extraBytes = Buffer.from("isolated unreferenced cleanup fixture"), extraId = sha(extraBytes); fs.writeFileSync(path.join(source, "media", `${extraId}.png`), extraBytes);
   let transferReads = 0; storage.readFile = async (filename, encoding) => { if (filename.startsWith(path.join(source, "backup-transfers"))) transferReads++; return originalRead(filename, encoding); };

@@ -1,0 +1,39 @@
+.section { container: payment-inventory / inline-size; display: grid; gap: var(--space-3); min-width: 0; margin-block-end: var(--space-5); padding: var(--space-4); border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); color: var(--ink-strong); }
+.header { display: flex; flex-wrap: wrap; align-items: end; justify-content: space-between; gap: var(--space-3); }
+.header > div { min-width: 0; max-width: var(--reading-measure); }
+.headerActions { display: flex; flex-wrap: wrap; align-items: center; gap: var(--space-2); }
+.eyebrow { margin: 0 0 var(--space-1); color: var(--accent-ink); font-size: var(--font-size-1); letter-spacing: .08em; text-transform: uppercase; }
+.header h2 { margin: 0; font: 500 var(--font-size-5)/1.4 var(--font-body); }
+.header p:not(.eyebrow) { margin: var(--space-2) 0 0; color: var(--ink-soft); line-height: 1.7; }
+.action, .primary { display: inline-flex; align-items: center; justify-content: center; gap: var(--space-2); min-height: var(--field-min-height); padding: var(--space-2) var(--space-3); border: 1px solid var(--field-border); border-radius: var(--radius); background: var(--paper); color: var(--ink-strong); font: inherit; }
+.primary { border-color: var(--navy); background: var(--navy); color: var(--paper); }
+.action svg { width: var(--icon-size); height: var(--icon-size); flex-shrink: 0; }
+.action:disabled, .primary:disabled { opacity: .5; cursor: default; }
+.section :is(button, input, textarea):focus-visible { outline: 2px solid var(--field-border-focus); outline-offset: 3px; }
+.cards { display: grid; gap: var(--space-3); min-width: 0; }
+.card { display: grid; gap: var(--space-3); min-width: 0; padding: var(--space-3); border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface-raised); }
+.cardHead { display: flex; flex-wrap: wrap; align-items: start; justify-content: space-between; gap: var(--space-2); }
+.productLabel { margin: 0; color: var(--ink-soft); font-size: var(--font-size-1); }
+.cardHead h3 { margin: 0; font: 600 var(--font-size-3)/1.4 var(--font-body); overflow-wrap: anywhere; }
+.mismatch, .matched { display: inline-flex; align-items: center; gap: var(--space-1); width: fit-content; padding: var(--space-1) var(--space-2); border-radius: var(--radius); font-size: var(--font-size-1); line-height: 1.5; }
+.mismatch { background: var(--status-error-surface); color: var(--status-error); }
+.matched { background: var(--status-success-surface); color: var(--status-success); }
+.mismatch svg { width: var(--icon-size); height: var(--icon-size); flex-shrink: 0; }
+.balances { display: grid; grid-template-columns: repeat(auto-fit, minmax(min(100%, 10rem), 1fr)); gap: var(--space-2); margin: 0; }
+.balances > div { display: grid; gap: var(--space-1); min-width: 0; padding: var(--space-2); border: 1px solid var(--line); border-radius: var(--radius); background: var(--paper); }
+.balances dt { color: var(--ink-soft); font-size: var(--font-size-1); }
+.balances dd { margin: 0; font-weight: 600; overflow-wrap: anywhere; }
+.cardActions, .formActions { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: var(--space-2); }
+.cardActions > span { color: var(--ink-soft); font-size: var(--font-size-1); }
+.form { display: grid; gap: var(--space-3); padding-block-start: var(--space-3); border-top: 1px solid var(--line); }
+.form label { display: grid; gap: var(--space-1); max-width: 38rem; font-weight: 600; }
+.form :is(input, textarea) { width: 100%; min-height: var(--field-min-height); padding: var(--space-2); border: 1px solid var(--field-border); border-radius: var(--radius); background: var(--paper); color: var(--ink-strong); font-weight: 400; }
+.form textarea { resize: vertical; }
+.warning { display: flex; align-items: start; gap: var(--space-2); margin: 0; padding: var(--space-3); border-radius: var(--radius); background: #fff0df; color: #834923; line-height: 1.6; }
+.warning svg { width: var(--icon-size); height: var(--icon-size); flex-shrink: 0; }
+.note { margin: 0; color: var(--ink-soft); line-height: 1.7; }
+.error { margin: 0; color: var(--status-error); }
+.success { margin: 0; padding: var(--space-3); border-radius: var(--radius); background: var(--status-success-surface); color: var(--status-success); }
+@container payment-inventory (max-width: 32rem) { .header .action, .cardActions .action { width: 100%; } .formActions > button { flex: 1 1 10rem; } }
+@media (hover: hover) and (pointer: fine) and (not (any-pointer: coarse)) { .action:hover:not(:disabled) { background: var(--background); } .primary:hover:not(:disabled) { background: var(--navy-dark); } }
+.action:active:not(:disabled) { background: var(--surface); }

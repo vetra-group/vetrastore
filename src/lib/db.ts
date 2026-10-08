@@ -3,7 +3,8 @@ import { Db, MongoClient } from "mongodb";
 let connection: Promise<MongoClient> | undefined;
 export async function getMongoClient(): Promise<MongoClient | null> {
   const uri = process.env.MONGODB_URI;
-  if (!uri) return null;
+  const database = process.env.MONGODB_DB;
+  if (!uri || !/^mongodb(?:\+srv)?:\/\/[^/?#]+/i.test(uri) || !database || database !== database.trim()) return null;
   if (!connection) {
     const client = new MongoClient(uri, {
       serverSelectionTimeoutMS: 5000,
@@ -20,5 +21,5 @@ export async function getMongoClient(): Promise<MongoClient | null> {
   return connection;
 }
 export async function getDb(): Promise<Db | null> {
-  return (await getMongoClient())?.db(process.env.MONGODB_DB || "vetra_store") ?? null;
+  return (await getMongoClient())?.db(process.env.MONGODB_DB) ?? null;
 }

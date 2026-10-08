@@ -1,8 +1,10 @@
 import { createHash, createHmac, timingSafeEqual } from "node:crypto";
-import type { Db } from "mongodb";
+import type { ClientSession, Db } from "mongodb";
 import { MAX_QUANTITY, type CatalogProduct } from "@/lib/catalog";
+import { getMongoClient } from "@/lib/db";
 import type { Locale } from "@/lib/i18n";
 import { marketForShippingCountry } from "@/lib/shipping-market";
+import { settlePaymentInventory } from "./inventory";
 import type { PaymentOrderQuote } from "./order-pricing";
 import type { PaymentProviderId, VerifiedPaymentEvent } from "./providers";
 
@@ -32,6 +34,8 @@ export type PaymentOrder = {
   lastAttemptId?: string;
   paidAttemptId?: string;
   paidAt?: Date;
+  unstartedExpiredAt?: Date;
+  fulfilmentRevision?: number;
   secondaryPaidAttemptIds?: string[];
   requiresPaymentReview?: boolean;
 };
@@ -49,6 +53,9 @@ export type PaymentAttempt = {
   siteOrigin: string;
   providerPaymentId?: string;
   redirectUrl?: string;
+  providerCallLeaseId?: string;
+  providerCallLeaseUntil?: Date;
+  failureSource?: "provider-create" | "verified";
   lastEventId?: string;
   createdAt: Date;
   updatedAt: Date;
@@ -67,6 +74,23 @@ export class PaymentOrderError extends Error {
   constructor(readonly code: string, readonly status: number, message: string) {
     super(message);
     this.name = "PaymentOrderError";
+  }
+}
+
+/** Payment and inventory writes must share one durable MongoDB transaction.
+ * Never fall back to independent writes when sessions are unavailable. */
+export async function withPaymentTransaction<T>(work: (session: ClientSession) => Promise<T>): Promise<T> {
+  const client = await getMongoClient();
+  if (!client) throw new PaymentOrderError("PAYMENT_UNAVAILABLE", 503, "Transactional payment storage is unavailable.");
+  const session = client.startSession();
+  try {
+    return await session.withTransaction(() => work(session), {
+      readConcern: { level: "snapshot" },
+      writeConcern: { w: "majority" },
+      maxCommitTimeMS: 10_000,
+    });
+  } finally {
+    await session.endSession();
   }
 }
 
@@ -99,7 +123,8 @@ export function paymentSiteOrigin(): string {
 }
 
 export function paymentsConfigured(): boolean {
-  if (process.env.PAYMENTS_ENABLED !== "true" || process.env.CMS_STORAGE !== "mongodb" || !process.env.MONGODB_URI) return false;
+  const uri = process.env.MONGODB_URI, database = process.env.MONGODB_DB;
+  if (process.env.PAYMENTS_ENABLED !== "true" || process.env.CMS_STORAGE !== "mongodb" || !uri || !/^mongodb(?:\+srv)?:\/\/[^/?#]+/i.test(uri) || !database || database !== database.trim()) return false;
   try { paymentAccessToken("configuration-check"); paymentSiteOrigin(); return true; }
   catch { return false; }
 }
@@ -177,32 +202,109 @@ export function newPaymentOrder(id: string, fingerprint: string, input: ReturnTy
   };
 }
 
-/** Conditional updates make repeat and out-of-order provider events harmless.
- * An unexpected second successful attempt is recorded for manual review. */
+/** Provider outcomes, the order and the inventory ledger commit together.
+ * A later verified success can supersede a failure, and a second charge is
+ * retained for review without committing the same order's stock twice. */
 export async function applyVerifiedPaymentEvent(db: Db, event: VerifiedPaymentEvent): Promise<void> {
   const orders = db.collection<PaymentOrder>("payment_orders");
   const attempts = db.collection<PaymentAttempt>("payment_attempts");
   const events = db.collection<PaymentEventRecord>("payment_events");
-  const [order, attempt] = await Promise.all([
-    orders.findOne({ _id: event.orderId }),
-    attempts.findOne({ _id: event.attemptId }),
-  ]);
-  if (!order || !attempt || attempt.orderId !== order._id || attempt.provider !== event.provider || order.reference !== event.reference || order.currency !== event.currency || attempt.currency !== event.currency || order.totalMinor !== event.amountMinor || attempt.amountMinor !== event.amountMinor || (attempt.providerPaymentId && attempt.providerPaymentId !== event.providerPaymentId)) {
-    throw new PaymentOrderError("PAYMENT_MISMATCH", 409, "Verified payment does not match the saved order.");
-  }
-  const now = new Date();
-  if (event.status === "paid") {
-    await attempts.updateOne({ _id: attempt._id }, { $set: { status: "paid", providerPaymentId: event.providerPaymentId, lastEventId: event.eventId, updatedAt: now } });
-    const marked = await orders.updateOne({ _id: order._id, status: "pending" }, { $set: { status: "paid", paidAttemptId: attempt._id, paidAt: now, updatedAt: now } });
-    if (marked.modifiedCount === 0) {
-      const latest = await orders.findOne({ _id: order._id });
-      if (latest?.paidAttemptId && latest.paidAttemptId !== attempt._id) {
-        await orders.updateOne({ _id: order._id }, { $set: { requiresPaymentReview: true, updatedAt: now }, $addToSet: { secondaryPaidAttemptIds: attempt._id } });
+  await withPaymentTransaction(async (session) => {
+    // The driver does not support parallel operations on one transaction.
+    const order = await orders.findOne({ _id: event.orderId }, { session });
+    const attempt = await attempts.findOne({ _id: event.attemptId }, { session });
+    if (!order || !attempt || attempt.orderId !== order._id || attempt.provider !== event.provider || order.reference !== event.reference || order.currency !== event.currency || attempt.currency !== event.currency || order.totalMinor !== event.amountMinor || attempt.amountMinor !== event.amountMinor || (attempt.providerPaymentId && attempt.providerPaymentId !== event.providerPaymentId)) {
+      throw new PaymentOrderError("PAYMENT_MISMATCH", 409, "Verified payment does not match the saved order.");
+    }
+    const eventId = `${event.provider}:${event.eventId}`;
+    const receipt = await events.findOne({ _id: eventId }, { session });
+    if (receipt) {
+      if (receipt.orderId !== order._id || receipt.attemptId !== attempt._id || receipt.providerPaymentId !== event.providerPaymentId || receipt.status !== event.status) {
+        throw new PaymentOrderError("PAYMENT_MISMATCH", 409, "Verified payment event does not match its saved receipt.");
+      }
+      return;
+    }
+
+    const now = new Date();
+    if (event.status === "paid") {
+      if (order.status === "pending") {
+        const inventory = await settlePaymentInventory(db, order, "paid", session);
+        // An older attempt can succeed after its reservation was released and
+        // a newer attempt reserved this order again. The newer provider
+        // payment may still be payable, so hold fulfilment for staff review.
+        const anotherAttemptActive = order.activeAttemptId !== attempt._id;
+        const marked = await orders.updateOne({ _id: order._id, status: "pending" }, {
+          $set: { status: "paid", paidAttemptId: attempt._id, paidAt: now, updatedAt: now, ...(inventory.requiresReview || anotherAttemptActive ? { requiresPaymentReview: true } : {}) },
+        }, { session });
+        if (marked.modifiedCount !== 1) throw new PaymentOrderError("PAYMENT_BUSY", 503, "Payment state changed. Retry the verified event.");
+      } else if (order.paidAttemptId !== attempt._id) {
+        await orders.updateOne({ _id: order._id, status: "paid" }, {
+          $set: { requiresPaymentReview: true, updatedAt: now },
+          $addToSet: { secondaryPaidAttemptIds: attempt._id },
+        }, { session });
+      }
+      await attempts.updateOne({ _id: attempt._id }, {
+        $set: { status: "paid", providerPaymentId: event.providerPaymentId, lastEventId: event.eventId, updatedAt: now },
+        $unset: { providerCallLeaseId: "", providerCallLeaseUntil: "" },
+      }, { session });
+    } else if (event.status === "failed" && attempt.status !== "paid") {
+      await attempts.updateOne({ _id: attempt._id, status: { $ne: "paid" } }, {
+        $set: { status: "failed", failureSource: "verified", providerPaymentId: event.providerPaymentId, lastEventId: event.eventId, updatedAt: now },
+        $unset: { providerCallLeaseId: "", providerCallLeaseUntil: "" },
+      }, { session });
+      if (order.status === "pending" && order.activeAttemptId === attempt._id) {
+        await settlePaymentInventory(db, order, "released", session);
+        const cleared = await orders.updateOne({ _id: order._id, status: "pending", activeAttemptId: attempt._id }, {
+          $unset: { activeAttemptId: "" }, $set: { updatedAt: now },
+        }, { session });
+        if (cleared.modifiedCount !== 1) throw new PaymentOrderError("PAYMENT_BUSY", 503, "Payment state changed. Retry the verified event.");
+      }
+    } else if (event.status === "pending") {
+      if (attempt.status === "failed" && attempt.failureSource === "provider-create") {
+        // The provider found a payment after its create call appeared to fail.
+        // This order must be reconciled before another charge is attempted.
+        await attempts.updateOne({ _id: attempt._id, status: "failed", failureSource: "provider-create" }, {
+          $set: { status: "uncertain", providerPaymentId: event.providerPaymentId, lastEventId: event.eventId, updatedAt: now },
+        }, { session });
+        if (order.status === "pending") await orders.updateOne({ _id: order._id, status: "pending" }, { $set: { requiresPaymentReview: true, updatedAt: now } }, { session });
+      } else if (!attempt.providerPaymentId) {
+        // A pending webhook can identify a Session whose create response was lost.
+        await attempts.updateOne({ _id: attempt._id, providerPaymentId: { $exists: false } }, {
+          $set: { providerPaymentId: event.providerPaymentId, lastEventId: event.eventId, updatedAt: now },
+        }, { session });
       }
     }
-  } else if (event.status === "failed") {
-    await attempts.updateOne({ _id: attempt._id, status: { $ne: "paid" } }, { $set: { status: "failed", providerPaymentId: event.providerPaymentId, lastEventId: event.eventId, updatedAt: now } });
-    await orders.updateOne({ _id: order._id, status: "pending", activeAttemptId: attempt._id }, { $unset: { activeAttemptId: "" }, $set: { updatedAt: now } });
+    await events.insertOne({ _id: eventId, orderId: order._id, attemptId: attempt._id, providerPaymentId: event.providerPaymentId, status: event.status, processedAt: now }, { session });
+  });
+}
+
+/** Release an expired order only when no provider attempt was ever claimed.
+ * An attempt's local expiry cannot establish that its provider payment failed,
+ * so those orders require provider reconciliation instead. */
+export async function releaseExpiredUnstartedPaymentOrders(db: Db, limit = 50): Promise<number> {
+  if (!Number.isSafeInteger(limit) || limit < 1 || limit > 100) throw new PaymentOrderError("INVALID_LIMIT", 400, "Choose a valid cleanup limit.");
+  const orders = db.collection<PaymentOrder>("payment_orders");
+  const candidates = await orders.find({
+    status: "pending",
+    expiresAt: { $lte: new Date() },
+    activeAttemptId: { $exists: false },
+    lastAttemptId: { $exists: false },
+    unstartedExpiredAt: { $exists: false },
+  }).sort({ expiresAt: 1, _id: 1 }).limit(limit).toArray();
+  let released = 0;
+  for (const candidate of candidates) {
+    const changed = await withPaymentTransaction(async (session) => {
+      const current = await orders.findOne({ _id: candidate._id }, { session });
+      if (!current || current.status !== "pending" || current.activeAttemptId || current.lastAttemptId || current.unstartedExpiredAt || Date.now() < new Date(current.expiresAt).getTime()) return false;
+      await settlePaymentInventory(db, current, "released", session);
+      const now = new Date();
+      const marked = await orders.updateOne({ _id: current._id, status: "pending", activeAttemptId: { $exists: false }, lastAttemptId: { $exists: false }, unstartedExpiredAt: { $exists: false } }, {
+        $set: { unstartedExpiredAt: now, updatedAt: now },
+      }, { session });
+      if (marked.modifiedCount !== 1) throw new PaymentOrderError("PAYMENT_BUSY", 503, "Order state changed during cleanup. Retry later.");
+      return true;
+    });
+    if (changed) released++;
   }
-  await events.updateOne({ _id: `${event.provider}:${event.eventId}` }, { $setOnInsert: { _id: `${event.provider}:${event.eventId}`, orderId: order._id, attemptId: attempt._id, providerPaymentId: event.providerPaymentId, status: event.status, processedAt: now } }, { upsert: true });
+  return released;
 }

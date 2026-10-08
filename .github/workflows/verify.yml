@@ -22,6 +22,8 @@ jobs:
       - run: npm run typecheck
       - run: npm run lint
       - run: npm test
+      - run: npm run test:payments
+      - run: npm run test:data
       - run: npm run test:demo
       - run: npm run test:cms
       - run: npm run test:cms:images

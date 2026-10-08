@@ -431,7 +431,7 @@ export default function CmsApp({ locale }: { locale: Locale }) {
   } else if (view === "trash") {
     page = <CmsTrash locale={locale} state={state} dirty={dirty} onState={adopt} onMessage={notify} onBusy={(value) => setBusy(value ? "trash" : null)} onConflict={() => { setConflict(true); notify(t.conflict, true); }} />;
   } else if (["orders", "messages", "customers", "notifications"].includes(view)) {
-    page = <CmsOperations key={`${locale}-${view}`} locale={locale} view={view as "orders" | "messages" | "customers" | "notifications"} onDirtyChange={setOperationsDirty} />;
+    page = <CmsOperations key={`${locale}-${view}`} locale={locale} view={view as "orders" | "messages" | "customers" | "notifications"} canReconcilePayments={identity?.role === "owner"} onDirtyChange={setOperationsDirty} />;
   } else if (view === "settings") {
     page = <div className={styles.stack}><form className={editorStyles.panel} id="cms-editor-form" onSubmit={(event) => event.preventDefault()}><h2>{t.storeInfo}</h2><div className={editorStyles.fields}>
       <Field label={t.fields.storeName}><input value={content.settings.storeName} required maxLength={100} onChange={(event) => setContent({ ...content, settings: { ...content.settings, storeName: event.target.value } })} /></Field>

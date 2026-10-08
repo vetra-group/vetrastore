@@ -24,7 +24,7 @@ try {
   await browser.click('button[aria-controls="mobile-navigation"]');
   await browser.wait('document.querySelector("button[aria-controls=mobile-navigation]").getAttribute("aria-expanded") === "true"');
   await browser.key("Escape");
-  await browser.wait('document.querySelector("button[aria-controls=mobile-navigation]").getAttribute("aria-expanded") === "false"');
+  await browser.wait('!document.querySelector("#mobile-navigation").open && document.querySelector("button[aria-controls=mobile-navigation]").getAttribute("aria-expanded") === "false"');
   assert.equal(await browser.evaluate('document.activeElement.getAttribute("aria-controls")'), "mobile-navigation");
   pass("mobile navigation opens, closes with Escape and returns keyboard focus");
   await checkLayout("English mobile home");

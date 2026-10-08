@@ -1,4 +1,5 @@
 import assert from "node:assert/strict";
+import { spawnSync } from "node:child_process";
 import fs from "node:fs";
 import path from "node:path";
 import { createRequire } from "node:module";
@@ -76,27 +77,35 @@ try {
   assert.equal(preservedLedger.submissions.find((entry) => entry.id === expiredLegacyId).owner, legacyHash);
   assert.ok(fs.existsSync(path.join(directory, "media", `${uploaded.id}.png`)));
   pass("current-session legacy receipts migrate safely while expired legacy receipts cannot be implicitly claimed or deleted");
-  const configurationKeys = ["CMS_STORAGE", "CMS_AUTH_MODE", "MONGODB_URI", "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "NEXT_PUBLIC_DEMO_MODE", "NEXT_PUBLIC_SITE_URL", "SITE_NOINDEX", "VERCEL"];
+  const configurationKeys = ["CMS_STORAGE", "CMS_AUTH_MODE", "MONGODB_URI", "MONGODB_DB", "CLOUDINARY_CLOUD_NAME", "CLOUDINARY_API_KEY", "CLOUDINARY_API_SECRET", "CMS_CLOUDINARY_FOLDER", "NEXT_PUBLIC_DEMO_MODE", "NEXT_PUBLIC_SITE_URL", "SITE_NOINDEX", "VERCEL"];
+  const publicOrigin = load("src/lib/site-origin.ts").productionSiteOrigin;
+  const siteOriginPath = path.join(root, "src", "lib", "site-origin.ts");
+  const metadataPath = path.join(root, "src", "lib", "metadata.ts");
   const configuredEnvironment = Object.fromEntries(configurationKeys.map((key) => [key, process.env[key]]));
   const restoreConfiguration = () => { for (const [key, value] of Object.entries(configuredEnvironment)) if (value === undefined) delete process.env[key]; else process.env[key] = value; };
   try {
-    for (const missing of ["CMS_AUTH_MODE", "MONGODB_URI", "CLOUDINARY_API_SECRET"]) {
-      Object.assign(process.env, { CMS_STORAGE: "mongodb", CMS_AUTH_MODE: "password", MONGODB_URI: "mongodb://mock.invalid/no-network", CLOUDINARY_CLOUD_NAME: "mock-cloud", CLOUDINARY_API_KEY: "mock-key", CLOUDINARY_API_SECRET: "mock-secret" });
+    for (const missing of ["CMS_AUTH_MODE", "MONGODB_URI", "MONGODB_DB", "CLOUDINARY_API_SECRET"]) {
+      Object.assign(process.env, { CMS_STORAGE: "mongodb", CMS_AUTH_MODE: "password", MONGODB_URI: "mongodb://mock.invalid/no-network", MONGODB_DB: "vetra_platform_test", CLOUDINARY_CLOUD_NAME: "mock-cloud", CLOUDINARY_API_KEY: "mock-key", CLOUDINARY_API_SECRET: "mock-secret", CMS_CLOUDINARY_FOLDER: "vetra-cms" });
       process.env[missing] = "";
       assert.equal(auth.cmsMode(), "unavailable", `Missing ${missing} must disable a configured remote CMS`);
+      if (missing === "MONGODB_DB") assert.equal(await load("src/lib/db.ts").getMongoClient(), null, "A missing database name must not open a MongoDB connection");
       await assert.rejects(load("src/lib/cms/server.ts").getPublishedContent(), (error) => error.code === "CMS_UNAVAILABLE", `Missing ${missing} must not expose fallback catalog prices`);
     }
+    Object.assign(process.env, { CMS_STORAGE: "mongodb", CMS_AUTH_MODE: "password", MONGODB_URI: "mongodb://mock.invalid/no-network", MONGODB_DB: "vetra_platform_test", CLOUDINARY_CLOUD_NAME: "bad/cloud", CLOUDINARY_API_KEY: "mock-key", CLOUDINARY_API_SECRET: "mock-secret", CMS_CLOUDINARY_FOLDER: "vetra-cms" });
+    assert.equal(auth.cmsMode(), "unavailable", "Invalid Cloudinary cloud names must disable remote CMS access");
+    process.env.CLOUDINARY_CLOUD_NAME = "mock-cloud"; process.env.CMS_CLOUDINARY_FOLDER = "bad//folder";
+    assert.equal(auth.cmsMode(), "unavailable", "Invalid Cloudinary folders must disable remote CMS access");
     Object.assign(process.env, { CMS_STORAGE: "", CMS_AUTH_MODE: "", NEXT_PUBLIC_DEMO_MODE: "false" });
     assert.equal((await load("src/lib/cms/server.ts").getPublishedContent()).products[0].id, defaults.defaultContent().products[0].id, "An intentionally disabled local CMS retains the bundled storefront");
     Object.assign(process.env, { NEXT_PUBLIC_DEMO_MODE: "true", VERCEL: "1" });
     assert.equal(auth.cmsMode(), "unavailable", "A deployed demo must not gain password-free CMS access");
     await assert.rejects(auth.authorizeCms(request(ownerCookie)), (error) => error.code === "CMS_UNAVAILABLE");
-    for (const [url, demo, noindex, blocked] of [["http://127.0.0.1:3100", "false", "false", true], ["https://store.example", "true", "false", true], ["https://store.example", "false", "true", true], ["https://store.example", "false", "false", false]]) {
+    for (const [url, demo, noindex, blocked] of [["http://127.0.0.1:3100", "false", "false", true], [publicOrigin, "true", "false", true], [publicOrigin, "false", "true", true], [publicOrigin, "false", "false", false]]) {
       Object.assign(process.env, { NEXT_PUBLIC_SITE_URL: url, NEXT_PUBLIC_DEMO_MODE: demo, SITE_NOINDEX: noindex });
-      cache.delete(path.join(root, "src", "lib", "metadata.ts"));
+      cache.delete(metadataPath); cache.delete(siteOriginPath);
       assert.equal(load("src/lib/metadata.ts").preventIndexing, blocked, "Local, demo and staging metadata block indexing; an approved non-demo public configuration can allow it");
     }
-  } finally { restoreConfiguration(); cache.delete(path.join(root, "src", "lib", "metadata.ts")); }
+  } finally { restoreConfiguration(); cache.delete(metadataPath); cache.delete(siteOriginPath); }
   pass("incomplete remote configuration fails closed, deployments reject local access and indexing follows local/demo/staging/public settings");
   const initial = await load("src/lib/cms/server.ts").getCmsState();
   const body = { revision: initial.revision, action: "save", content: structuredClone(initial.draft) };
@@ -129,10 +138,29 @@ try {
   const { launchReadiness } = load("src/lib/launch-readiness.ts");
   const indexingReady = (environment) => launchReadiness(content, environment).find((item) => item.key === "indexing").ready;
   assert.equal(indexingReady({ NEXT_PUBLIC_SITE_URL: "http://localhost:3100" }), false);
-  assert.equal(indexingReady({ NEXT_PUBLIC_SITE_URL: "https://store.example", NEXT_PUBLIC_DEMO_MODE: "true" }), false);
-  assert.equal(indexingReady({ NEXT_PUBLIC_SITE_URL: "https://store.example", SITE_NOINDEX: "true" }), false);
-  assert.equal(indexingReady({ NEXT_PUBLIC_SITE_URL: "https://store.example", NEXT_PUBLIC_DEMO_MODE: "false" }), true);
+  assert.equal(indexingReady({ NEXT_PUBLIC_SITE_URL: publicOrigin, NEXT_PUBLIC_DEMO_MODE: "true" }), false);
+  assert.equal(indexingReady({ NEXT_PUBLIC_SITE_URL: publicOrigin, SITE_NOINDEX: "true" }), false);
+  assert.equal(indexingReady({ NEXT_PUBLIC_SITE_URL: publicOrigin, NEXT_PUBLIC_DEMO_MODE: "false", SITE_NOINDEX: "false" }), true);
   pass("launch indexing status stays pending for local, demo and noindex environments");
+  const storageReady = (key, environment) => launchReadiness(content, environment).find((item) => item.key === key).ready;
+  const storageEnvironment = { CMS_STORAGE: "mongodb", MONGODB_URI: "mongodb://mock.invalid/no-network", MONGODB_DB: "vetra_staging", CLOUDINARY_CLOUD_NAME: "mock-cloud", CLOUDINARY_API_KEY: "mock-key", CLOUDINARY_API_SECRET: "mock-secret", CMS_CLOUDINARY_FOLDER: "vetra-cms/staging" };
+  assert.equal(storageReady("database", storageEnvironment), true);
+  assert.equal(storageReady("database", { ...storageEnvironment, MONGODB_URI: "https://mock.invalid/no-network" }), false);
+  assert.equal(storageReady("database", { ...storageEnvironment, MONGODB_URI: "mongodb://" }), false);
+  assert.equal(storageReady("database", { ...storageEnvironment, MONGODB_DB: "" }), false);
+  assert.equal(storageReady("database", { ...storageEnvironment, MONGODB_DB: " vetra_staging " }), false);
+  assert.equal(storageReady("media", storageEnvironment), true);
+  assert.equal(storageReady("media", { ...storageEnvironment, CLOUDINARY_CLOUD_NAME: "bad/cloud" }), false);
+  assert.equal(storageReady("media", { ...storageEnvironment, CMS_CLOUDINARY_FOLDER: "bad//folder" }), false);
+  pass("launch storage status requires an explicit database and valid Cloudinary cloud and folder settings");
+  const launchStatus = (overrides = {}) => spawnSync(process.execPath, [path.join(root, "scripts", "check-launch.mjs")], {
+    cwd: root, encoding: "utf8", env: { ...process.env, ...storageEnvironment, ...overrides },
+  }).stdout;
+  assert.match(launchStatus(), /READY: MongoDB CMS storage selected/);
+  assert.match(launchStatus({ MONGODB_DB: "" }), /PENDING: MongoDB CMS storage selected/);
+  assert.match(launchStatus({ MONGODB_URI: "https://mock.invalid" }), /PENDING: MongoDB CMS storage selected/);
+  assert.match(launchStatus({ CMS_CLOUDINARY_FOLDER: "bad//folder" }), /PENDING: Private media credentials present/);
+  pass("launch CLI reports incomplete MongoDB and Cloudinary settings without a provider connection");
 
   const collections = new Map();
   const matches = (doc, filter) => Object.entries(filter).every(([key, value]) => value && typeof value === "object" && !(value instanceof Date) ? Object.entries(value).every(([op, compare]) => op === "$gt" ? doc[key] > compare : op === "$lte" ? doc[key] <= compare : op === "$regex" ? new RegExp(compare).test(doc[key]) : false) : doc[key] === value);
@@ -151,7 +179,7 @@ try {
     };
   } };
   const mongo = load("src/lib/db.ts"); mongo.getDb = async () => db; mongo.getMongoClient = async () => ({ startSession: () => ({ withTransaction: async (task) => task(), endSession: async () => undefined }) });
-  process.env.CMS_STORAGE = "mongodb"; process.env.MONGODB_URI = "mongodb://mock.invalid/no-network";
+  process.env.CMS_STORAGE = "mongodb"; process.env.MONGODB_URI = "mongodb://mock.invalid/no-network"; process.env.MONGODB_DB = "vetra_platform_test";
   process.env.CLOUDINARY_CLOUD_NAME = "mock-cloud"; process.env.CLOUDINARY_API_KEY = "mock-key"; process.env.CLOUDINARY_API_SECRET = "mock-secret";
   const image = Buffer.from("Synthetic image transport bytes"); const id = createHash("sha256").update(image).digest("hex"), filename = `${id}.png`;
   let upload = null, deleteFails = false, existingResponse = false, uploadFails = false;
@@ -172,7 +200,7 @@ try {
     await storage.atomicFile(imagePath, image);
     assert.deepEqual(await storage.readFile(imagePath), image);
     existingResponse = true; await storage.atomicFile(imagePath, image); assert.deepEqual(await storage.readFile(imagePath), image);
-    upload = Buffer.from("Unexpected different bytes"); await assert.rejects(storage.atomicFile(imagePath, image), (error) => error.code === "MEDIA_STORAGE_INVALID");
+    upload = Buffer.from("Unexpected different bytes"); await assert.rejects(storage.atomicFile(imagePath, image), (error) => error.code === "UPLOAD_UNCERTAIN");
     upload = image; await storage.atomicFile(imagePath, image); existingResponse = false;
     assert.equal((await storage.stat(imagePath)).size, image.length);
     assert.deepEqual(await storage.readdir(path.join(directory, "media")), [filename]);

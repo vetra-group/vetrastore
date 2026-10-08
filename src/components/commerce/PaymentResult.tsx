@@ -5,6 +5,7 @@ import Link from "@/components/loading/NavigationLink";
 import Icon from "@/components/Icon";
 import { paymentCheckoutCopy } from "@/content/payment-checkout";
 import { localizedPath, type Locale } from "@/lib/i18n";
+import { useStore } from "./StoreProvider";
 import styles from "./PaymentResult.module.css";
 
 type PaymentState =
@@ -16,6 +17,7 @@ export default function PaymentResult({ locale, orderId }: { locale: Locale; ord
   const validOrderId = /^[0-9a-f-]{36}$/i.test(orderId);
   const [state, setState] = useState<PaymentState>(validOrderId ? { kind: "loading" } : { kind: "missing" });
   const [refresh, setRefresh] = useState(0);
+  const { hydrated, items, clearCart } = useStore();
 
   useEffect(() => {
     if (!validOrderId) return;
@@ -41,6 +43,19 @@ export default function PaymentResult({ locale, orderId }: { locale: Locale; ord
     void checkStatus();
     return () => { controller.abort(); if (timer) clearTimeout(timer); };
   }, [orderId, refresh, validOrderId]);
+
+  useEffect(() => {
+    if (!hydrated || state.kind !== "ready" || state.status !== "paid") return;
+    const key = `vetra-payment-bag:v1:${orderId}`;
+    try {
+      const paidBag = sessionStorage.getItem(key);
+      if (!paidBag) return;
+      sessionStorage.removeItem(key);
+      // Clear only the unchanged bag from this checkout. A new or edited bag
+      // must remain available even when this older order becomes paid.
+      if (JSON.stringify(items) === paidBag) clearCart();
+    } catch { /* Browser storage can be disabled; the verified result still stands. */ }
+  }, [clearCart, hydrated, items, orderId, state]);
 
   const title = state.kind === "ready" ? state.status === "paid" ? copy.paidTitle : state.status === "failed" ? copy.failedTitle : copy.pendingTitle : state.kind === "missing" ? copy.missingTitle : state.kind === "error" ? copy.statusErrorTitle : copy.loading;
   const body = state.kind === "ready" ? state.status === "paid" ? copy.paidBody : state.status === "failed" ? copy.failedBody : copy.pendingBody : state.kind === "missing" ? copy.missingBody : state.kind === "error" ? copy.statusErrorBody : "";

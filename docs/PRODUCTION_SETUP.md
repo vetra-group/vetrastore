@@ -46,6 +46,8 @@ Set `CMS_STORAGE=mongodb`, `MONGODB_URI`, `MONGODB_DB` and the existing Cloudina
 cloud name/key/secret. MongoDB must support transactions (a replica set, including
 Atlas). Use distinct databases and `CMS_CLOUDINARY_FOLDER` values for staging and
 production. Do not point a rehearsal at production data.
+See the [data management handoff](DATA_MANAGEMENT_HANDOFF.md) for the full
+collection map and the separate database, media and application backups.
 
 - CMS JSON snapshots, history and upload tracking use `cms_files` in MongoDB.
   Writes use transaction-fenced leases in `cms_locks`; expired workers cannot
@@ -64,7 +66,9 @@ production. Do not point a rehearsal at production data.
   `cms_login_limits`. Provision TTL indexes on their `expiresAt` fields with
   `expireAfterSeconds: 0`. Do **not** apply a blanket TTL to content, media,
   upload tracking or locks. Session expiry is enforced during authorization even
-  before an expired record is physically removed.
+  before an expired record is physically removed. Use the read-only
+  `node scripts/mongodb-management.mjs --inspect` plan, then apply only its
+  current hash as described in the [data management handoff](DATA_MANAGEMENT_HANDOFF.md).
 - Remote content read failures produce a recoverable page error and server log;
   the app does not silently substitute source prices when the database is down.
 
@@ -102,15 +106,19 @@ delivery, returns and wholesale terms in all three languages. Editing a confirme
 clears its confirmation until an owner reviews it. No shipping fee, stock count,
 supplier claim or legal policy is invented by the application.
 
-The current live commerce path is a **non-binding order enquiry**. Server prices,
-quantity limits and request idempotency remain authoritative. Request outbox
-records are stored with the enquiry; their provider is disabled. Mock order stages,
-tracking, payment outcomes, cancellation and refund views are available locally.
+The available customer path remains a **non-binding order enquiry** while
+`PAYMENTS_ENABLED=false`. Server prices, quantity limits and request idempotency
+remain authoritative. Request outbox records are stored with the enquiry; their
+delivery provider is disabled. Mock order stages, tracking, payment outcomes,
+cancellation and refund views are available locally.
 
-Before enabling actual payment or delivery, choose the providers and implement and
-verify their signed server callbacks, retry handling, stock reservations/releases,
-shipping quote rules and refund reconciliation. A staff simulation must never be
-treated as proof of payment or actual shipment. These integrations remain pending.
+The separate real-payment path now prepares pending orders, stock reservations,
+provider attempts, verified callbacks and paid-order fulfilment. It remains gated
+until connected MongoDB inventory, Stripe test webhook, staff and provider
+reconciliation checks pass. Merchant iPay still needs its official API details.
+International online payment and live shipping remain pending. A staff
+simulation must never be treated as proof of payment or actual shipment. See the
+[payment handoff](PAYMENT_INTEGRATION_HANDOFF.md) for the remaining checks.
 
 ## Verification and release
 
@@ -120,8 +128,8 @@ treated as proof of payment or actual shipment. These integrations remain pendin
   URLs, language alternatives, sitemap and redirects, then allow indexing only
   for the approved public release. Internal search and CMS previews remain noindex.
 - Run typecheck, lint, commerce/demo/CMS/image/publishing/platform tests, build,
-  isolated live HTTP tests, localized smoke tests, and a browser pass in both
-  languages. `.github/workflows/verify.yml` provides the automated checks when
+  isolated live HTTP tests, localized smoke tests, and a browser pass in all
+  three languages. `.github/workflows/verify.yml` provides the automated checks when
   this project is placed in GitHub; it does not deploy.
 - Rehearse draft → preview → publish, renamed URLs, image retries, backup recovery,
   wholesale enquiries and the complete customer/staff journey using staging data.
@@ -161,7 +169,7 @@ The checks run in this order:
 
 1. Minimal public health response, anonymous administrative access denial,
    private preview headers, staging/private noindex and metadata domains.
-2. Thai and English public routes, published articles, shared navigation/footer,
+2. English, Arabic and Thai public routes, published articles, shared navigation/footer,
    headings, structured data, sitemap and legacy redirects.
 3. Actual HTTP CMS edits, image submission/retry/cleanup, Trash, draft preview,
    selected publication, stable URL redirects, revision recovery and complete

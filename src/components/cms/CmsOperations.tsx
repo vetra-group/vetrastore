@@ -22,7 +22,8 @@ type View = "orders" | "messages" | "customers" | "notifications";
 const loading = () => <LoadingScreen variant="panel" layout="content" />;
 const SharedOperations = dynamic(() => import("./SharedOperations"), { loading });
 const PaidOrders = dynamic(() => import("./PaidOrders").then((module) => module.PaidOrders), { loading });
-export function CmsOperations({ locale, view, onDirtyChange }: { locale: Locale; view: View; onDirtyChange?: (dirty: boolean) => void }) {
+const PaymentInventory = dynamic(() => import("./PaymentInventory").then((module) => module.PaymentInventory), { loading });
+export function CmsOperations({ locale, view, canReconcilePayments = false, onDirtyChange }: { locale: Locale; view: View; canReconcilePayments?: boolean; onDirtyChange?: (dirty: boolean) => void }) {
   const { enabled } = useDemo(), t = sharedOperationsCopy[locale], c = operationsCopy[locale];
   const [source, setSource] = useState<"shared" | "browser">("shared"), [dirty, setDirty] = useState(false);
   const { confirm, confirmation } = useCmsConfirm(locale);
@@ -31,7 +32,18 @@ export function CmsOperations({ locale, view, onDirtyChange }: { locale: Locale;
     if (next === source || dirty && !await confirm({ title: c.unsavedTitle, body: c.discardBody, label: c.discard, destructive: true })) return;
     setDirty(false); setSource(next);
   }
-  return <><div className={styles.actions} role="group" aria-label={t.source}>{(["shared", ...(enabled ? ["browser"] : [])] as const).map((value) => <button type="button" key={value} aria-pressed={source === value} className={source === value ? styles.primary : styles.quiet} onClick={() => void change(value as "shared" | "browser")}>{value === "shared" ? t.shared : t.browser}</button>)}</div>{source === "shared" ? <>{view === "orders" && <PaidOrders locale={locale} />}<SharedOperations locale={locale} view={view} onDirtyChange={setDirty} /></> : <BrowserOperations locale={locale} view={view} onDirtyChange={setDirty} />}{confirmation}</>;
+  return <>
+    <div className={styles.actions} role="group" aria-label={t.source}>
+      {(["shared", ...(enabled ? ["browser"] : [])] as const).map((value) =>
+        <button type="button" key={value} aria-pressed={source === value} className={source === value ? styles.primary : styles.quiet} onClick={() => void change(value as "shared" | "browser")}>{value === "shared" ? t.shared : t.browser}</button>)}
+    </div>
+    {source === "shared" ? <>
+      {view === "orders" && <PaidOrders locale={locale} canReconcile={canReconcilePayments} />}
+      {view === "orders" && canReconcilePayments && <PaymentInventory locale={locale} />}
+      <SharedOperations locale={locale} view={view} onDirtyChange={setDirty} />
+    </> : <BrowserOperations locale={locale} view={view} onDirtyChange={setDirty} />}
+    {confirmation}
+  </>;
 }
 function date(value: string, locale: Locale) { return new Intl.DateTimeFormat(locale, { dateStyle: "medium", timeStyle: "short" }).format(new Date(value)); }
 function downloadCsv(rows: string[][], filename: string) {

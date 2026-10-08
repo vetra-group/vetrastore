@@ -163,6 +163,11 @@ export default function Checkout({ locale, enquiriesEnabled, paymentsEnabled = f
           checkoutUrl.searchParams.get("order") === result.orderId &&
           [...checkoutUrl.searchParams.keys()].every((key) => key === "order") && !checkoutUrl.hash;
         if (!providerCheckout && !verifiedResult) throw new Error("Invalid payment destination");
+        // Keep only the exact bag snapshot for this order. A later paid result
+        // must leave any bag changed after checkout untouched.
+        try {
+          sessionStorage.setItem(`vetra-payment-bag:v1:${result.orderId}`, JSON.stringify(items));
+        } catch { /* Cart cleanup is optional when browser storage is unavailable. */ }
         window.location.assign(verifiedResult ? `${checkoutUrl.pathname}${checkoutUrl.search}` : checkoutUrl.href);
       } else {
         const controller = new AbortController();

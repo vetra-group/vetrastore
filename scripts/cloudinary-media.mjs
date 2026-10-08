@@ -472,7 +472,7 @@ export async function run({
     ),
   );
   console.error(
-    "All nine delivery URLs match the bundled originals. Review the receipt before enabling CLOUDINARY_MEDIA_ENABLED=true and rebuilding.",
+    `All ${assets.length} delivery URLs match the bundled originals. Review the receipt before enabling CLOUDINARY_MEDIA_ENABLED=true and rebuilding.`,
   );
 }
 
@@ -485,7 +485,9 @@ if (
     console.error(
       error instanceof MediaError
         ? error.message
-        : "Media setup failed while reading or validating local assets. Check all nine public/images files.",
+        : ["EPERM", "EACCES"].includes(error?.code)
+          ? "Media setup could not read the bundled images because filesystem access was denied. No network requests or uploads were made."
+          : `Media setup failed while reading or validating local assets. Check all ${filenames.length} public/images files.`,
     );
     process.exitCode = 1;
   });

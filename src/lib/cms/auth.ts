@@ -9,7 +9,12 @@ export const CMS_COOKIE = "vetra-cms-session";
 const sessionSeconds = 8 * 60 * 60;
 export function cmsMode(): "local" | "configured" | "unavailable" {
   if (process.env.CMS_AUTH_MODE === "password") {
-    const durable = process.env.CMS_STORAGE === "mongodb" && process.env.MONGODB_URI && process.env.CLOUDINARY_CLOUD_NAME && process.env.CLOUDINARY_API_KEY && process.env.CLOUDINARY_API_SECRET;
+    const uri = process.env.MONGODB_URI, database = process.env.MONGODB_DB, cloud = process.env.CLOUDINARY_CLOUD_NAME;
+    const folder = process.env.CMS_CLOUDINARY_FOLDER || "vetra-cms";
+    const durable = process.env.CMS_STORAGE === "mongodb" && !!uri && /^mongodb(?:\+srv)?:\/\/[^/?#]+/i.test(uri)
+      && !!database && database === database.trim() && !!cloud && /^[\w-]+$/.test(cloud)
+      && !!process.env.CLOUDINARY_API_KEY && !!process.env.CLOUDINARY_API_SECRET
+      && /^[\w-]+(?:\/[\w-]+)*$/.test(folder);
     const local = process.env.NEXT_PUBLIC_DEMO_MODE === "true" && !process.env.VERCEL && process.env.CMS_STORAGE !== "mongodb";
     return passwordAuthConfigured() && (durable || local) ? "configured" : "unavailable";
   }

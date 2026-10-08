@@ -113,4 +113,4 @@ recovery and public enquiry to authenticated inbox persistence.
 For browser QA, use an isolated local CMS directory and fictional details:
 submit Contact to shared storage, open CMS in another browser session, search
 the reference, save assignment/notes, then simulate and resolve a notification.
-Also verify offline/error input retention and narrow layouts in both languages.
+Also verify offline/error input retention and narrow layouts in all three languages.

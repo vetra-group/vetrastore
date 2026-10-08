@@ -7,6 +7,8 @@ export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 const PAGE_SIZE = 12;
+const ATTEMPT_HISTORY_LIMIT = 50;
+type StaffAllocation = { _id: string; state: "reserved" | "committed" | "released"; updatedAt: Date };
 const headers = {
   "Cache-Control": "private, no-store, max-age=0",
   "X-Robots-Tag": "noindex, nofollow",
@@ -25,6 +27,7 @@ export async function GET(request: Request) {
       const id = params.get("id");
       const orders = db.collection<PaymentOrder>("payment_orders");
       const attempts = db.collection<PaymentAttempt>("payment_attempts");
+      const allocations = db.collection<StaffAllocation>("payment_inventory_allocations");
 
       if (id !== null) {
         if (!paymentIdPattern.test(id)) throw new CmsError("Invalid order reference.", 400, "INVALID_ORDER");
@@ -34,6 +37,21 @@ export async function GET(request: Request) {
         const attempt = attemptId
           ? await attempts.findOne({ _id: attemptId, orderId: order._id })
           : null;
+        const allSecondaryAttemptIds = [...new Set(order.secondaryPaidAttemptIds ?? [])];
+        const secondaryAttemptIds = allSecondaryAttemptIds.slice(0, ATTEMPT_HISTORY_LIMIT);
+        const secondaryAttempts = secondaryAttemptIds.length
+          ? await attempts.find({ _id: { $in: secondaryAttemptIds }, orderId: order._id }).toArray()
+          : [];
+        const secondaryAttemptById = new Map(secondaryAttempts.map((entry) => [entry._id, entry]));
+        const historyRows = await attempts.find({ orderId: order._id })
+          .sort({ createdAt: -1, _id: -1 })
+          .limit(ATTEMPT_HISTORY_LIMIT + 1)
+          .toArray();
+        const visibleHistory = historyRows.slice(0, ATTEMPT_HISTORY_LIMIT);
+        const visibleHistoryIds = new Set(visibleHistory.map((entry) => entry._id));
+        const missingSecondaryIds = secondaryAttemptIds.filter((secondaryId) => !visibleHistoryIds.has(secondaryId));
+        const historyRoom = ATTEMPT_HISTORY_LIMIT - visibleHistory.length;
+        const allocation = await allocations.findOne({ _id: order._id });
         return Response.json({ order: {
           id: order._id,
           reference: order.reference,
@@ -49,6 +67,7 @@ export async function GET(request: Request) {
           expiresAt: order.expiresAt,
           initiationWindowElapsed: order.status === "pending" && Date.now() >= new Date(order.expiresAt).getTime(),
           attempt: attempt ? {
+            id: attempt._id,
             status: attempt.status,
             provider: attempt.provider,
             providerPaymentId: attempt.providerPaymentId ?? null,
@@ -57,7 +76,41 @@ export async function GET(request: Request) {
             providerExpiresAtUnix: attempt.providerExpiresAtUnix,
           } : null,
           requiresPaymentReview: order.requiresPaymentReview === true,
-          additionalPaidAttempts: order.secondaryPaidAttemptIds?.length ?? 0,
+          additionalPaidAttempts: allSecondaryAttemptIds.length,
+          inventory: allocation ? { state: allocation.state, updatedAt: allocation.updatedAt } : null,
+          attemptHistory: [
+            ...visibleHistory.map((entry) => ({
+              id: entry._id,
+              status: entry.status,
+              provider: entry.provider,
+              providerPaymentId: entry.providerPaymentId ?? null,
+              amountMinor: entry.amountMinor,
+              currency: entry.currency,
+              createdAt: entry.createdAt,
+              role: entry._id === order.paidAttemptId ? "primary" : allSecondaryAttemptIds.includes(entry._id) ? "secondary" : entry._id === order.activeAttemptId ? "active" : "other",
+            })),
+            ...missingSecondaryIds.slice(0, historyRoom).map((secondaryId) => ({
+              id: secondaryId,
+              status: null,
+              provider: null,
+              providerPaymentId: null,
+              amountMinor: null,
+              currency: null,
+              createdAt: null,
+              role: "secondary",
+            })),
+          ],
+          attemptHistoryHasMore: historyRows.length > ATTEMPT_HISTORY_LIMIT || allSecondaryAttemptIds.length > secondaryAttemptIds.length || missingSecondaryIds.length > historyRoom,
+          additionalPaidAttemptDetails: secondaryAttemptIds.map((secondaryId) => {
+            const secondary = secondaryAttemptById.get(secondaryId);
+            return {
+              id: secondaryId,
+              status: secondary?.status ?? null,
+              provider: secondary?.provider ?? null,
+              providerPaymentId: secondary?.providerPaymentId ?? null,
+              createdAt: secondary?.createdAt ?? null,
+            };
+          }),
         } }, { headers });
       }
 
